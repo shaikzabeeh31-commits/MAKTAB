@@ -1,0 +1,2147 @@
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'app_localizations.dart';
+import 'pdf_service.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COLORS
+// ─────────────────────────────────────────────────────────────────────────────
+const Color _kNavy = Color(0xFF0A1F5C);
+const Color _kGreen = Color(0xFF1DB954);
+const Color _kOrange = Color(0xFFFF6D00);
+const Color _kWhatsApp = Color(0xFF25D366);
+const Color _kRed = Color(0xFFD32F2F);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────────────────────────────────────
+const _kMonths = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FEE SCREEN
+// ─────────────────────────────────────────────────────────────────────────────
+class FeeScreen extends StatefulWidget {
+  final List<Map<String, dynamic>> students;
+  final LanguageController languageController;
+  final Future<void> Function(List<Map<String, dynamic>>) onSave;
+  final bool showAppBarLanguageButton;
+
+  const FeeScreen({
+    super.key,
+    required this.students,
+    required this.languageController,
+    required this.onSave,
+    this.showAppBarLanguageButton = false,
+  });
+
+  @override
+  State<FeeScreen> createState() => _FeeScreenState();
+}
+
+class _FeeScreenState extends State<FeeScreen> {
+  late List<Map<String, dynamic>> _students;
+
+  // ── filters ──
+  String _selectedSession = 'subah';
+  String _selectedClass = 'All';
+  int _selectedYear = DateTime.now().year;
+  int _selectedMonthIndex = DateTime.now().month - 1; // 0-based
+
+  // ── selection ──
+  final Set<int> _selectedIndices = {};
+  bool _selectAll = false;
+
+  // ── expand timeline rows ──
+  final Set<int> _expandedRows = {};
+
+  // ── derived ──
+  List<MapEntry<int, Map<String, dynamic>>> _filtered = [];
+
+  // ────────────────────────────────── INIT ──
+  @override
+  void initState() {
+    super.initState();
+    _students =
+        widget.students.map((s) => Map<String, dynamic>.from(s)).toList();
+    _applyFilter();
+  }
+
+  // ── calendar label ──
+  String get _selectedMonthLabel =>
+      '${_kMonths[_selectedMonthIndex]} $_selectedYear';
+
+  // ── filter ──
+  void _applyFilter() {
+    setState(() {
+      _filtered = _students.asMap().entries.where((e) {
+        final s = e.value;
+        final shiftOk = _selectedSession == 'subah'
+            ? (s['shift'] ?? 'morning') == 'morning'
+            : (s['shift'] ?? 'morning') == 'evening';
+        final classOk = _selectedClass == 'All' ||
+            (s['className']?.toString() ?? '') == _selectedClass;
+        return shiftOk && classOk;
+      }).toList();
+    });
+  }
+
+  List<String> get _classOptions {
+    final classes = _students
+        .map((s) => s['className']?.toString() ?? '')
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return ['All', ...classes];
+  }
+
+  // ── fee helpers (month-aware) ──
+  Map<String, dynamic>? _monthRecord(Map<String, dynamic> s) {
+    final hist = s['feeHistory'];
+    if (hist is Map) {
+      final key = _selectedMonthLabel;
+      final rec = hist[key];
+      if (rec is Map) return Map<String, dynamic>.from(rec);
+    }
+    // fallback: use the root-level fields if they match the selected month
+    final m = s['feeMonth']?.toString() ?? '';
+    if (m.startsWith(_kMonths[_selectedMonthIndex])) {
+      return {
+        'status': s['feeStatus'] ?? 'due',
+        'paid': s['paidAmount']?.toString() ?? '0',
+        'total': s['feeAmount']?.toString() ?? '0',
+        'paymentMode': s['paymentMode'] ?? 'Cash',
+      };
+    }
+    return null;
+  }
+
+  String _paymentMode(Map<String, dynamic> s) =>
+      _monthRecord(s)?['paymentMode']?.toString() ??
+      s['paymentMode']?.toString() ??
+      'Cash';
+
+  double _total(Map<String, dynamic> s) =>
+      double.tryParse(s['feeAmount']?.toString() ?? '0') ?? 0;
+
+  double _paid(Map<String, dynamic> s) {
+    final rec = _monthRecord(s);
+    final status = rec?['status'] ?? 'due';
+    final total = _total(s);
+    if (status == 'paid') return total;
+    if (status == 'partially_paid') {
+      return double.tryParse(rec?['paid']?.toString() ?? '0') ?? 0;
+    }
+    return 0;
+  }
+
+  double _pending(Map<String, dynamic> s) => _total(s) - _paid(s);
+
+  String _feeStatus(Map<String, dynamic> s) =>
+      _monthRecord(s)?['status']?.toString() ?? 'due';
+
+  // ── month-timeline helpers ──
+  String _monthStatusForIndex(Map<String, dynamic> s, int mIdx) {
+    final hist = s['feeHistory'];
+    if (hist is Map) {
+      final key = '${_kMonths[mIdx]} $_selectedYear';
+      final rec = hist[key];
+      if (rec is Map) return rec['status']?.toString() ?? 'due';
+    }
+    final m = s['feeMonth']?.toString() ?? '';
+    if (m.startsWith(_kMonths[mIdx])) return s['feeStatus'] ?? 'due';
+    return 'none';
+  }
+
+  // ── selection ──
+  void _toggleSelectAll(bool? v) {
+    setState(() {
+      _selectAll = v ?? false;
+      if (_selectAll) {
+        _selectedIndices.addAll(_filtered.map((e) => e.key));
+      } else {
+        _selectedIndices.clear();
+      }
+    });
+  }
+
+  void _toggleStudent(int globalIdx, bool? v) {
+    setState(() {
+      if (v == true) {
+        _selectedIndices.add(globalIdx);
+      } else {
+        _selectedIndices.remove(globalIdx);
+      }
+      _selectAll = _selectedIndices.length == _filtered.length;
+    });
+  }
+
+  // ── comms ──
+  Future<void> _openWhatsApp(String phone, String msg) async {
+    final clean = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    await launchUrl(
+        Uri.parse('https://wa.me/$clean?text=${Uri.encodeComponent(msg)}'),
+        mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _openSms(String phone, String msg) async {
+    await launchUrl(
+        Uri(scheme: 'sms', path: phone, queryParameters: {'body': msg}),
+        mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _openCall(String phone) async {
+    await launchUrl(Uri(scheme: 'tel', path: phone),
+        mode: LaunchMode.externalApplication);
+  }
+
+  String _feeMessage(Map<String, dynamic> s) {
+    final name = s['name']?.toString() ?? 'Student';
+    final month = _selectedMonthLabel;
+    final total = _total(s).toInt();
+    final paid = _paid(s).toInt();
+    final pending = _pending(s).toInt();
+    final status = _feeStatus(s);
+    final lang = s['language']?.toString() ?? 'ur';
+
+    if (status == 'paid' || pending <= 0) {
+      switch (lang) {
+        case 'en':
+          return "Assalamu Alaikum, thank you! Your child $name's Maktab fee for $month (₹$total) is fully paid.";
+        case 'ar':
+          return "السلام عليكم، شكراً لكم! تم سداد رسوم المكتب لـ$name لشهر $month (₹$total) بالكامل.";
+        case 'hi':
+          return "अस्सलामु अलैकुम, धन्यवाद! $name की $month की फीस (₹$total) पूरी जमा हो चुकी है।";
+        case 'te':
+          return "అస్సలాము అలైకుం, ధన్యవాదాలు! $name యొక్క $month ఫీజు (₹$total) పూర్తిగా చెల్లించబడింది.";
+        case 'kn':
+          return "ಅಸ್ಸಲಾಮು ಅಲೈಕುಮ್, ಧನ್ಯವಾದಗಳು! $name ಅವರ $month ಶುಲ್ಕ (₹$total) ಸಂಪೂರ್ಣವಾಗಿ ಪಾವತಿಸಲಾಗಿದೆ.";
+        case 'ta':
+          return "அஸ்ஸலாமு அலைக்கும், நன்றி! $name இன் $month கட்டணம் (₹$total) முழுமையாக செலுத்தப்பட்டது.";
+        case 'ml':
+          return "അസ്സലാമു അലൈക്കും, നന്ദി! $name യുടെ $month ഫീസ് (₹$total) പൂർണ്ണമായി അടച്ചു.";
+        default:
+          return "السلام علیکم، شکریہ! آپ کے بچے $name کی ماہ $month کی مکتب فیس (₹$total) مکمل ادا ہو چکی ہے۔";
+      }
+    } else if (status == 'partially_paid') {
+      switch (lang) {
+        case 'en':
+          return "Assalamu Alaikum, your child $name's Maktab fee for $month has a remaining balance of ₹$pending (Paid: ₹$paid / Total: ₹$total). Please pay soon.";
+        case 'ar':
+          return "السلام عليكم، المبلغ المتبقي لرسوم $name لشهر $month هو ₹$pending (المدفوع: ₹$paid / الإجمالي: ₹$total). نرجو السداد.";
+        case 'hi':
+          return "अस्सलामु अलैकुम, $name की $month की बाकी फीस ₹$pending है (जमा: ₹$paid / कुल: ₹$total)। कृपया बाकी फीस जल्द जमा करें।";
+        case 'te':
+          return "అస్సలాము అలైకుం, $name యొక్క $month మిగిలిన బాకీ ఫీజు ₹$pending (చెల్లించినది: ₹$paid / మొత్తం: ₹$total).";
+        case 'kn':
+          return "ಅಸ್ಸಲಾಮು ಅಲೈಕುಮ್, $name ಅವರ $month ಬಾಕಿ ಶುಲ್ಕ ₹$pending (ಪಾವತಿಸಿದ್ದು: ₹$paid / ಒಟ್ಟು: ₹$total).";
+        case 'ta':
+          return "அஸ்ஸலாமு அலைக்கும், $name இன் $month மீதமுள்ள கட்டணம் ₹$pending (செலுத்தியது: ₹$paid / மொத்தம்: ₹$total).";
+        case 'ml':
+          return "അസ്സലാമു അലൈക്കും, $name യുടെ $month ബാക്കി ഫീസ് ₹$pending ആണ് (നൽകിയത്: ₹$paid / ആകെ: ₹$total).";
+        default:
+          return "السلام علیکم، آپ کے بچے $name کی ماہ $month کی بقایا فیس ₹$pending ہے (ادا شدہ: ₹$paid / کل: ₹$total)۔ برائے کرم بقایا فیس جلد جمع کرائیں۔";
+      }
+    } else {
+      // Due (Nothing paid)
+      switch (lang) {
+        case 'en':
+          return "Assalamu Alaikum, your child $name's Maktab fee for $month (₹$total) is pending. Please pay soon.";
+        case 'ar':
+          return "السلام عليكم، رسوم المكتب لـ$name لشهر $month (₹$total) مستحقة. نرجو السداد.";
+        case 'hi':
+          return "अस्सलामु अलैकुम, $name की $month की फीस (₹$total) बाकी है। कृपया जल्द जमा करें।";
+        case 'te':
+          return "అస్సలాము అలైకుం, $name యొక్క $month ఫీజు (₹$total) బాకీ ఉంది.";
+        case 'kn':
+          return "ಅಸ್ಸಲಾಮು ಅಲೈಕುಮ್, $name ಅವರ $month ಶುಲ್ಕ (₹$total) ಬಾಕಿ ಇದೆ.";
+        case 'ta':
+          return "அஸ்ஸலாமு அலைக்கும், $name இன் $month கட்டணம் (₹$total) நிலுவையில் உள்ளது.";
+        case 'ml':
+          return "അസ്സലാമു അലൈക്കും, $name യുടെ $month ഫീസ് (₹$total) കുടിശ്ശിക.";
+        default:
+          return "السلام علیکم، آپ کے بچے $name کی ماہ $month کی فیس (₹$total) واجب الادا ہے۔ برائے کرم جلد جمع کرائیں۔";
+      }
+    }
+  }
+
+  Future<void> _sendToSelected() async {
+    final selected = _filtered
+        .where((e) => _selectedIndices.contains(e.key))
+        .map((e) => e.value)
+        .toList();
+    for (final s in selected) {
+      final msg = _feeMessage(s);
+      final phone = s['fatherPhone']?.toString() ?? '';
+      if ((s['messageMethod'] ?? 'SMS') == 'WhatsApp') {
+        await _openWhatsApp(phone, msg);
+      } else {
+        await _openSms(phone, msg);
+      }
+    }
+  }
+
+  Future<void> _saveChanges() async {
+    for (int i = 0; i < _students.length; i++) {
+      if (i < widget.students.length) {
+        widget.students[i].addAll(_students[i]);
+      }
+    }
+    await widget.onSave(widget.students);
+  }
+
+  // ── update month record ──
+  void _updateMonthRecord(
+    int globalIdx,
+    String status,
+    String paid, {
+    String paymentMode = 'Cash',
+    double? addedAmount,
+  }) {
+    setState(() {
+      final s = _students[globalIdx];
+      final hist = (s['feeHistory'] is Map)
+          ? Map<String, dynamic>.from(s['feeHistory'] as Map)
+          : <String, dynamic>{};
+      final existingRec = (hist[_selectedMonthLabel] is Map)
+          ? Map<String, dynamic>.from(hist[_selectedMonthLabel] as Map)
+          : <String, dynamic>{};
+
+      List<Map<String, dynamic>> logs = [];
+      if (existingRec['logs'] is List) {
+        logs = (existingRec['logs'] as List)
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
+      }
+
+      if (addedAmount != null && addedAmount > 0) {
+        final now = DateTime.now();
+        final timeStr =
+            '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+        logs.add({
+          'amount': addedAmount.toInt().toString(),
+          'mode': paymentMode,
+          'date': timeStr,
+          'accumulated': paid,
+        });
+      }
+
+      existingRec['status'] = status;
+      existingRec['paid'] = paid;
+      existingRec['paymentMode'] = paymentMode;
+      existingRec['logs'] = logs;
+
+      hist[_selectedMonthLabel] = existingRec;
+      _students[globalIdx]['feeHistory'] = hist;
+
+      // also update root fields for current month
+      _students[globalIdx]['feeMonth'] = _selectedMonthLabel;
+      _students[globalIdx]['feeStatus'] = status;
+      _students[globalIdx]['paidAmount'] = paid;
+      _students[globalIdx]['paymentMode'] = paymentMode;
+      _students[globalIdx]['paymentLogs'] = logs;
+    });
+    _saveChanges();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PDF ACTIONS
+  // ─────────────────────────────────────────────────────────────────────────
+  Future<void> _printStudentTimeline(int globalIdx) async {
+    final s = _students[globalIdx];
+    final doc =
+        await PdfService.buildStudentFeeTimelinePdf(s, _selectedYear);
+    await PdfService.printOrSharePdf(
+        doc, 'Fee_Timeline_${s['name']}_$_selectedYear');
+  }
+
+  Future<void> _printStudentReceipt(int globalIdx) async {
+    final s = _students[globalIdx];
+    final doc = await PdfService.buildFeeReceiptPdf(s);
+    await PdfService.printOrSharePdf(
+        doc, 'Fee_Receipt_${s['name']}_$_selectedMonthLabel');
+  }
+
+  Future<void> _printBatchReport() async {
+    final batchStudents =
+        _filtered.map((e) => _students[e.key]).toList();
+    final batchTitle =
+        '${_selectedClass == 'All' ? 'All Classes' : _selectedClass} — ${_selectedSession == 'subah' ? 'Subah (Morning)' : 'Shaam (Evening)'}';
+    final doc = await PdfService.buildBatchFeeReportPdf(
+        batchStudents, _selectedMonthLabel, batchTitle);
+    await PdfService.printOrSharePdf(
+        doc, 'Batch_Fee_${_selectedMonthLabel.replaceAll(' ', '_')}');
+  }
+
+  bool _isFeeCollectorRoleEnabled = true;
+
+  void _showCollectionAnalyticsDialog() {
+    final double totalCollected = _students.fold(0, (sum, s) => sum + _paid(s));
+    final double totalPending = _students.fold(0, (sum, s) => sum + _pending(s));
+    final double grandTotal = totalCollected + totalPending;
+    final int ratio = grandTotal == 0 ? 0 : ((totalCollected / grandTotal) * 100).toInt();
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.bar_chart_rounded, color: _kNavy),
+            SizedBox(width: 8),
+            Text('ماہانہ فیس وصولی بمقابلہ واجب الادا', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('مہینہ: $_selectedMonthLabel', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _statBox('وصول شدہ', '₹${totalCollected.toInt()}', Colors.green),
+                _statBox('واجب الادا', '₹${totalPending.toInt()}', Colors.orange),
+                _statBox('تناسب', '$ratio%', Colors.indigo),
+              ],
+            ),
+            const SizedBox(height: 14),
+            LinearProgressIndicator(
+              value: grandTotal == 0 ? 0 : (totalCollected / grandTotal).clamp(0.0, 1.0),
+              color: Colors.green,
+              backgroundColor: Colors.orange.shade100,
+              minHeight: 10,
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('ٹھیک ہے')),
+        ],
+      ),
+    );
+  }
+
+  void _showTeacherLedgerDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.receipt_long_rounded, color: Colors.green),
+            SizedBox(width: 8),
+            Text('استاد فیس وصولی کھاتہ (Teacher Ledger)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              dense: true,
+              title: Text('قاری محمد طارق (استاد)', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text('جمع شدہ رقم: ₹4,500 | ایڈمن کے پاس جمع شدہ: ₹4,000'),
+              trailing: Text('باقی: ₹500', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+            ),
+            ListTile(
+              dense: true,
+              title: Text('مولانا عبداللہ علی (استاد)', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text('جمع شدہ رقم: ₹3,200 | ایڈمن کے پاس جمع شدہ: ₹3,200'),
+              trailing: Text('باقی: ₹0', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('بند کریں')),
+        ],
+      ),
+    );
+  }
+
+  void _showAnnualAuditDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.verified_user_rounded, color: Colors.indigo),
+            SizedBox(width: 8),
+            Text('سالانہ مالیاتی اڈٹ رپورٹ (Annual Audit)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('سال 2026ء کی مالیاتی اڈٹ سمری تیار کر لی گئی ہے۔', style: TextStyle(fontSize: 12)),
+          ],
+        ),
+        actions: [
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _printBatchReport();
+            },
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+            label: const Text('سالانہ رپورٹ پی ڈی ایف'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFeeCollectorRoleDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.admin_panel_settings_rounded, color: _kNavy),
+              SizedBox(width: 8),
+              Text('اختیاری فیس وصولی کار رول (Fee Collector Permission)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('استاد یا مینیجر کو فیس وصول کرنے اور کاؤنٹر استعمال کرنے کا اختیار دیں:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                title: const Text('استاد/مینیجر فیس وصولی اختیار (Fee Collector Active)'),
+                value: _isFeeCollectorRoleEnabled,
+                onChanged: (v) {
+                  setDlgState(() => _isFeeCollectorRoleEnabled = v);
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('محفوظ کریں')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statBox(String title, String val, Color col) {
+    return Column(
+      children: [
+        Text(val, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: col)),
+        Text(title, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+      ],
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DIALOGS
+  // ─────────────────────────────────────────────────────────────────────────
+  void _showEditFeeDialog(int globalIdx) {
+    final loc = AppLocalizations.of(context);
+    final s = _students[globalIdx];
+    final rec = _monthRecord(s);
+    final double initialTotal =
+        double.tryParse(s['feeAmount']?.toString() ?? '300') ?? 300;
+    final double prevPaid = double.tryParse(
+            rec?['paid']?.toString() ?? s['paidAmount']?.toString() ?? '0') ??
+        0;
+
+    final totalCtrl =
+        TextEditingController(text: initialTotal.toInt().toString());
+    final addedCtrl = TextEditingController(text: '');
+    final setDirectPaidCtrl =
+        TextEditingController(text: prevPaid.toInt().toString());
+
+    String feeStatus = rec?['status']?.toString() ?? s['feeStatus'] ?? 'due';
+    String paymentMode = rec?['paymentMode']?.toString() ??
+        s['paymentMode']?.toString() ??
+        'Cash';
+
+    List<Map<String, dynamic>> logs = [];
+    if (rec?['logs'] is List) {
+      logs = (rec!['logs'] as List)
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) {
+          final double currentTotal =
+              double.tryParse(totalCtrl.text.trim()) ?? initialTotal;
+          final double newAdd =
+              double.tryParse(addedCtrl.text.trim()) ?? 0;
+          final double calculatedTotalPaid = prevPaid + newAdd;
+          final double remainingBalance =
+              (currentTotal - calculatedTotalPaid).clamp(0, currentTotal);
+
+          return AlertDialog(
+            title: Text(
+              '${loc.translate('fee_record')}: ${s['name']}\n$_selectedMonthLabel',
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, color: _kNavy, fontSize: 14),
+            ),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                // Total Fee
+                TextField(
+                  controller: totalCtrl,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setSt(() {}),
+                  decoration: InputDecoration(
+                    labelText: loc.translate('fee_amount'),
+                    prefixText: '₹ ',
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Current paid info banner
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Previously Paid: ₹${prevPaid.toInt()}',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: _kNavy)),
+                      Text('Balance: ₹${remainingBalance.toInt()}',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: remainingBalance > 0
+                                  ? _kOrange
+                                  : _kGreen)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Add New Payment Field (+ ₹)
+                TextField(
+                  controller: addedCtrl,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setSt(() {}),
+                  decoration: const InputDecoration(
+                    labelText: '+ Add New Payment (₹)',
+                    hintText: 'e.g. 20 (will add 120 + 20 = 140)',
+                    prefixText: '+ ₹ ',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Direct Total Paid Field (for manual overwrite if needed)
+                TextField(
+                  controller: setDirectPaidCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Or Direct Total Paid (₹)',
+                    prefixText: '₹ ',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Payment Mode Dropdown
+                DropdownButtonFormField<String>(
+                  initialValue: paymentMode,
+                  decoration: const InputDecoration(
+                    labelText: 'Payment Mode',
+                    prefixIcon:
+                        Icon(Icons.payment_rounded, color: _kNavy, size: 20),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'Cash', child: Text('💵 Cash')),
+                    DropdownMenuItem(
+                        value: 'UPI', child: Text('📱 UPI / GPay / PhonePe')),
+                    DropdownMenuItem(
+                        value: 'Bank Transfer',
+                        child: Text('🏦 Bank Transfer')),
+                    DropdownMenuItem(
+                        value: 'Cheque', child: Text('📝 Cheque')),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setSt(() => paymentMode = v);
+                  },
+                ),
+                const SizedBox(height: 10),
+                // Fee Status Dropdown
+                DropdownButtonFormField<String>(
+                  initialValue: feeStatus,
+                  decoration: InputDecoration(
+                    labelText: loc.translate('fee_status'),
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                        value: 'due', child: Text(loc.translate('due'))),
+                    DropdownMenuItem(
+                        value: 'partially_paid',
+                        child: Text(loc.translate('partially_paid'))),
+                    DropdownMenuItem(
+                        value: 'paid', child: Text(loc.translate('paid'))),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setSt(() => feeStatus = v);
+                  },
+                ),
+                const SizedBox(height: 12),
+                // Payment History Logs List (if any logs exist)
+                if (logs.isNotEmpty) ...[
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Payment Logs History:',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: _kNavy)),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 100),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: logs.length,
+                      itemBuilder: (ctx, i) {
+                        final log = logs[i];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          child: Row(
+                            children: [
+                              Text(log['date']?.toString() ?? '',
+                                  style: const TextStyle(
+                                      fontSize: 9.5, color: Colors.grey)),
+                              const Spacer(),
+                              Text(
+                                '+₹${log['amount']} (${log['mode']})',
+                                style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: _kGreen),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                // PDF Buttons
+                Row(children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        await _printStudentReceipt(globalIdx);
+                      },
+                      icon: const Icon(Icons.receipt_long, size: 16),
+                      label: const Text('Receipt PDF',
+                          style: TextStyle(fontSize: 11)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        await _printStudentTimeline(globalIdx);
+                      },
+                      icon: const Icon(Icons.timeline, size: 16),
+                      label: const Text('Timeline PDF',
+                          style: TextStyle(fontSize: 11)),
+                    ),
+                  ),
+                ]),
+              ]),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(loc.translate('cancel')),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: _kNavy),
+                onPressed: () async {
+                  final double totFee =
+                      double.tryParse(totalCtrl.text.trim()) ?? initialTotal;
+                  final double addVal =
+                      double.tryParse(addedCtrl.text.trim()) ?? 0;
+                  double finalPaid = prevPaid;
+
+                  if (addVal > 0) {
+                    finalPaid = prevPaid + addVal;
+                  } else {
+                    finalPaid = double.tryParse(
+                            setDirectPaidCtrl.text.trim()) ??
+                        prevPaid;
+                  }
+
+                  // Determine auto status
+                  String calculatedStatus = feeStatus;
+                  if (finalPaid >= totFee) {
+                    calculatedStatus = 'paid';
+                  } else if (finalPaid > 0) {
+                    calculatedStatus = 'partially_paid';
+                  } else {
+                    calculatedStatus = 'due';
+                  }
+
+                  _students[globalIdx]['feeAmount'] = totFee.toInt().toString();
+                  _updateMonthRecord(
+                    globalIdx,
+                    calculatedStatus,
+                    finalPaid.toInt().toString(),
+                    paymentMode: paymentMode,
+                    addedAmount: addVal > 0 ? addVal : null,
+                  );
+
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+                child: Text(loc.translate('save')),
+              ),
+            ],
+          );
+        },
+      ),
+    ).whenComplete(() {
+      totalCtrl.dispose();
+      addedCtrl.dispose();
+      setDirectPaidCtrl.dispose();
+    });
+  }
+
+  void _showLanguagePicker(int globalIdx) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            margin: const EdgeInsets.only(top: 8, bottom: 4),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2)),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Text('Select Message Language',
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+          ...kAllLanguages.map((lang) {
+            final current =
+                _students[globalIdx]['language']?.toString() ?? 'ur';
+            return ListTile(
+              title: Text(lang.nativeScript),
+              trailing: current == lang.code
+                  ? const Icon(Icons.check_circle, color: _kGreen)
+                  : null,
+              onTap: () {
+                setState(() {
+                  _students[globalIdx]['language'] = lang.code;
+                });
+                _saveChanges();
+                Navigator.pop(ctx);
+              },
+            );
+          }),
+          const SizedBox(height: 8),
+        ]),
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────────────────────────────────────
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final alertCount =
+        _filtered.where((e) => _pending(_students[e.key]) > 0).length;
+    final pendingCount =
+        _filtered.where((e) => _feeStatus(_students[e.key]) == 'due').length;
+    final paidCount =
+        _filtered.where((e) => _feeStatus(_students[e.key]) == 'paid').length;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF0F4FF),
+      appBar: AppBar(
+        backgroundColor: _kNavy,
+        foregroundColor: Colors.white,
+        title: const Text(
+          'Maktab Fee Management',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+        ),
+        centerTitle: true,
+        actions: [
+          // Collection Analytics Button (Item 36)
+          IconButton(
+            icon: const Icon(Icons.bar_chart_rounded),
+            tooltip: 'ماہانہ فیس گراف و اینالیٹکس',
+            onPressed: _showCollectionAnalyticsDialog,
+          ),
+          // Teacher Collection Ledger Button (Item 37)
+          IconButton(
+            icon: const Icon(Icons.receipt_long_rounded),
+            tooltip: 'استاد فیس کھاتہ (Teacher Ledger)',
+            onPressed: _showTeacherLedgerDialog,
+          ),
+          // Annual Audit Report Button (Item 39)
+          IconButton(
+            icon: const Icon(Icons.verified_user_rounded),
+            tooltip: 'سالانہ اڈٹ رپورٹ (Annual Audit)',
+            onPressed: _showAnnualAuditDialog,
+          ),
+          // Fee Collector Role Toggle (Item 40)
+          IconButton(
+            icon: const Icon(Icons.admin_panel_settings_rounded),
+            tooltip: 'فیس وصولی کار رول اختیارات',
+            onPressed: _showFeeCollectorRoleDialog,
+          ),
+          // Batch PDF button
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+            tooltip: 'Batch PDF Report',
+            onPressed: _printBatchReport,
+          ),
+          if (widget.showAppBarLanguageButton)
+            LanguageButton(controller: widget.languageController),
+        ],
+      ),
+      body: Column(children: [
+        _buildFilterBar(),
+        _buildCalendarBar(),
+        _buildSelectAllRow(loc),
+        _buildTableHeader(loc),
+        Expanded(
+          child: _filtered.isEmpty
+              ? Center(
+                  child: Text(loc.translate('no_students_found'),
+                      style: const TextStyle(color: Colors.grey)))
+              : ListView.builder(
+                  itemCount: _filtered.length,
+                  itemBuilder: (ctx, i) {
+                    final entry = _filtered[i];
+                    return _buildStudentRow(entry, i + 1, loc);
+                  },
+                ),
+        ),
+        _buildSummaryFooter(
+            _selectedIndices.length, alertCount, pendingCount, paidCount),
+        _buildSendButton(loc),
+      ]),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FILTER BAR  (session / class)
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildFilterBar() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: Row(children: [
+        _SessionToggle(
+          value: _selectedSession,
+          onChanged: (v) {
+            _selectedSession = v;
+            _applyFilter();
+          },
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _FilterDropdown(
+            value: _selectedClass,
+            items: _classOptions,
+            onChanged: (v) {
+              if (v != null) {
+                _selectedClass = v;
+                _applyFilter();
+              }
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        _DateTimeBox(),
+      ]),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CALENDAR BAR  (← month → navigation)
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildCalendarBar() {
+    return Container(
+      color: _kNavy,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Row(children: [
+        // Previous month
+        IconButton(
+          onPressed: () {
+            setState(() {
+              if (_selectedMonthIndex == 0) {
+                _selectedMonthIndex = 11;
+                _selectedYear--;
+              } else {
+                _selectedMonthIndex--;
+              }
+            });
+          },
+          icon: const Icon(Icons.chevron_left_rounded,
+              color: Colors.white, size: 28),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+        // Month display + year selector
+        Expanded(
+          child: GestureDetector(
+            onTap: _showMonthYearPicker,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.calendar_month_rounded,
+                      color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    _selectedMonthLabel,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.arrow_drop_down_rounded,
+                      color: Colors.white70, size: 20),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // Next month
+        IconButton(
+          onPressed: () {
+            setState(() {
+              if (_selectedMonthIndex == 11) {
+                _selectedMonthIndex = 0;
+                _selectedYear++;
+              } else {
+                _selectedMonthIndex++;
+              }
+            });
+          },
+          icon: const Icon(Icons.chevron_right_rounded,
+              color: Colors.white, size: 28),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+      ]),
+    );
+  }
+
+  void _showMonthYearPicker() {
+    int tempMonth = _selectedMonthIndex;
+    int tempYear = _selectedYear;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => AlertDialog(
+          title: const Text('Select Month & Year',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            // Year
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              IconButton(
+                onPressed: () => setSt(() => tempYear--),
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
+              Text('$tempYear',
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold)),
+              IconButton(
+                onPressed: () => setSt(() => tempYear++),
+                icon: const Icon(Icons.add_circle_outline),
+              ),
+            ]),
+            const SizedBox(height: 8),
+            // Month grid
+            SizedBox(
+              height: 160,
+              child: GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                childAspectRatio: 2,
+                mainAxisSpacing: 4,
+                crossAxisSpacing: 4,
+                children: List.generate(12, (i) {
+                  final isSelected = i == tempMonth;
+                  return GestureDetector(
+                    onTap: () => setSt(() => tempMonth = i),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected ? _kNavy : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          _kMonths[i].substring(0, 3),
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.black87,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ]),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: _kNavy),
+              onPressed: () {
+                setState(() {
+                  _selectedMonthIndex = tempMonth;
+                  _selectedYear = tempYear;
+                });
+                Navigator.pop(ctx);
+              },
+              child: const Text('Apply'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SELECT ALL ROW
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildSelectAllRow(AppLocalizations loc) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      child: Row(children: [
+        Checkbox(
+          value: _selectAll,
+          activeColor: _kNavy,
+          onChanged: _toggleSelectAll,
+        ),
+        const Text('Select All',
+            style:
+                TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        const Spacer(),
+        // timeline toggle hint
+        const Icon(Icons.timeline, size: 14, color: Colors.grey),
+        const SizedBox(width: 4),
+        const Text('Tap row to see timeline',
+            style: TextStyle(fontSize: 10, color: Colors.grey)),
+      ]),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // TABLE HEADER
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildTableHeader(AppLocalizations loc) {
+    const style = TextStyle(
+        fontSize: 9.5, fontWeight: FontWeight.bold, color: _kNavy);
+    const orange =
+        TextStyle(fontSize: 9, color: _kOrange, fontWeight: FontWeight.bold);
+    const green =
+        TextStyle(fontSize: 9, color: _kGreen, fontWeight: FontWeight.bold);
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: Row(children: [
+        const SizedBox(width: 36),
+        const SizedBox(
+            width: 90,
+            child: Text('Student Name\n(Parent Name)', style: style)),
+        Expanded(
+          child: Column(children: [
+            Text(
+              '${_kMonths[_selectedMonthIndex]} Fee Status',
+              style: style,
+            ),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Text('Paid(₹)', style: green),
+              const Text(' / ', style: style),
+              const Text('Pend(₹)', style: orange),
+            ]),
+          ]),
+        ),
+        const SizedBox(
+            width: 28,
+            child: Center(
+                child: Text('Edit\nPay', style: style, textAlign: TextAlign.center))),
+        const SizedBox(
+            width: 26,
+            child: Center(child: Text('Alert', style: style))),
+        const SizedBox(
+            width: 26,
+            child: Center(
+                child: Text('₹\nPend', style: style, textAlign: TextAlign.center))),
+        const SizedBox(
+            width: 26,
+            child: Center(
+                child: Text('Paid\n✓', style: style, textAlign: TextAlign.center))),
+        const SizedBox(
+            width: 72,
+            child: Center(
+                child: Text('Lang\n/App', style: style, textAlign: TextAlign.center))),
+        const SizedBox(
+            width: 28,
+            child: Center(child: Text('Call', style: style))),
+      ]),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STUDENT ROW
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildStudentRow(
+      MapEntry<int, Map<String, dynamic>> entry, int serial, AppLocalizations loc) {
+    final globalIdx = entry.key;
+    final s = _students[globalIdx];
+    final isSelected = _selectedIndices.contains(globalIdx);
+    final paid = _paid(s);
+    final total = _total(s);
+    final pending = total - paid;
+    final status = _feeStatus(s);
+    final isPaid = status == 'paid';
+    final hasPending = pending > 0;
+    final method = s['messageMethod']?.toString() ?? 'SMS';
+    final isWhatsApp = method == 'WhatsApp';
+    final langCode = s['language']?.toString() ?? 'ur';
+    final langOption = kAllLanguages.firstWhere(
+        (l) => l.code == langCode,
+        orElse: () => kAllLanguages.first);
+    final isExpanded = _expandedRows.contains(globalIdx);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 3.5),
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFFEBF3FF) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isSelected ? const Color(0xFF0A1F5C) : Colors.grey.shade200,
+          width: isSelected ? 2.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+              color: isSelected
+                  ? const Color(0xFF0A1F5C).withValues(alpha: 0.18)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: isSelected ? 8 : 4,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: Column(children: [
+        // ── main row ──
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              if (isExpanded) {
+                _expandedRows.remove(globalIdx);
+              } else {
+                _expandedRows.add(globalIdx);
+              }
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // checkbox
+                  SizedBox(
+                    width: 20,
+                    child: Checkbox(
+                      value: isSelected,
+                      activeColor: _kNavy,
+                      materialTapTargetSize:
+                          MaterialTapTargetSize.shrinkWrap,
+                      onChanged: (v) => _toggleStudent(globalIdx, v),
+                    ),
+                  ),
+                  // serial
+                  SizedBox(
+                    width: 18,
+                    child: Text('$serial',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: _kNavy)),
+                  ),
+                  // name + parent + phone
+                  SizedBox(
+                    width: 90,
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            s['name']?.toString() ?? '-',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                color: _kNavy),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            s['fatherName']?.toString() ?? '-',
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey.shade600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            s['fatherPhone']?.toString() ?? '-',
+                            style: const TextStyle(
+                                fontSize: 10,
+                                color: _kNavy,
+                                fontWeight: FontWeight.w500),
+                          ),
+                        ]),
+                  ),
+                  // fee status
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Column(children: [
+                        Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.center,
+                            children: [
+                              Text(paid.toInt().toString(),
+                                  style: const TextStyle(
+                                      color: _kGreen,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12)),
+                              const Text(' / ',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey)),
+                              Text(pending.toInt().toString(),
+                                  style: const TextStyle(
+                                      color: _kOrange,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12)),
+                            ]),
+                        const SizedBox(height: 3),
+                        _FeeProgressBar(paid: paid, total: total),
+                        if (paid > 0) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            _paymentMode(s) == 'UPI'
+                                ? '📱 UPI'
+                                : _paymentMode(s) == 'Bank Transfer'
+                                    ? '🏦 Bank'
+                                    : _paymentMode(s) == 'Cheque'
+                                        ? '📝 Cheque'
+                                        : '💵 Cash',
+                            style: TextStyle(
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blueGrey.shade700),
+                          ),
+                        ],
+                      ]),
+                    ),
+                  ),
+                  // edit
+                  SizedBox(
+                    width: 28,
+                    child: _IconBtn(
+                      icon: Icons.edit_note_rounded,
+                      color: _kNavy,
+                      size: 20,
+                      onTap: () => _showEditFeeDialog(globalIdx),
+                    ),
+                  ),
+                  // alert bell
+                  SizedBox(
+                    width: 26,
+                    child: _IconBtn(
+                      icon: hasPending
+                          ? Icons.notifications_active_rounded
+                          : Icons.notifications_none_rounded,
+                      color: hasPending
+                          ? const Color(0xFFFFB300)
+                          : Colors.grey.shade400,
+                      size: 19,
+                      onTap: () {
+                        final msg = _feeMessage(s);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(msg),
+                            backgroundColor:
+                                hasPending ? _kNavy : _kGreen,
+                            duration: const Duration(seconds: 4)));
+                      },
+                    ),
+                  ),
+                  // pending rupee (interactive toggle to due)
+                  SizedBox(
+                    width: 26,
+                    child: GestureDetector(
+                      onTap: () {
+                        final tot = s['feeAmount']?.toString() ?? '300';
+                        _updateMonthRecord(globalIdx, 'due', '0');
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Marked ${s['name']} fee as Pending (₹$tot)'),
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: _kOrange,
+                        ));
+                      },
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: hasPending
+                              ? _kOrange.withValues(alpha: 0.15)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Icon(
+                          Icons.currency_rupee_rounded,
+                          color: hasPending
+                              ? _kOrange
+                              : Colors.grey.shade400,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  // paid check (interactive 1-tap toggle to paid)
+                  SizedBox(
+                    width: 26,
+                    child: GestureDetector(
+                      onTap: () {
+                        final tot = s['feeAmount']?.toString() ?? '300';
+                        final newStatus = isPaid ? 'due' : 'paid';
+                        final newPaid = isPaid ? '0' : tot;
+                        _updateMonthRecord(globalIdx, newStatus, newPaid);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(isPaid
+                              ? 'Marked ${s['name']} fee as Pending'
+                              : 'Marked ${s['name']} fee as Paid (₹$tot)'),
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: isPaid ? _kOrange : _kGreen,
+                        ));
+                      },
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: isPaid
+                              ? _kGreen.withValues(alpha: 0.15)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Icon(
+                          isPaid
+                              ? Icons.check_circle_rounded
+                              : Icons.check_circle_outline_rounded,
+                          color: isPaid ? _kGreen : Colors.grey.shade400,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  // language + app method toggle
+                  SizedBox(
+                    width: 72,
+                    child: Row(children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => _showLanguagePicker(globalIdx),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 3, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(
+                                  color: _kNavy.withValues(alpha: 0.2)),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(children: [
+                              Expanded(
+                                child: Text(
+                                  langOption.nativeScript,
+                                  style: const TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w600),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                              const Icon(Icons.arrow_drop_down, size: 12),
+                            ]),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      // Toggle SMS / WhatsApp method on tap
+                      GestureDetector(
+                        onTap: () {
+                          final newMethod =
+                              isWhatsApp ? 'SMS' : 'WhatsApp';
+                          setState(() {
+                            _students[globalIdx]['messageMethod'] = newMethod;
+                          });
+                          _saveChanges();
+                        },
+                        onLongPress: () async {
+                          final msg = _feeMessage(s);
+                          final phone = s['fatherPhone']?.toString() ?? '';
+                          if (isWhatsApp) {
+                            await _openWhatsApp(phone, msg);
+                          } else {
+                            await _openSms(phone, msg);
+                          }
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: isWhatsApp
+                                ? _kWhatsApp
+                                : Colors.blue.shade600,
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (isWhatsApp
+                                        ? _kWhatsApp
+                                        : Colors.blue.shade600)
+                                    .withValues(alpha: 0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              )
+                            ],
+                          ),
+                          child: Icon(
+                            isWhatsApp
+                                ? Icons.chat_rounded
+                                : Icons.sms_rounded,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                        ),
+                      ),
+                    ]),
+                  ),
+                  // call
+                  SizedBox(
+                    width: 28,
+                    child: GestureDetector(
+                      onTap: () => _openCall(
+                          s['fatherPhone']?.toString() ?? ''),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: _kGreen,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.phone_rounded,
+                            color: Colors.white, size: 16),
+                      ),
+                    ),
+                  ),
+                ]),
+          ),
+        ),
+        // ── TIMELINE EXPANSION ──
+        if (isExpanded) _buildTimelineRow(globalIdx, s),
+      ]),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 12-MONTH TIMELINE ROW
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildTimelineRow(int globalIdx, Map<String, dynamic> s) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F7FF),
+        borderRadius:
+            const BorderRadius.vertical(bottom: Radius.circular(10)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.timeline, size: 14, color: _kNavy),
+          const SizedBox(width: 4),
+          Text(
+            'Fee Timeline — $_selectedYear',
+            style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: _kNavy),
+          ),
+          const Spacer(),
+          // PDF receipt button
+          _TimelineActionBtn(
+            icon: Icons.receipt_long,
+            label: 'Receipt',
+            color: _kNavy,
+            onTap: () => _printStudentReceipt(globalIdx),
+          ),
+          const SizedBox(width: 6),
+          // PDF timeline button
+          _TimelineActionBtn(
+            icon: Icons.picture_as_pdf_rounded,
+            label: 'Year PDF',
+            color: _kRed,
+            onTap: () => _printStudentTimeline(globalIdx),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        // 12 month dots
+        SizedBox(
+          height: 56,
+          child: Row(
+            children: List.generate(12, (mIdx) {
+              final status = _monthStatusForIndex(s, mIdx);
+              final isCurrentMonth = mIdx == _selectedMonthIndex;
+              Color dotColor;
+              IconData dotIcon;
+              switch (status) {
+                case 'paid':
+                  dotColor = _kGreen;
+                  dotIcon = Icons.check_circle;
+                  break;
+                case 'partially_paid':
+                  dotColor = _kOrange;
+                  dotIcon = Icons.timelapse;
+                  break;
+                case 'due':
+                  dotColor = _kRed;
+                  dotIcon = Icons.cancel;
+                  break;
+                default:
+                  dotColor = Colors.grey.shade300;
+                  dotIcon = Icons.circle_outlined;
+              }
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedMonthIndex = mIdx;
+                    });
+                  },
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: isCurrentMonth ? 26 : 22,
+                          height: isCurrentMonth ? 26 : 22,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: dotColor,
+                            border: isCurrentMonth
+                                ? Border.all(
+                                    color: _kNavy, width: 2)
+                                : null,
+                            boxShadow: isCurrentMonth
+                                ? [
+                                    BoxShadow(
+                                        color: _kNavy.withValues(alpha: 0.3),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2))
+                                  ]
+                                : null,
+                          ),
+                          child: Icon(dotIcon,
+                              color: Colors.white, size: 12),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          _kMonths[mIdx].substring(0, 3),
+                          style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: isCurrentMonth
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isCurrentMonth
+                                  ? _kNavy
+                                  : Colors.grey.shade600),
+                        ),
+                      ]),
+                ),
+              );
+            }),
+          ),
+        ),
+        // legend
+        Row(children: [
+          _Dot(color: _kGreen),
+          const SizedBox(width: 3),
+          const Text('Paid', style: TextStyle(fontSize: 9)),
+          const SizedBox(width: 10),
+          _Dot(color: _kOrange),
+          const SizedBox(width: 3),
+          const Text('Partial', style: TextStyle(fontSize: 9)),
+          const SizedBox(width: 10),
+          _Dot(color: _kRed),
+          const SizedBox(width: 3),
+          const Text('Due', style: TextStyle(fontSize: 9)),
+          const SizedBox(width: 10),
+          _Dot(color: Colors.grey.shade300),
+          const SizedBox(width: 3),
+          const Text('No record', style: TextStyle(fontSize: 9)),
+        ]),
+        if (_monthRecord(s)?['logs'] is List &&
+            (_monthRecord(s)?['logs'] as List).isNotEmpty) ...[
+          const SizedBox(height: 6),
+          const Divider(height: 1),
+          const SizedBox(height: 4),
+          const Text('Payment History Log (ادائیگیاں):',
+              style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.bold,
+                  color: _kNavy)),
+          const SizedBox(height: 2),
+          Column(
+            children: (_monthRecord(s)?['logs'] as List).map((item) {
+              final log = Map<String, dynamic>.from(item as Map);
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 1.5),
+                child: Row(
+                  children: [
+                    Text('• ${log['date']}',
+                        style: const TextStyle(
+                            fontSize: 9, color: Colors.grey)),
+                    const Spacer(),
+                    Text(
+                      '+₹${log['amount']} (${log['mode']}) → Total: ₹${log['accumulated']}',
+                      style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: _kGreen),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ]),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SUMMARY FOOTER
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildSummaryFooter(
+      int selected, int alert, int pending, int paid) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _SummaryChip(
+                icon: Icons.people_alt_outlined,
+                label: 'Selected\nStudents',
+                count: selected,
+                iconColor: _kNavy),
+            _SummaryChip(
+                icon: Icons.notifications_none_rounded,
+                label: 'Alert',
+                count: alert,
+                iconColor: _kNavy),
+            _SummaryChip(
+                icon: Icons.currency_rupee_rounded,
+                label: 'Pending',
+                count: pending,
+                iconColor: _kOrange),
+            _SummaryChip(
+                icon: Icons.check_circle_outline_rounded,
+                label: 'Paid',
+                count: paid,
+                iconColor: _kGreen),
+          ]),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SEND BUTTON
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildSendButton(AppLocalizations loc) {
+    return SafeArea(
+      child: Container(
+        color: _kNavy,
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _kNavy,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed:
+                _selectedIndices.isEmpty ? null : _sendToSelected,
+            icon: const Icon(Icons.send_rounded, size: 20),
+            label: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Send Message to Selected',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 14)),
+                Text(
+                    '(Will send in parents preferred language//app)',
+                    style: TextStyle(
+                        fontSize: 10, color: Colors.white70)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-WIDGETS
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SessionToggle extends StatelessWidget {
+  final String value;
+  final void Function(String) onChanged;
+  const _SessionToggle({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        _Tab(
+          icon: Icons.wb_sunny_rounded,
+          label: 'Subah',
+          active: value == 'subah',
+          activeColor: Colors.amber.shade600,
+          onTap: () => onChanged('subah'),
+        ),
+        _Tab(
+          icon: Icons.dark_mode_rounded,
+          label: 'Shaam',
+          active: value == 'shaam',
+          activeColor: _kNavy,
+          onTap: () => onChanged('shaam'),
+        ),
+      ]),
+    );
+  }
+}
+
+class _Tab extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final Color activeColor;
+  final VoidCallback onTap;
+  const _Tab(
+      {required this.icon,
+      required this.label,
+      required this.active,
+      required this.activeColor,
+      required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? activeColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Row(children: [
+          Icon(icon,
+              size: 14, color: active ? Colors.white : Colors.grey),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: active
+                      ? Colors.white
+                      : Colors.grey.shade600)),
+        ]),
+      ),
+    );
+  }
+}
+
+class _FilterDropdown extends StatelessWidget {
+  final String value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+  const _FilterDropdown(
+      {required this.value,
+      required this.items,
+      required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final safeValue = items.contains(value) ? value : items.first;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+      ),
+      child: DropdownButton<String>(
+        value: safeValue,
+        isExpanded: true,
+        underline: const SizedBox(),
+        isDense: true,
+        style: const TextStyle(
+            fontSize: 11,
+            color: Colors.black87,
+            fontWeight: FontWeight.w500),
+        items:
+            items.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+        onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class _DateTimeBox extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final date =
+        '${now.day.toString().padLeft(2, '0')}-${now.month.toString().padLeft(2, '0')}-${now.year}';
+    final hour =
+        now.hour > 12 ? now.hour - 12 : now.hour == 0 ? 12 : now.hour;
+    final ampm = now.hour >= 12 ? 'PM' : 'AM';
+    final time =
+        '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $ampm';
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(children: [
+          const Icon(Icons.calendar_today_outlined,
+              size: 12, color: _kNavy),
+          const SizedBox(width: 3),
+          Text(date,
+              style: const TextStyle(
+                  fontSize: 10, fontWeight: FontWeight.w500)),
+        ]),
+      ),
+      const SizedBox(height: 3),
+      Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(children: [
+          const Icon(Icons.access_time_rounded,
+              size: 12, color: _kNavy),
+          const SizedBox(width: 3),
+          Text(time,
+              style: const TextStyle(
+                  fontSize: 10, fontWeight: FontWeight.w500)),
+        ]),
+      ),
+    ]);
+  }
+}
+
+class _FeeProgressBar extends StatelessWidget {
+  final double paid;
+  final double total;
+  const _FeeProgressBar({required this.paid, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio =
+        total <= 0 ? 0.0 : (paid / total).clamp(0.0, 1.0);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: SizedBox(
+        height: 6,
+        child: LinearProgressIndicator(
+          value: ratio,
+          backgroundColor: _kOrange.withValues(alpha: 0.3),
+          valueColor:
+              const AlwaysStoppedAnimation<Color>(_kGreen),
+        ),
+      ),
+    );
+  }
+}
+
+class _IconBtn extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final double size;
+  final VoidCallback onTap;
+  const _IconBtn(
+      {required this.icon,
+      required this.color,
+      required this.size,
+      required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          border:
+              Border.all(color: color.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(icon, size: size, color: color),
+      ),
+    );
+  }
+}
+
+class _TimelineActionBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _TimelineActionBtn(
+      {required this.icon,
+      required this.label,
+      required this.color,
+      required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10,
+                  color: color,
+                  fontWeight: FontWeight.bold)),
+        ]),
+      ),
+    );
+  }
+}
+
+class _SummaryChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int count;
+  final Color iconColor;
+  const _SummaryChip(
+      {required this.icon,
+      required this.label,
+      required this.count,
+      required this.iconColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 18, color: iconColor),
+        const SizedBox(width: 4),
+        Text('$count',
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: iconColor)),
+      ]),
+      Text(label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 9.5, color: Colors.grey)),
+    ]);
+  }
+}
+
+class _Dot extends StatelessWidget {
+  final Color color;
+  const _Dot({required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+      );
+}
