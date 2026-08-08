@@ -32,6 +32,16 @@ class AnalyticsScreen extends StatelessWidget {
         ? 0.0
         : ((presentStudents / totalStudents) * 100);
 
+    // Calculate New vs Old Admissions
+    final newAdmissionsCount = students.where((s) => s['isNewAdmission'] == true).length;
+    final oldAdmissionsCount = totalStudents - newAdmissionsCount;
+
+    // Group-wise breakdown
+    final hifzCount = students.where((s) => (s['group'] ?? s['className'] ?? '').toString().contains('Hifz')).length;
+    final naziraCount = students.where((s) => (s['group'] ?? s['className'] ?? '').toString().contains('Nazira')).length;
+    final tajweedCount = students.where((s) => (s['group'] ?? s['className'] ?? '').toString().contains('Tajweed')).length;
+    final primaryCount = totalStudents - (hifzCount + naziraCount + tajweedCount);
+
     // Calculate Fees
     double totalPaid = 0;
     double totalDue = 0;
@@ -46,20 +56,22 @@ class AnalyticsScreen extends StatelessWidget {
       }
     }
 
-    // Detect students absent for 3+ consecutive days or flagged absent
-    final consecutiveAbsentees = absentStudentsList;
-
     final morningShiftCount = students
         .where((s) => (s['shift']?.toString() ?? '').toLowerCase().contains('morn') || s['shift'] == 'صبح')
         .length;
-    final eveningShiftCount = totalStudents - morningShiftCount;
+    final eveningShiftCount = students
+        .where((s) => (s['shift']?.toString() ?? '').toLowerCase().contains('even') || s['shift'] == 'شام')
+        .length;
+    final nightShiftCount = totalStudents - (morningShiftCount + eveningShiftCount);
 
     return Directionality(
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
         appBar: AppBar(
-          title: Text(loc.translate('analytics')),
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          title: Text(loc.translate('advanced_dashboard')),
+          backgroundColor: const Color(0xFF074E32),
+          foregroundColor: Colors.white,
           actions: [
             ThemeButton(controller: themeController),
             LanguageButton(controller: languageController),
@@ -70,13 +82,13 @@ class AnalyticsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Attendance Summary Card
+              // 1. Overall Performance Banner
               Card(
                 elevation: 4,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                color: Colors.green.shade700,
+                color: const Color(0xFF074E32),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
@@ -85,16 +97,16 @@ class AnalyticsScreen extends StatelessWidget {
                         loc.translate('attendance_rate'),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         '${attendanceRate.toStringAsFixed(1)}%',
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 36,
+                          color: Colors.amberAccent,
+                          fontSize: 38,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -126,8 +138,129 @@ class AnalyticsScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // Consecutive Absence Warning Card
-              if (consecutiveAbsentees.isNotEmpty) ...[
+              // 2. New vs Old Admission Analytics
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.pie_chart_rounded, color: Colors.blue, size: 22),
+                          SizedBox(width: 8),
+                          Text(
+                            'داخلہ تجزیہ (New vs Old Admission Breakdown)',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.green.shade200),
+                              ),
+                              child: Column(
+                                children: [
+                                  const Text('نئے داخلے (New)', style: TextStyle(fontSize: 12, color: Colors.green)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$newAdmissionsCount',
+                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.green),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Column(
+                                children: [
+                                  const Text('سابقہ داخلے (Old)', style: TextStyle(fontSize: 12, color: Colors.blue)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$oldAdmissionsCount',
+                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // 3. Batch Group Distribution
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.groups_rounded, color: Colors.purple, size: 22),
+                          SizedBox(width: 8),
+                          Text(
+                            'گروپ و بیچ تقسیم (Batch Group Analytics)',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 20),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          Chip(
+                            avatar: const CircleAvatar(backgroundColor: Colors.purple, child: Text('A', style: TextStyle(color: Colors.white, fontSize: 10))),
+                            label: Text('حفظ گروپ: $hifzCount'),
+                          ),
+                          Chip(
+                            avatar: const CircleAvatar(backgroundColor: Colors.teal, child: Text('B', style: TextStyle(color: Colors.white, fontSize: 10))),
+                            label: Text('ناظرہ گروپ: $naziraCount'),
+                          ),
+                          Chip(
+                            avatar: const CircleAvatar(backgroundColor: Colors.indigo, child: Text('C', style: TextStyle(color: Colors.white, fontSize: 10))),
+                            label: Text('تجوید گروپ: $tajweedCount'),
+                          ),
+                          Chip(
+                            avatar: const CircleAvatar(backgroundColor: Colors.orange, child: Text('D', style: TextStyle(color: Colors.white, fontSize: 10))),
+                            label: Text('ابتدائی گروپ: ${primaryCount > 0 ? primaryCount : 0}'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // 4. Consecutive Absence Warning Card
+              if (absentStudentsList.isNotEmpty) ...[
                 Card(
                   color: Colors.red.shade50,
                   elevation: 2,
@@ -148,7 +281,7 @@ class AnalyticsScreen extends StatelessWidget {
                               child: Text(
                                 loc.translate('consecutive_absent_alert'),
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.red.shade900,
                                 ),
@@ -159,15 +292,15 @@ class AnalyticsScreen extends StatelessWidget {
                         const SizedBox(height: 6),
                         Text(
                           loc.translate('consecutive_absent_desc'),
-                          style: TextStyle(color: Colors.red.shade800),
+                          style: TextStyle(color: Colors.red.shade800, fontSize: 12),
                         ),
                         const SizedBox(height: 12),
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: consecutiveAbsentees.length,
+                          itemCount: absentStudentsList.length,
                           itemBuilder: (context, index) {
-                            final student = consecutiveAbsentees[index];
+                            final student = absentStudentsList[index];
                             return ListTile(
                               dense: true,
                               contentPadding: EdgeInsets.zero,
@@ -176,7 +309,7 @@ class AnalyticsScreen extends StatelessWidget {
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               subtitle: Text(
-                                'Lang: ${student['language'] ?? 'urdu'} | Method: ${student['messageMethod'] ?? 'SMS'}',
+                                'فون: ${student['fatherPhone'] ?? '-'} | گروپ: ${student['group'] ?? student['className'] ?? '-'}',
                               ),
                               trailing: OutlinedButton.icon(
                                 style: OutlinedButton.styleFrom(
@@ -200,7 +333,7 @@ class AnalyticsScreen extends StatelessWidget {
                 const SizedBox(height: 20),
               ],
 
-              // Fee Collection Card
+              // 5. Fee Collection Card
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(
@@ -211,15 +344,17 @@ class AnalyticsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        loc.translate('fee_record'),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      const Row(
+                        children: [
+                          Icon(Icons.account_balance_wallet_rounded, color: Colors.green, size: 22),
+                          SizedBox(width: 8),
+                          Text(
+                            'فیس وصولی کا خلاصہ (Financial Recovery)',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
-                      const Divider(),
-                      const SizedBox(height: 8),
+                      const Divider(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -256,7 +391,7 @@ class AnalyticsScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // Shift Breakdown Card
+              // 6. Shift Breakdown Card
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(
@@ -267,25 +402,31 @@ class AnalyticsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        loc.translate('shift'),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      const Row(
+                        children: [
+                          Icon(Icons.schedule_rounded, color: Colors.orange, size: 22),
+                          SizedBox(width: 8),
+                          Text(
+                            'شفٹ تقسیم (Shift Timings)',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
-                      const Divider(),
-                      const SizedBox(height: 8),
+                      const Divider(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           Chip(
-                            avatar: const Icon(Icons.wb_sunny_outlined),
-                            label: Text('${loc.translate('morning')}: $morningShiftCount'),
+                            avatar: const Icon(Icons.wb_sunny_outlined, size: 18),
+                            label: Text('صبح: $morningShiftCount'),
                           ),
                           Chip(
-                            avatar: const Icon(Icons.nights_stay_outlined),
-                            label: Text('${loc.translate('evening')}: $eveningShiftCount'),
+                            avatar: const Icon(Icons.wb_twilight_rounded, size: 18),
+                            label: Text('شام: $eveningShiftCount'),
+                          ),
+                          Chip(
+                            avatar: const Icon(Icons.nights_stay_outlined, size: 18),
+                            label: Text('شبینہ: ${nightShiftCount > 0 ? nightShiftCount : 0}'),
                           ),
                         ],
                       ),
@@ -316,7 +457,7 @@ class AnalyticsScreen extends StatelessWidget {
           label,
           style: TextStyle(
             color: textColor.withValues(alpha: 0.9),
-            fontSize: 14,
+            fontSize: 13,
           ),
         ),
       ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'theme/app_components.dart';
 import 'app_localizations.dart';
 import 'attendance_screen.dart';
 import 'fee_screen.dart';
@@ -8,6 +9,11 @@ import 'leave_management_screen.dart';
 import 'community_chat_screen.dart';
 import 'results_screen.dart';
 import 'admin_features_screen.dart';
+import 'analytics_screen.dart';
+import 'create_class_group_screen.dart';
+import 'manage_parent_logins_screen.dart';
+import 'manage_staff_logins_screen.dart';
+import 'theme_controller.dart';
 import 'main.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -42,6 +48,72 @@ class RoleInfo {
     required this.icon,
     required this.primaryColor,
   });
+
+  String title(BuildContext context) {
+    final lang = AppLocalizations.of(context).locale.languageCode;
+    if (lang == 'en') return titleEnglish;
+    if (lang == 'ar') {
+      switch (role) {
+        case AppRole.admin: return 'المسؤول (Admin)';
+        case AppRole.manager: return 'المدير (Manager)';
+        case AppRole.teacher: return 'المعلم (Teacher)';
+        case AppRole.parent: return 'ولي الأمر (Parent)';
+        case AppRole.mutawalli: return 'المتولي (Trustee)';
+        case AppRole.other: return 'مستخدم (User)';
+      }
+    }
+    if (lang == 'hi') {
+      switch (role) {
+        case AppRole.admin: return 'व्यवस्थापक (Admin)';
+        case AppRole.manager: return 'प्रबंधक (Manager)';
+        case AppRole.teacher: return 'शिक्षक (Teacher)';
+        case AppRole.parent: return 'अभिभावक (Parent)';
+        case AppRole.mutawalli: return 'मुतवल्ली (Trustee)';
+        case AppRole.other: return 'उपयोगकर्ता (User)';
+      }
+    }
+    if (lang == 'te') {
+      switch (role) {
+        case AppRole.admin: return 'అడ్మిన్ (Admin)';
+        case AppRole.manager: return 'మేనేజర్ (Manager)';
+        case AppRole.teacher: return 'ఉపాధ్యాయుడు (Teacher)';
+        case AppRole.parent: return 'తల్లిదండ్రులు (Parent)';
+        case AppRole.mutawalli: return 'ట్రస్టీ (Trustee)';
+        case AppRole.other: return 'వినియోగదారు (User)';
+      }
+    }
+    if (lang == 'kn') {
+      switch (role) {
+        case AppRole.admin: return 'ಅಡ್ಮಿನ್ (Admin)';
+        case AppRole.manager: return 'ಮ್ಯಾನೇಜರ್ (Manager)';
+        case AppRole.teacher: return 'ಶಿಕ್ಷಕ (Teacher)';
+        case AppRole.parent: return 'ಪೋಷಕರು (Parent)';
+        case AppRole.mutawalli: return 'ಟ್ರಸ್ಟಿ (Trustee)';
+        case AppRole.other: return 'ಬಳಕೆದಾರ (User)';
+      }
+    }
+    if (lang == 'ta') {
+      switch (role) {
+        case AppRole.admin: return 'நிர்வாகி (Admin)';
+        case AppRole.manager: return 'மேலாளர் (Manager)';
+        case AppRole.teacher: return 'ஆசிரியர் (Teacher)';
+        case AppRole.parent: return 'பெற்றோர் (Parent)';
+        case AppRole.mutawalli: return 'அறங்காவலர் (Trustee)';
+        case AppRole.other: return 'பயனர் (User)';
+      }
+    }
+    if (lang == 'ml') {
+      switch (role) {
+        case AppRole.admin: return 'അഡ്മിൻ (Admin)';
+        case AppRole.manager: return 'മാനേജർ (Manager)';
+        case AppRole.teacher: return 'അധ്യാപകൻ (Teacher)';
+        case AppRole.parent: return 'രക്ഷിതാവ് (Parent)';
+        case AppRole.mutawalli: return 'ട്രസ്റ്റി (Trustee)';
+        case AppRole.other: return 'ഉപയോക്താവ് (User)';
+      }
+    }
+    return '$titleUrdu ($titleEnglish)';
+  }
 }
 
 const List<RoleInfo> kAppRoles = [
@@ -112,6 +184,7 @@ const List<RoleInfo> kAppRoles = [
 // ─────────────────────────────────────────────────────────────────────────────
 class RoleSelectionScreen extends StatefulWidget {
   final LanguageController languageController;
+  final ThemeController themeController;
   final List<Map<String, dynamic>> students;
   final Future<void> Function(List<Map<String, dynamic>>) onSave;
   final Function(AppRole) onRoleSelected;
@@ -119,6 +192,7 @@ class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({
     super.key,
     required this.languageController,
+    required this.themeController,
     required this.students,
     required this.onSave,
     required this.onRoleSelected,
@@ -149,6 +223,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
   // ── STEP 1: SELECT ROLE (Dark Green Islamic Theme) ──
   Widget _buildStep1RoleSelect() {
+    final loc = AppLocalizations.of(context);
+
     return Container(
       key: const ValueKey(1),
       width: double.infinity,
@@ -175,9 +251,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Text(
-                '1. کردار منتخب کریں',
-                style: TextStyle(
+              child: Text(
+                loc.translate('select_role'),
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
@@ -193,18 +269,17 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 shape: BoxShape.circle,
                 color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
                 border: Border.all(color: const Color(0xFFD4AF37), width: 2),
-              ),
-              child: const Icon(
-                Icons.mosque_rounded,
-                color: Color(0xFFFEE180),
-                size: 44,
+                image: const DecorationImage(
+                  image: AssetImage('assets/images/app_logo.jpg'),
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
             const SizedBox(height: 16),
             // Main Title
-            const Text(
-              'اپنا کردار منتخب کریں',
-              style: TextStyle(
+            Text(
+              loc.translate('select_role'),
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -287,7 +362,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              roleInfo.titleUrdu,
+                              roleInfo.title(context),
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -325,9 +400,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                       _currentStep = 2;
                     });
                   },
-                  icon: const Text(
-                    'جاری رکھیں',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  icon: Text(
+                    loc.translate('continue_btn'),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   label: const Icon(Icons.arrow_forward_rounded, size: 20),
                 ),
@@ -341,6 +416,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
   // ── STEP 2: WELCOME SCREEN (Soft Off-White Islamic Screen) ──
   Widget _buildStep2WelcomeScreen() {
+    final loc = AppLocalizations.of(context);
     final info = _activeInfo;
     return Container(
       key: const ValueKey(2),
@@ -369,7 +445,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
-                    '2. خوش آمدید اسکرین',
+                    'خوش آمدید',
                     style: TextStyle(
                       color: Color(0xFF074E32),
                       fontWeight: FontWeight.bold,
@@ -385,44 +461,25 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Icon(Icons.wb_twilight_rounded, color: Colors.amber.shade700, size: 28),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFF074E32).withValues(alpha: 0.08),
-                    border: Border.all(color: const Color(0xFF074E32), width: 1.5),
-                  ),
-                  child: Icon(
-                    info.icon,
-                    size: 48,
-                    color: info.primaryColor,
+                const Icon(Icons.star, color: Color(0xFFD4AF37), size: 18),
+                Text(
+                  loc.translate('welcome'),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF032617),
                   ),
                 ),
-                Icon(Icons.wb_twilight_rounded, color: Colors.amber.shade700, size: 28),
+                const Icon(Icons.star, color: Color(0xFFD4AF37), size: 18),
               ],
             ),
-            const SizedBox(height: 20),
-            // Greeting Title
+            const SizedBox(height: 6),
             Text(
-              info.welcomeUrdu,
+              info.title(context),
               style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: info.primaryColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                info.subtitleUrdu,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.black87,
-                  height: 1.4,
-                ),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
               ),
             ),
             const Spacer(),
@@ -451,10 +508,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'علم کے نور سے اپنی دنیا اور آخرت کو سنواریں',
+                    info.title(context),
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 13.5,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Colors.grey.shade800,
                     ),
@@ -502,6 +559,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 class RoleDashboardScreen extends StatefulWidget {
   final AppRole currentRole;
   final LanguageController languageController;
+  final ThemeController themeController;
   final List<Map<String, dynamic>> students;
   final Future<void> Function(List<Map<String, dynamic>>) onSave;
   final VoidCallback onChangeRole;
@@ -510,6 +568,7 @@ class RoleDashboardScreen extends StatefulWidget {
     super.key,
     required this.currentRole,
     required this.languageController,
+    required this.themeController,
     required this.students,
     required this.onSave,
     required this.onChangeRole,
@@ -521,9 +580,269 @@ class RoleDashboardScreen extends StatefulWidget {
 
 class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
   int _selectedIndex = 0;
+  String _loggedInUserName = '';
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('current_user_name') ?? prefs.getString('cred_${widget.currentRole.name}_name');
+    if (name != null && name.isNotEmpty) {
+      setState(() {
+        _loggedInUserName = name;
+      });
+    }
+    setState(() {
+      _isLoading = false;
+    });
+  }
 
   RoleInfo get _roleInfo =>
       kAppRoles.firstWhere((r) => r.role == widget.currentRole);
+
+  void _triggerAddStudentModal() {
+    final studentNameCtrl = TextEditingController();
+    final fatherNameCtrl = TextEditingController();
+    final fatherPhoneCtrl = TextEditingController();
+    final teacherNameCtrl = TextEditingController(text: 'حافظ احمد حسن');
+    DateTime selectedAdmissionDate = DateTime.now();
+    String selectedShift = 'morning';
+    String selectedGroup = 'Hifz Group A';
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              titlePadding: EdgeInsets.zero,
+              title: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF074E32),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 22),
+                    SizedBox(width: 10),
+                    Text(
+                      'نیا طالب علم شامل کریں (New Student)',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF074E32),
+                        side: const BorderSide(color: Color(0xFF074E32)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () async {
+                        final contact = await ContactPickerHelper.pickContact(context, widget.students);
+                        if (contact != null) {
+                          setDialogState(() {
+                            fatherNameCtrl.text = contact['name'] ?? '';
+                            fatherPhoneCtrl.text = contact['phone'] ?? '';
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.contacts_rounded, size: 18),
+                      label: const Text('فون کانٹیکٹ سے نام امپورٹ کریں (Import Contact)', style: TextStyle(fontSize: 12)),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: studentNameCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'طالب علم کا نام (Student Name)',
+                        prefixIcon: const Icon(Icons.person, color: Color(0xFF074E32)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: fatherNameCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'والد کا نام (Father Name)',
+                        prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF074E32)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: fatherPhoneCtrl,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: 'والد کا موبائل نمبر (Parent Phone)',
+                        prefixIcon: const Icon(Icons.phone, color: Color(0xFF074E32)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedAdmissionDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2030),
+                        );
+                        if (picked != null) {
+                          setDialogState(() {
+                            selectedAdmissionDate = picked;
+                          });
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          border: Border.all(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_month_rounded, color: Color(0xFF074E32)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'تاریخ داخلہ (Admission Date): ${selectedAdmissionDate.year}-${selectedAdmissionDate.month.toString().padLeft(2, '0')}-${selectedAdmissionDate.day.toString().padLeft(2, '0')}',
+                                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                            const Icon(Icons.arrow_drop_down),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedGroup,
+                      decoration: InputDecoration(
+                        labelText: 'گروپ (Batch Group Option)',
+                        prefixIcon: const Icon(Icons.groups_rounded, color: Color(0xFF074E32)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'Hifz Group A', child: Text('حفظ گروپ (Hifz Group A)')),
+                        DropdownMenuItem(value: 'Nazira Group B', child: Text('ناظرہ گروپ (Nazira Group B)')),
+                        DropdownMenuItem(value: 'Tajweed Group C', child: Text('تجوید گروپ (Tajweed Group C)')),
+                        DropdownMenuItem(value: 'Primary Group D', child: Text('ابتدائی گروپ (Primary Group D)')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => selectedGroup = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedShift,
+                      decoration: InputDecoration(
+                        labelText: 'شفٹ / وقت (Shift Timing)',
+                        prefixIcon: const Icon(Icons.access_time_rounded, color: Color(0xFF074E32)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'morning', child: Text('صبح (Morning Shift)')),
+                        DropdownMenuItem(value: 'evening', child: Text('شام (Evening Shift)')),
+                        DropdownMenuItem(value: 'night', child: Text('شبینہ (Night Shift)')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => selectedShift = val);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  child: const Text('منسوخ'),
+                ),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF074E32),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.check_circle_rounded, size: 18),
+                  onPressed: () async {
+                    final name = studentNameCtrl.text.trim();
+                    if (name.isEmpty) return;
+
+                    final formattedDate = "${selectedAdmissionDate.year}-${selectedAdmissionDate.month.toString().padLeft(2, '0')}-${selectedAdmissionDate.day.toString().padLeft(2, '0')}";
+                    final fatherPhone = fatherPhoneCtrl.text.trim();
+
+                    final newStudent = {
+                      'name': name,
+                      'fatherName': fatherNameCtrl.text.trim(),
+                      'fatherPhone': fatherPhone,
+                      'dob': '',
+                      'group': selectedGroup,
+                      'className': selectedGroup,
+                      'teacherName': teacherNameCtrl.text.trim(),
+                      'shift': selectedShift,
+                      'gender': 'male',
+                      'language': 'ur',
+                      'messageMethod': 'SMS',
+                      'feeAmount': '500',
+                      'feeMonth': 'August 2026',
+                      'feeStatus': 'due',
+                      'isPresent': true,
+                      'isNewAdmission': true,
+                      'admissionDate': formattedDate,
+                      'parentPin': '1234',
+                    };
+
+                    final updatedList = List<Map<String, dynamic>>.from(widget.students)..add(newStudent);
+                    await widget.onSave(updatedList);
+
+                    if (fatherPhone.isNotEmpty) {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString('cred_parent_${fatherPhone}_pin', '1234');
+                    }
+
+                    if (context.mounted && dialogCtx.mounted) {
+                      Navigator.pop(dialogCtx);
+                      setState(() {
+                        _selectedIndex = 0; // Show Students List
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('نیا طالب علم ($name) کامیابی سے تمام پورٹلز (حاضری، فیس، بیچ) میں شامل ہو گیا!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  },
+                  label: const Text('داخلہ محفوظ کریں'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   void _showPtmDispatchDialog() {
     showDialog<void>(
@@ -686,16 +1005,30 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
         appBar: AppBar(
           backgroundColor: info.primaryColor,
           foregroundColor: Colors.white,
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          title: Row(
             children: [
-              Text(
-                'مکتب ایپ — ${info.titleUrdu} ڈیش بورڈ',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'assets/images/app_logo.jpg',
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.cover,
+                ),
               ),
-              Text(
-                info.titleEnglish,
-                style: const TextStyle(fontSize: 11, color: Colors.white70),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'مکتب ایپ — ${info.titleUrdu} ڈیش بورڈ',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    info.titleEnglish,
+                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                  ),
+                ],
               ),
             ],
           ),
@@ -728,61 +1061,203 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 widget.onChangeRole();
               },
             ),
+            ThemeButton(controller: widget.themeController),
+            const SizedBox(height: 8),
             LanguageButton(controller: widget.languageController),
           ],
         ),
-        body: _buildRoleSpecificBody(),
-        bottomNavigationBar: _buildBottomNav(),
+        body: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                ),
+              )
+            : _buildRoleSpecificBody(),
+        bottomNavigationBar: Container(
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, 5),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(30),
+            child: _buildBottomNav(),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildSideDrawer(BuildContext context, RoleInfo info) {
+    final loc = AppLocalizations.of(context);
+    final bool canAddStudent = widget.currentRole == AppRole.admin ||
+        widget.currentRole == AppRole.teacher ||
+        widget.currentRole == AppRole.manager;
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-            decoration: BoxDecoration(color: info.primaryColor),
-            accountName: Text('مکتب ایپ — ${info.titleUrdu}',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            accountEmail: Text('Role: ${info.titleEnglish}',
-                style: const TextStyle(color: Colors.white70)),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [info.primaryColor, info.primaryColor.withValues(alpha: 0.7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            accountName: Text(
+              _loggedInUserName.isNotEmpty
+                  ? _loggedInUserName
+                  : info.title(context),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            accountEmail: Text(
+              'Role: ${info.title(context)}',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
-              child: Icon(info.icon, color: info.primaryColor, size: 32),
+              child: const MaktabLogo(size: 64),
             ),
           ),
+          if (canAddStudent)
+            ListTile(
+              leading: const Icon(Icons.person_add_alt_1_rounded, color: Colors.blue),
+              title: Text(
+                loc.translate('add_student'),
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 13.5),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _triggerAddStudentModal();
+              },
+            ),
+          if (widget.currentRole == AppRole.admin || widget.currentRole == AppRole.manager)
+            ListTile(
+              leading: const Icon(Icons.class_rounded, color: Colors.teal),
+              title: Text(
+                loc.translate('create_group'),
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal, fontSize: 13.5),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CreateClassGroupScreen(
+                      students: widget.students,
+                      languageController: widget.languageController,
+                      onSave: widget.onSave,
+                    ),
+                  ),
+                );
+              },
+            ),
+          if (widget.currentRole == AppRole.admin || widget.currentRole == AppRole.manager)
+            ListTile(
+              leading: const Icon(Icons.security_rounded, color: Color(0xFF0F172A)),
+              title: Text(
+                loc.translate('staff_logins'),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ManageStaffLoginsScreen(
+                      languageController: widget.languageController,
+                    ),
+                  ),
+                );
+              },
+            ),
+          if (canAddStudent)
+            ListTile(
+              leading: const Icon(Icons.family_restroom_rounded, color: Colors.indigo),
+              title: Text(
+                loc.translate('parent_logins'),
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo, fontSize: 13.5),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ManageParentLoginsScreen(
+                      languageController: widget.languageController,
+                      students: widget.students,
+                      onSaveStudents: widget.onSave,
+                    ),
+                  ),
+                );
+              },
+            ),
+          if (canAddStudent) const Divider(),
           ListTile(
-            leading: const Icon(Icons.people_rounded, color: Color(0xFF074E32)),
-            title: const Text('1. طلبہ کی فہرست (Students List)'),
+            leading: const Icon(Icons.analytics_rounded, color: Colors.purple),
+            title: Text(
+              loc.translate('advanced_dashboard'),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             onTap: () {
               Navigator.pop(context);
-              setState(() => _selectedIndex = 0);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AnalyticsScreen(
+                    students: widget.students,
+                    languageController: widget.languageController,
+                    themeController: ThemeController(),
+                  ),
+                ),
+              );
             },
           ),
           ListTile(
-            leading: const Icon(Icons.how_to_reg_rounded, color: Color(0xFF074E32)),
-            title: const Text('2. حاضری کا کھاتہ (Attendance Ledger)'),
+            leading: const Icon(Icons.people_rounded, color: Color(0xFF074E32)),
+            title: Text(loc.translate('students_list')),
             onTap: () {
               Navigator.pop(context);
               setState(() => _selectedIndex = 1);
             },
           ),
           ListTile(
-            leading: const Icon(Icons.menu_book_rounded, color: Color(0xFF074E32)),
-            title: const Text('3. سبق و تلاوت (Lesson Plan)'),
+            leading: const Icon(Icons.how_to_reg_rounded, color: Color(0xFF074E32)),
+            title: Text(loc.translate('attendance')),
             onTap: () {
               Navigator.pop(context);
-              setState(() => _selectedIndex = 2);
+              setState(() => _selectedIndex = 3);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.menu_book_rounded, color: Color(0xFF074E32)),
+            title: Text(loc.translate('sabaq_lessons')),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LessonScreen(
+                    languageController: widget.languageController,
+                  ),
+                ),
+              );
             },
           ),
           ListTile(
             leading: const Icon(Icons.currency_rupee_rounded, color: Color(0xFF074E32)),
-            title: const Text('4. فیس پورٹل (Fees Management)'),
+            title: Text(loc.translate('fee_record')),
             onTap: () {
               Navigator.pop(context);
-              setState(() => _selectedIndex = 3);
+              setState(() => _selectedIndex = 2);
             },
           ),
           const Divider(),
@@ -907,6 +1382,8 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
   }
 
   Widget _buildBottomNav() {
+    final loc = AppLocalizations.of(context);
+
     switch (widget.currentRole) {
       case AppRole.manager:
       case AppRole.admin:
@@ -916,15 +1393,15 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           unselectedItemColor: Colors.grey,
           type: BottomNavigationBarType.fixed,
           onTap: (i) => setState(() => _selectedIndex = i),
-          items: const [
+          items: [
             BottomNavigationBarItem(
-                icon: Icon(Icons.dashboard_rounded), label: 'خلاصہ'),
+                icon: const Icon(Icons.dashboard_rounded), label: loc.translate('advanced_dashboard')),
             BottomNavigationBarItem(
-                icon: Icon(Icons.people_rounded), label: 'طلبہ'),
+                icon: const Icon(Icons.people_rounded), label: loc.translate('students_list')),
             BottomNavigationBarItem(
-                icon: Icon(Icons.currency_rupee_rounded), label: 'فیس'),
+                icon: const Icon(Icons.currency_rupee_rounded), label: loc.translate('fee_record')),
             BottomNavigationBarItem(
-                icon: Icon(Icons.how_to_reg_rounded), label: 'حاضری'),
+                icon: const Icon(Icons.how_to_reg_rounded), label: loc.translate('attendance')),
           ],
         );
       case AppRole.teacher:
@@ -934,15 +1411,15 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           unselectedItemColor: Colors.grey,
           type: BottomNavigationBarType.fixed,
           onTap: (i) => setState(() => _selectedIndex = i),
-          items: const [
+          items: [
             BottomNavigationBarItem(
-                icon: Icon(Icons.menu_book_rounded), label: 'سبق و تلاوت'),
+                icon: const Icon(Icons.menu_book_rounded), label: loc.translate('sabaq_lessons')),
             BottomNavigationBarItem(
-                icon: Icon(Icons.fact_check_rounded), label: 'حاضری'),
+                icon: const Icon(Icons.fact_check_rounded), label: loc.translate('attendance')),
             BottomNavigationBarItem(
-                icon: Icon(Icons.currency_rupee_rounded), label: 'فیس پورٹل'),
+                icon: const Icon(Icons.currency_rupee_rounded), label: loc.translate('fee_record')),
             BottomNavigationBarItem(
-                icon: Icon(Icons.people_outline_rounded), label: 'طلبہ'),
+                icon: const Icon(Icons.people_outline_rounded), label: loc.translate('students_list')),
           ],
         );
       case AppRole.parent:
@@ -951,13 +1428,13 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           selectedItemColor: _roleInfo.primaryColor,
           unselectedItemColor: Colors.grey,
           onTap: (i) => setState(() => _selectedIndex = i),
-          items: const [
+          items: [
             BottomNavigationBarItem(
-                icon: Icon(Icons.child_care_rounded), label: 'میرا بچہ'),
+                icon: const Icon(Icons.child_care_rounded), label: loc.translate('students_list')),
             BottomNavigationBarItem(
-                icon: Icon(Icons.history_edu_rounded), label: 'سبق کی رفتار'),
+                icon: const Icon(Icons.history_edu_rounded), label: loc.translate('sabaq_lessons')),
             BottomNavigationBarItem(
-                icon: Icon(Icons.receipt_long_rounded), label: 'فیس کی رسید'),
+                icon: const Icon(Icons.receipt_long_rounded), label: loc.translate('fee_record')),
           ],
         );
       case AppRole.mutawalli:
@@ -966,13 +1443,13 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           selectedItemColor: _roleInfo.primaryColor,
           unselectedItemColor: Colors.grey,
           onTap: (i) => setState(() => _selectedIndex = i),
-          items: const [
+          items: [
             BottomNavigationBarItem(
-                icon: Icon(Icons.account_balance_rounded), label: 'وقف خلاصہ'),
+                icon: const Icon(Icons.account_balance_rounded), label: loc.translate('advanced_dashboard')),
             BottomNavigationBarItem(
-                icon: Icon(Icons.payments_rounded), label: 'مالیاتی جائزہ'),
+                icon: const Icon(Icons.payments_rounded), label: loc.translate('fee_record')),
             BottomNavigationBarItem(
-                icon: Icon(Icons.picture_as_pdf_rounded), label: 'بیچ رپورٹ'),
+                icon: const Icon(Icons.picture_as_pdf_rounded), label: loc.translate('attendance')),
           ],
         );
       default:
@@ -981,11 +1458,11 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           selectedItemColor: _roleInfo.primaryColor,
           unselectedItemColor: Colors.grey,
           onTap: (i) => setState(() => _selectedIndex = i),
-          items: const [
+          items: [
             BottomNavigationBarItem(
-                icon: Icon(Icons.info_outline_rounded), label: 'معلومات'),
+                icon: const Icon(Icons.dashboard_rounded), label: loc.translate('advanced_dashboard')),
             BottomNavigationBarItem(
-                icon: Icon(Icons.contact_phone_rounded), label: 'رابطہ'),
+                icon: const Icon(Icons.people_rounded), label: loc.translate('students_list')),
           ],
         );
     }
@@ -996,13 +1473,18 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
       case AppRole.manager:
       case AppRole.admin:
         if (_selectedIndex == 1) {
-          return StudentListScreen(languageController: widget.languageController);
+          return StudentListScreen(
+            languageController: widget.languageController,
+            currentRole: widget.currentRole,
+            hideAppBar: true,
+          );
         }
         if (_selectedIndex == 2) {
           return FeeScreen(
             students: widget.students,
             languageController: widget.languageController,
             onSave: widget.onSave,
+            currentRole: widget.currentRole,
           );
         }
         if (_selectedIndex == 3) {
@@ -1010,6 +1492,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             students: widget.students,
             languageController: widget.languageController,
             onSave: widget.onSave,
+            currentRole: widget.currentRole,
           );
         }
         return _buildManagerAdminOverview();
@@ -1017,6 +1500,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
       case AppRole.teacher:
         if (_selectedIndex == 0) {
           return LessonScreen(
+            students: widget.students,
             languageController: widget.languageController,
           );
         }
@@ -1025,9 +1509,23 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             students: widget.students,
             languageController: widget.languageController,
             onSave: widget.onSave,
+            currentRole: widget.currentRole,
           );
         }
-        return StudentListScreen(languageController: widget.languageController);
+        if (_selectedIndex == 2) {
+          return FeeScreen(
+            students: widget.students,
+            languageController: widget.languageController,
+            onSave: widget.onSave,
+            currentRole: widget.currentRole,
+          );
+        }
+        // index 3 = Students List
+        return StudentListScreen(
+          languageController: widget.languageController,
+          currentRole: widget.currentRole,
+          hideAppBar: true,
+        );
 
       case AppRole.parent:
         if (_selectedIndex == 1) {
@@ -1040,6 +1538,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             students: widget.students,
             languageController: widget.languageController,
             onSave: widget.onSave,
+            currentRole: widget.currentRole,
           );
         }
         return _buildParentChildOverview();
@@ -1050,6 +1549,15 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             students: widget.students,
             languageController: widget.languageController,
             onSave: widget.onSave,
+            currentRole: widget.currentRole,
+          );
+        }
+        if (_selectedIndex == 2) {
+          return AttendanceScreen(
+            students: widget.students,
+            languageController: widget.languageController,
+            onSave: widget.onSave,
+            currentRole: widget.currentRole,
           );
         }
         return _buildMutawalliOverview();
@@ -1061,33 +1569,46 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
 
   // ── MANAGER / ADMIN OVERVIEW ──
   Widget _buildManagerAdminOverview() {
+    final loc = AppLocalizations.of(context);
     final totalStudents = widget.students.length;
     final presentCount =
         widget.students.where((s) => s['isPresent'] == true).length;
+    final absentCount = totalStudents - presentCount;
     final paidCount =
         widget.students.where((s) => s['feeStatus'] == 'paid').length;
+    final attendanceRate = totalStudents == 0
+        ? 0
+        : ((presentCount / totalStudents) * 100).toInt();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _RoleBannerCard(
-            title: 'خوش آمدید، ${_roleInfo.titleUrdu}!',
-            subtitle: _roleInfo.subtitleUrdu,
-            color: _roleInfo.primaryColor,
+          Row(
+            children: [
+              const MaktabLogo(size: 64),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _RoleBannerCard(
+                  title: '${loc.translate('welcome')}, ${_roleInfo.titleUrdu}!',
+                  subtitle: _roleInfo.subtitleUrdu,
+                  color: _roleInfo.primaryColor,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          const Text(
-            'ادارے کا مجموعی جائزہ (Overview)',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Text(
+            loc.translate('overview'),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: _StatCard(
-                  title: 'کل طلبہ',
+                  title: loc.translate('total_students'),
                   value: '$totalStudents',
                   icon: Icons.groups_rounded,
                   color: Colors.blue.shade700,
@@ -1096,7 +1617,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _StatCard(
-                  title: 'حاضر طلبہ',
+                  title: loc.translate('present'),
                   value: '$presentCount',
                   icon: Icons.check_circle_rounded,
                   color: Colors.green.shade700,
@@ -1105,7 +1626,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _StatCard(
-                  title: 'فیس وصولی',
+                  title: loc.translate('fee_collection'),
                   value: '$paidCount / $totalStudents',
                   icon: Icons.payments_rounded,
                   color: Colors.amber.shade800,
@@ -1113,10 +1634,107 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 20),
+
+          // ── ATTENDANCE RESULT DISPLAY ──
+          Text(
+            loc.translate('attendance_result'),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [const Color(0xFF074E32), Colors.green.shade800],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3))],
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.how_to_reg_rounded, color: Colors.amberAccent, size: 22),
+                    const SizedBox(width: 8),
+                    Text(loc.translate('attendance_result'),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ],
+                ),
+                const Divider(color: Colors.white30, height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _attendanceResultItem(loc.translate('present'), '$presentCount', Colors.greenAccent, Icons.check_circle_rounded),
+                    _attendanceResultItem(loc.translate('absent'), '$absentCount', Colors.redAccent, Icons.cancel_rounded),
+                    _attendanceResultItem(loc.translate('attendance_rate'), '$attendanceRate%', Colors.amberAccent, Icons.bar_chart_rounded),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Progress bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: totalStudents == 0 ? 0 : presentCount / totalStudents,
+                    minHeight: 10,
+                    backgroundColor: Colors.red.shade200,
+                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.greenAccent),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('${loc.translate('present')}: $presentCount',
+                        style: const TextStyle(fontSize: 10, color: Colors.white70)),
+                    Text('${loc.translate('absent')}: $absentCount',
+                        style: const TextStyle(fontSize: 10, color: Colors.white70)),
+                  ],
+                ),
+                if (widget.students.where((s) => s['isPresent'] != true).isNotEmpty) ...[
+                  const Divider(color: Colors.white30, height: 16),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text('${loc.translate('absent')} ${loc.translate('students_list')}:',
+                        style: const TextStyle(fontSize: 11, color: Colors.amberAccent, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 6),
+                  ...widget.students
+                      .where((s) => s['isPresent'] != true)
+                      .take(5)
+                      .map((s) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.person_off_rounded, size: 14, color: Colors.redAccent),
+                                const SizedBox(width: 8),
+                                Text(s['name']?.toString() ?? 'Student',
+                                    style: const TextStyle(fontSize: 12, color: Colors.white)),
+                                const Spacer(),
+                                Text(s['group']?.toString() ?? s['className']?.toString() ?? '',
+                                    style: const TextStyle(fontSize: 10, color: Colors.white54)),
+                              ],
+                            ),
+                          )),
+                  if (widget.students.where((s) => s['isPresent'] != true).length > 5)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '+${widget.students.where((s) => s['isPresent'] != true).length - 5} more...',
+                        style: const TextStyle(fontSize: 10, color: Colors.white54),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+
           const SizedBox(height: 24),
-          const Text(
-            'فوری اقدامات (Quick Actions)',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Text(
+            loc.translate('quick_actions'),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           GridView.count(
@@ -1128,19 +1746,19 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             crossAxisSpacing: 10,
             children: [
               _ActionTile(
-                title: 'حاضری درج کریں',
+                title: loc.translate('mark_attendance'),
                 icon: Icons.fact_check_rounded,
                 color: Colors.teal,
                 onTap: () => setState(() => _selectedIndex = 3),
               ),
               _ActionTile(
-                title: 'فیس پورٹل',
+                title: loc.translate('fee_portal'),
                 icon: Icons.currency_rupee_rounded,
                 color: Colors.orange.shade800,
                 onTap: () => setState(() => _selectedIndex = 2),
               ),
               _ActionTile(
-                title: 'سبق و تلاوت',
+                title: loc.translate('sabaq_lessons'),
                 icon: Icons.menu_book_rounded,
                 color: Colors.indigo,
                 onTap: () {
@@ -1155,13 +1773,13 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 },
               ),
               _ActionTile(
-                title: 'طلبہ کی فہرست',
+                title: loc.translate('students_list'),
                 icon: Icons.list_alt_rounded,
                 color: Colors.blue.shade800,
                 onTap: () => setState(() => _selectedIndex = 1),
               ),
               _ActionTile(
-                title: 'استاد لیو پورٹل',
+                title: loc.translate('leave_portal'),
                 icon: Icons.mark_email_unread_rounded,
                 color: Colors.green.shade800,
                 onTap: () {
@@ -1177,7 +1795,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 },
               ),
               _ActionTile(
-                title: 'کمیونٹی و پیغام رسانی',
+                title: loc.translate('community_chat'),
                 icon: Icons.chat_rounded,
                 color: Colors.purple.shade800,
                 onTap: () {
@@ -1193,7 +1811,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 },
               ),
               _ActionTile(
-                title: 'نتائج و کارکردگی',
+                title: loc.translate('results_performance'),
                 icon: Icons.assignment_turned_in_rounded,
                 color: Colors.teal.shade800,
                 onTap: () {
@@ -1208,7 +1826,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 },
               ),
               _ActionTile(
-                title: 'ایڈمن کنٹرول پورٹل',
+                title: loc.translate('admin_control'),
                 icon: Icons.admin_panel_settings_rounded,
                 color: const Color(0xFF074E32),
                 onTap: () {
@@ -1228,6 +1846,17 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _attendanceResultItem(String label, String val, Color color, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 22),
+        const SizedBox(height: 4),
+        Text(val, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.white70)),
+      ],
     );
   }
 
@@ -1543,6 +2172,9 @@ class _RoleBannerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12 ? 'Good Morning' : (hour < 17 ? 'Good Afternoon' : 'Good Evening');
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -1560,6 +2192,15 @@ class _RoleBannerCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            greeting,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.white70,
+            ),
+          ),
+          const SizedBox(height: 4),
           Text(
             title,
             style: const TextStyle(
@@ -1600,14 +2241,18 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: LinearGradient(
+          colors: [Colors.white, color.withValues(alpha: 0.05)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+            color: color.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1656,9 +2301,20 @@ class _ActionTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          gradient: LinearGradient(
+            colors: [color.withValues(alpha: 0.15), color.withValues(alpha: 0.05)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [

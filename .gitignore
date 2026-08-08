@@ -47,3 +47,9 @@ app.*.map.json
 # Logs & temp files
 error.txt
 
+# Windows
+windows/flutter/ephemeral/
+windows/flutter/generated_plugin_registrant.cc
+
+# Secrets
+.env

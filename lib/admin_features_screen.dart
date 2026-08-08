@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_localizations.dart';
 import 'db_backup_service.dart';
+import 'manage_staff_logins_screen.dart';
+import 'manage_parent_logins_screen.dart';
 
 class AdminFeaturesScreen extends StatefulWidget {
   final LanguageController languageController;
@@ -77,6 +79,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final isRtl = widget.languageController.locale.languageCode != 'en';
     final totalStudents = widget.students.length;
     final presentCount = widget.students.where((s) => s['isPresent'] == true).length;
@@ -94,19 +97,19 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('ایڈمنسٹریشن و انتظامی پورٹل', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Text(loc.translate('advanced_dashboard'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               Text('Branch: $activeBranch', style: const TextStyle(fontSize: 11, color: Colors.white70)),
             ],
           ),
           actions: [
             IconButton(
               icon: const Icon(Icons.account_tree_rounded),
-              tooltip: 'ملٹی مکتب شاخیں (Multi-Branch Switch)',
+              tooltip: 'Multi-Branch Switch',
               onPressed: _showBranchSwitchDialog,
             ),
             IconButton(
               icon: const Icon(Icons.storage_rounded),
-              tooltip: '.db داتابیس ایکسپورٹ و امپورٹ',
+              tooltip: 'DB Backup & Import/Export',
               onPressed: _showDbImportExportDialog,
             ),
             LanguageButton(controller: widget.languageController),
@@ -117,19 +120,66 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ITEM 1: Daily Executive Summary Card (روزانہ کی خلاصہ رپورٹ)
+              // ITEM 1: Daily Executive Summary Card
               _buildExecutiveSummaryCard(totalStudents, presentCount, totalFees),
 
               const SizedBox(height: 16),
 
-              // ITEM 8, 19, 30: Quick Student Actions (ID Card, Class Promotion, Leaving Certificate)
-              const Text('طلبہ و تعلیمی انتظامیہ (Student & Academic Controls)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              // SECURITY & LOGINS MANAGEMENT
+              const Text('Security & Logins / سیکیورٹی و لاگ ان انتظام', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
                     child: _QuickAdminCard(
-                      title: 'شناختی کارڈ (ID Card)',
+                      title: loc.translate('staff_logins'),
+                      icon: Icons.shield_rounded,
+                      color: const Color(0xFF0F172A),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ManageStaffLoginsScreen(
+                              languageController: widget.languageController,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _QuickAdminCard(
+                      title: loc.translate('parent_logins'),
+                      icon: Icons.vpn_key_rounded,
+                      color: const Color(0xFFB45309),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ManageParentLoginsScreen(
+                              languageController: widget.languageController,
+                              students: widget.students,
+                              onSaveStudents: widget.onSave,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // ITEM 8, 19, 30: Quick Student Actions
+              const Text('Student & Academic Controls / طلبہ و تعلیمی انتظامیہ', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _QuickAdminCard(
+                      title: 'ID Card / شناختی کارڈ',
                       icon: Icons.badge_rounded,
                       color: Colors.blue.shade800,
                       onTap: _showIdCardGeneratorDialog,
@@ -138,7 +188,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _QuickAdminCard(
-                      title: 'ترقیِ درجہ (Class Promote)',
+                      title: 'Promote / ترقیِ درجہ',
                       icon: Icons.grade_rounded,
                       color: Colors.green.shade800,
                       onTap: _showClassPromotionDialog,
@@ -147,7 +197,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _QuickAdminCard(
-                      title: 'سندِ فراغت (Leaving Cert)',
+                      title: 'Cert / سندِ فراغت',
                       icon: Icons.school_rounded,
                       color: Colors.indigo.shade800,
                       onTap: _showLeavingCertDialog,
@@ -163,17 +213,17 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
 
               const SizedBox(height: 16),
 
-              // ITEM 4: Madrasa Budgeting & Expenses (وقف و مکتب کی آمدن و اخراجات)
+              // ITEM 4: Madrasa Budgeting & Expenses
               _buildBudgetingSection(),
 
               const SizedBox(height: 16),
 
-              // ITEM 20: Substitute Teacher Assignment (متبادل استاد کی ڈیوٹی)
+              // ITEM 20: Substitute Teacher Assignment
               _buildSubstituteTeacherCard(),
 
               const SizedBox(height: 16),
 
-              // ITEM 26: Dropout Analytics (ترکِ تعلیم کا جائزہ)
+              // ITEM 26: Dropout Analytics
               _buildDropoutAnalyticsCard(),
 
               const SizedBox(height: 16),
@@ -185,7 +235,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _showRulesPortalDialog,
                       icon: const Icon(Icons.gavel_rounded, color: Color(0xFF074E32)),
-                      label: const Text('مکتب کے قواعد (Rules Code)'),
+                      label: const Text('Maktab Rules / قواعد'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -193,7 +243,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _showPermissionsMatrixDialog,
                       icon: const Icon(Icons.admin_panel_settings_rounded, color: Colors.purple),
-                      label: const Text('اجازت نامے (Permissions)'),
+                      label: const Text('Permissions / اجازتیں'),
                     ),
                   ),
                 ],
@@ -211,6 +261,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
   }
 
   Widget _buildExecutiveSummaryCard(int totalStudents, int presentCount, double totalFees) {
+    final loc = AppLocalizations.of(context);
     final attendanceRatio = totalStudents == 0 ? 0 : ((presentCount / totalStudents) * 100).toInt();
 
     return Container(
@@ -227,13 +278,13 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.dashboard_customize_rounded, color: Colors.amberAccent, size: 22),
-              SizedBox(width: 8),
+              const Icon(Icons.dashboard_customize_rounded, color: Colors.amberAccent, size: 22),
+              const SizedBox(width: 8),
               Expanded(
-                child: Text('خلاصہ رپورٹ (Daily Executive Summary)',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                child: Text(loc.translate('advanced_dashboard'),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
                     overflow: TextOverflow.ellipsis),
               ),
             ],
@@ -242,10 +293,10 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _summaryItem('کل طلبہ', '$totalStudents', Icons.people_rounded),
-              _summaryItem('حاضر طلبہ', '$presentCount', Icons.check_circle_rounded),
-              _summaryItem('حاضری کا تناسب', '$attendanceRatio%', Icons.bar_chart_rounded),
-              _summaryItem('وصول شدہ فیس', '₹${totalFees.toInt()}', Icons.account_balance_wallet_rounded),
+              _summaryItem(loc.translate('total_students'), '$totalStudents', Icons.people_rounded),
+              _summaryItem(loc.translate('present'), '$presentCount', Icons.check_circle_rounded),
+              _summaryItem(loc.translate('attendance_rate'), '$attendanceRatio%', Icons.bar_chart_rounded),
+              _summaryItem(loc.translate('fee_record'), '₹${totalFees.toInt()}', Icons.account_balance_wallet_rounded),
             ],
           ),
         ],
@@ -488,7 +539,9 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
             return RadioListTile<String>(
               title: Text(b),
               value: b,
+              // ignore: deprecated_member_use
               groupValue: activeBranch,
+              // ignore: deprecated_member_use
               onChanged: (val) {
                 if (val != null) {
                   setState(() => activeBranch = val);
@@ -526,7 +579,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
             onPressed: () async {
               final jsonStr = await DbBackupService.exportDatabaseJson();
               await DbBackupService.addAuditLog('DB Export', 'Exported full database json');
-              if (mounted) {
+              if (ctx.mounted && mounted) {
                 Navigator.pop(ctx);
                 showDialog(
                   context: context,
@@ -548,7 +601,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
               final jsonStr = await DbBackupService.exportDatabaseJson();
               final success = await DbBackupService.importDatabaseJson(jsonStr);
               await DbBackupService.addAuditLog('DB Import', 'Restored database from file');
-              if (mounted) {
+              if (ctx.mounted && mounted) {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

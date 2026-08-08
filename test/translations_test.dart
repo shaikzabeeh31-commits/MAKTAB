@@ -43,6 +43,19 @@ void main() {
     'sabaq_lessons',
     'select_language',
     'no_students_found',
+    'select_role',
+    'welcome',
+    'continue_btn',
+    'login',
+    'new_admission',
+    'old_admission',
+    'batch_group',
+    'advanced_dashboard',
+    'staff_logins',
+    'parent_logins',
+    'create_group',
+    'attendance_ledger',
+    'lesson_plan',
   ];
 
   group('Multi-Language Translations Verification Tests (8 Languages)', () {

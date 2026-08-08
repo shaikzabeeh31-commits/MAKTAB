@@ -1,36 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class LanguageController extends ChangeNotifier {
-  static const String _prefKey = 'selected_language';
-  Locale _locale = const Locale('ur');
-
-  Locale get locale => _locale;
-
-  LanguageController() {
-    _loadLanguage();
-  }
-
-  Future<void> _loadLanguage() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final langCode = prefs.getString(_prefKey) ?? 'ur';
-      _locale = Locale(langCode);
-      notifyListeners();
-    } catch (_) {}
-  }
-
-  Future<void> setLanguage(String langCode) async {
-    if (_locale.languageCode == langCode) return;
-    _locale = Locale(langCode);
-    notifyListeners();
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_prefKey, langCode);
-    } catch (_) {}
-  }
-}
-
+/// AppLocalizations provides multi-language translations across 8 languages:
+/// Urdu (ur), English (en), Arabic (ar), Hindi (hi), Telugu (te), Kannada (kn), Tamil (ta), Malayalam (ml).
 class AppLocalizations {
   final Locale locale;
 
@@ -41,19 +13,19 @@ class AppLocalizations {
         AppLocalizations(const Locale('ur'));
   }
 
-  static final Map<String, Map<String, String>> _localizedValues = {
+  static const _localizedValues = <String, Map<String, String>>{
     // ─────────────── URDU ───────────────
     'ur': {
       'app_title': 'مکتب مینیجر',
-      'students_list': 'طلباء کی فہرست',
-      'add_student': 'طالب علم شامل کریں',
-      'edit_student': 'معلومات تبدیل کریں',
+      'students_list': 'طلبہ کی فہرست',
+      'add_student': 'نیا طالب علم شامل کریں',
+      'edit_student': 'طالب علم کی تفصیلات ایڈٹ کریں',
       'delete_student': 'حذف کریں',
-      'search_hint': 'نام، رول نمبر، یا والد کے نام سے تلاش کریں...',
+      'search_hint': 'نام، داخلہ نمبر، یا والد کے نام سے تلاش کریں...',
       'name': 'نام',
-      'roll_no': 'رول نمبر',
+      'roll_no': 'داخلہ نمبر / Roll No',
       'father_name': 'والد کا نام',
-      'phone_number': 'فون نمبر',
+      'phone_number': 'موبائل نمبر / فون',
       'class_grade': 'کلاس / درجہ',
       'shift': 'شفٹ',
       'morning': 'صبح',
@@ -62,25 +34,25 @@ class AppLocalizations {
       'male': 'لڑکا',
       'female': 'لڑکی',
       'teacher_name': 'استاد کا نام',
-      'notice_channel': 'اطلاع کا ذریعہ',
-      'message_language': 'میسج کی زبان',
+      'notice_channel': 'نوٹس کا ذریعہ',
+      'message_language': 'پیغام کی زبان',
       'save': 'محفوظ کریں',
-      'cancel': 'کینسل',
-      'delete': 'ڈیلیٹ',
-      'fee_record': 'فیس ریکارڈ',
+      'cancel': 'منسوخ کریں',
+      'delete': 'حذف کریں',
+      'fee_record': 'فیس کا کھاتہ',
       'fee_amount': 'فیس کی رقم',
       'select_month': 'مہینہ منتخب کریں',
-      'fee_status': 'فیس کا اسٹیٹس',
-      'due': 'واجب الادا',
-      'partially_paid': 'جزوی ادا',
-      'paid': 'ادا شدہ',
+      'fee_status': 'فیس کی صورتحال',
+      'due': 'غیر ادا شدہ / واجب الادا',
+      'partially_paid': 'جزوی ادا شدہ',
+      'paid': 'مکمل ادا شدہ',
       'attendance': 'حاضری',
       'present': 'حاضر',
       'absent': 'غائب',
       'leave': 'رخصت',
-      'sabaq_lessons': 'اسباق کا ہدف',
-      'total_students': 'کل طلباء',
-      'actions': 'ایکشنز',
+      'sabaq_lessons': 'سبق و تلاوت',
+      'total_students': 'کل طلبہ',
+      'actions': 'کارروائی',
       'select_language': 'زبان منتخب کریں',
       'urdu': 'اردو',
       'english': 'English',
@@ -94,31 +66,54 @@ class AppLocalizations {
       'confirm_delete': 'کیا آپ واقعی اس طالب علم کو حذف کرنا چاہتے ہیں؟',
       'view_sabaq': 'سبق دیکھیں',
       'call': 'کال کریں',
-      'whatsapp': 'واٹس ایپ',
+      'whatsapp': 'WhatsApp',
       'all': 'تمام',
-      'analytics': 'تجزیہ و رپورٹس',
+      'analytics': 'ایڈوانسڈ ڈیش بورڈ',
       'theme_mode': 'تھیم تبدیل کریں',
-      'print_pdf': 'پی ڈی ایف پرنٹ کریں',
-      'fee_receipt': 'فیس کی رسید',
-      'report_card': 'تعلیمی و حاضری رپورٹ',
+      'print_pdf': 'PDF پرنٹ کریں',
+      'fee_receipt': 'فیس رسید',
+      'report_card': 'تعلیمی رپورٹ کارڈ',
       'consecutive_absent_alert': 'مسلسل غیر حاضری کا الرٹ',
-      'consecutive_absent_desc': 'ان طلبہ کو مسلسل 3 دن سے زائد غیر حاضر پایا گیا ہے',
+      'consecutive_absent_desc': 'یہ طلبہ مسلسل 3 یا اس سے زیادہ دنوں سے غیر حاضر ہیں',
       'total_due_amount': 'کل واجب الادا رقم',
-      'total_paid_amount': 'کل ادا شدہ رقم',
+      'total_paid_amount': 'کل وصول شدہ رقم',
       'attendance_rate': 'حاضری کا تناسب',
+      'select_role': 'اپنا کردار منتخب کریں',
+      'welcome': 'خوش آمدید',
+      'continue_btn': 'آگے بڑھیں',
+      'login': 'لاگ ان کریں',
+      'new_admission': 'نیا داخلہ',
+      'old_admission': 'قدیم طالب علم',
+      'batch_group': 'گروپ / بیچ',
+      'advanced_dashboard': 'ایڈوانسڈ ڈیش بورڈ',
+      'staff_logins': 'اسٹاف PINs کا انتظام',
+      'parent_logins': 'والدین کے PINs کا انتظام',
+      'create_group': 'کلاس و گروپ بنائیں',
+      'attendance_ledger': 'حاضری کا کھاتہ',
+      'lesson_plan': 'سبق و تلاوت',
+      'overview': 'مجموعی جائزہ',
+      'quick_actions': 'فوری اقدامات',
+      'mark_attendance': 'حاضری درج کریں',
+      'fee_portal': 'فیس پورٹل',
+      'community_chat': 'کمیونٹی و پیغام رسانی',
+      'results_performance': 'نتائج و کارکردگی',
+      'admin_control': 'ایڈمن کنٹرول پورٹل',
+      'leave_portal': 'رخصت پورٹل',
+      'fee_collection': 'فیس وصولی',
+      'attendance_result': 'حاضری کا نتیجہ',
     },
 
     // ─────────────── ENGLISH ───────────────
     'en': {
       'app_title': 'Maktab Manager',
       'students_list': 'Student List',
-      'add_student': 'Add Student',
-      'edit_student': 'Edit Student',
-      'delete_student': 'Delete Student',
+      'add_student': 'Add New Student',
+      'edit_student': 'Edit Student Details',
+      'delete_student': 'Delete',
       'search_hint': 'Search by name, roll no, or father name...',
       'name': 'Name',
-      'roll_no': 'Roll Number',
-      'father_name': "Father's Name",
+      'roll_no': 'Roll No / Admission No',
+      'father_name': 'Father Name',
       'phone_number': 'Phone Number',
       'class_grade': 'Class / Grade',
       'shift': 'Shift',
@@ -127,13 +122,13 @@ class AppLocalizations {
       'gender': 'Gender',
       'male': 'Male',
       'female': 'Female',
-      'teacher_name': "Teacher's Name",
-      'notice_channel': 'Notification Method',
+      'teacher_name': 'Teacher Name',
+      'notice_channel': 'Notice Channel',
       'message_language': 'Message Language',
       'save': 'Save',
       'cancel': 'Cancel',
       'delete': 'Delete',
-      'fee_record': 'Fee Record',
+      'fee_record': 'Fee Ledger',
       'fee_amount': 'Fee Amount',
       'select_month': 'Select Month',
       'fee_status': 'Fee Status',
@@ -172,13 +167,36 @@ class AppLocalizations {
       'total_due_amount': 'Total Due Amount',
       'total_paid_amount': 'Total Paid Amount',
       'attendance_rate': 'Attendance Rate',
+      'select_role': 'Select Your Role',
+      'welcome': 'Welcome',
+      'continue_btn': 'Continue',
+      'login': 'Login',
+      'new_admission': 'New Admission',
+      'old_admission': 'Old Student',
+      'batch_group': 'Batch Group',
+      'advanced_dashboard': 'Advanced Dashboard',
+      'staff_logins': 'Manage Staff PINs',
+      'parent_logins': 'Manage Parent PINs',
+      'create_group': 'Create Class / Group',
+      'attendance_ledger': 'Attendance Ledger',
+      'lesson_plan': 'Lesson Plan',
+      'overview': 'Overview',
+      'quick_actions': 'Quick Actions',
+      'mark_attendance': 'Mark Attendance',
+      'fee_portal': 'Fee Portal',
+      'community_chat': 'Community Chat',
+      'results_performance': 'Results & Performance',
+      'admin_control': 'Admin Control Portal',
+      'leave_portal': 'Leave Portal',
+      'fee_collection': 'Fee Collection',
+      'attendance_result': 'Attendance Result',
     },
 
     // ─────────────── ARABIC ───────────────
     'ar': {
       'app_title': 'مدير المكتب',
       'students_list': 'قائمة الطلاب',
-      'add_student': 'إضافة طالب',
+      'add_student': 'إضافة طالب جديد',
       'edit_student': 'تعديل بيانات الطالب',
       'delete_student': 'حذف',
       'search_hint': 'ابحث بالاسم أو رقم القيد أو اسم الأب...',
@@ -205,7 +223,7 @@ class AppLocalizations {
       'fee_status': 'حالة الرسوم',
       'due': 'مستحق',
       'partially_paid': 'مدفوع جزئياً',
-      'paid': 'مدفوع',
+      'paid': 'مدفوع بالكامل',
       'attendance': 'التحضير',
       'present': 'حاضر',
       'absent': 'غائب',
@@ -238,16 +256,39 @@ class AppLocalizations {
       'total_due_amount': 'إجمالي المبلغ المستحق',
       'total_paid_amount': 'إجمالي المبلغ المدفوع',
       'attendance_rate': 'نسبة الحضور',
+      'select_role': 'اختر دورك',
+      'welcome': 'أهلاً وسهلاً',
+      'continue_btn': 'متابعة',
+      'login': 'تسجيل الدخول',
+      'new_admission': 'قبول جديد',
+      'old_admission': 'طالب سابق',
+      'batch_group': 'مجموعة الدفعة',
+      'advanced_dashboard': 'لوحة التحكم المتقدمة',
+      'staff_logins': 'إدارة حسابات الموظفين',
+      'parent_logins': 'إدارة حسابات أولياء الأمور',
+      'create_group': 'إنشاء مجموعة أو صف',
+      'attendance_ledger': 'سجل الحضور',
+      'lesson_plan': 'خطة الدروس',
+      'overview': 'نظرة عامة',
+      'quick_actions': 'إجراءات سريعة',
+      'mark_attendance': 'تسجيل الحضور',
+      'fee_portal': 'بوابة الرسوم',
+      'community_chat': 'المجتمع والمراسلة',
+      'results_performance': 'النتائج والأداء',
+      'admin_control': 'بوابة تحكم المشرف',
+      'leave_portal': 'بوابة الإجازات',
+      'fee_collection': 'تحصيل الرسوم',
+      'attendance_result': 'نتيجة الحضور',
     },
 
     // ─────────────── HINDI ───────────────
     'hi': {
       'app_title': 'मकतब मैनेजर',
       'students_list': 'छात्र सूची',
-      'add_student': 'छात्र जोड़ें',
-      'edit_student': 'छात्र संपादित करें',
+      'add_student': 'नया छात्र जोड़ें',
+      'edit_student': 'छात्र विवरण संपादित करें',
       'delete_student': 'हटाएं',
-      'search_hint': 'नाम, रोल नं, या पिता के नाम से खोजें...',
+      'search_hint': 'नाम, रोल नंबर या पिता के नाम से खोजें...',
       'name': 'नाम',
       'roll_no': 'रोल नंबर',
       'father_name': 'पिता का नाम',
@@ -304,14 +345,37 @@ class AppLocalizations {
       'total_due_amount': 'कुल बकाया राशि',
       'total_paid_amount': 'कुल भुगतान राशि',
       'attendance_rate': 'उपस्थिति दर',
+      'select_role': 'अपनी भूमिका चुनें',
+      'welcome': 'स्वागत है',
+      'continue_btn': 'जारी रखें',
+      'login': 'लॉग इन करें',
+      'new_admission': 'नया प्रवेश',
+      'old_admission': 'पुराना छात्र',
+      'batch_group': 'बैच ग्रुप',
+      'advanced_dashboard': 'एडवांस डैशबोर्ड',
+      'staff_logins': 'स्टाफ लॉगिन प्रबंधन',
+      'parent_logins': 'अभिभावक लॉगिन प्रबंधन',
+      'create_group': 'क्लास/ग्रुप बनाएं',
+      'attendance_ledger': 'उपस्थिति रजिस्टर',
+      'lesson_plan': 'पाठ योजना',
+      'overview': 'सारांश',
+      'quick_actions': 'त्वरित कार्रवाई',
+      'mark_attendance': 'हाज़िरी दर्ज करें',
+      'fee_portal': 'फीस पोर्टल',
+      'community_chat': 'समुदाय चैट',
+      'results_performance': 'परिणाम और प्रदर्शन',
+      'admin_control': 'एडमिन कंट्रोल पोर्टल',
+      'leave_portal': 'छुट्टी पोर्टल',
+      'fee_collection': 'फीस वसूली',
+      'attendance_result': 'हाज़िरी का परिणाम',
     },
 
     // ─────────────── TELUGU ───────────────
     'te': {
       'app_title': 'మక్తబ్ మేనేజర్',
       'students_list': 'విద్యార్థుల జాబితా',
-      'add_student': 'విద్యార్థిని జోడించండి',
-      'edit_student': 'విద్యార్థిని సవరించండి',
+      'add_student': 'కొత్త విద్యార్థిని జోడించండి',
+      'edit_student': 'విద్యార్థి వివరాలను సవరించండి',
       'delete_student': 'తొలగించండి',
       'search_hint': 'పేరు, రోల్ నం, లేదా తండ్రి పేరు ద్వారా శోధించండి...',
       'name': 'పేరు',
@@ -337,7 +401,7 @@ class AppLocalizations {
       'fee_status': 'ఫీజు స్థితి',
       'due': 'బాకీ',
       'partially_paid': 'పాక్షికంగా చెల్లించారు',
-      'paid': 'చెల్లించారు',
+      'paid': 'పూర్తిగా చెల్లించారు',
       'attendance': 'హాజరు',
       'present': 'హాజరు',
       'absent': 'గైర్హాజరు',
@@ -370,14 +434,37 @@ class AppLocalizations {
       'total_due_amount': 'మొత్తం బాకీ మొత్తం',
       'total_paid_amount': 'మొత్తం చెల్లించిన మొత్తం',
       'attendance_rate': 'హాజరు రేటు',
+      'select_role': 'మీ పాత్రను ఎంచుకోండి',
+      'welcome': 'స్వాగతం',
+      'continue_btn': 'కొనసాగించండి',
+      'login': 'లాగిన్',
+      'new_admission': 'కొత్త ప్రవేశం',
+      'old_admission': 'పాత విద్యార్థి',
+      'batch_group': 'బ్యాచ్ గ్రూప్',
+      'advanced_dashboard': 'అడ్వాన్స్డ్ డాష్‌బోర్డ్',
+      'staff_logins': 'స్టాఫ్ లాగిన్ నిర్వహణ',
+      'parent_logins': 'తల్లిదండ్రుల లాగిన్ నిర్వహణ',
+      'create_group': 'గ్రూప్ సృష్టించండి',
+      'attendance_ledger': 'హాజరు రికార్డు',
+      'lesson_plan': 'పాఠ్య ప్రణాళిక',
+      'overview': 'అవలోకనం',
+      'quick_actions': 'త్వరిత చర్యలు',
+      'mark_attendance': 'హాజరు నమోదు చేయండి',
+      'fee_portal': 'ఫీజు పోర్టల్',
+      'community_chat': 'సమాజ చాట్',
+      'results_performance': 'ఫలితాలు & పనితీరు',
+      'admin_control': 'అడ్మిన్ కంట్రోల్ పోర్టల్',
+      'leave_portal': 'సెలవు పోర్టల్',
+      'fee_collection': 'ఫీజు వసూలు',
+      'attendance_result': 'హాజరు ఫలితం',
     },
 
     // ─────────────── KANNADA ───────────────
     'kn': {
       'app_title': 'ಮಕ್ತಬ್ ಮ್ಯಾನೇಜರ್',
       'students_list': 'ವಿದ್ಯಾರ್ಥಿ ಪಟ್ಟಿ',
-      'add_student': 'ವಿದ್ಯಾರ್ಥಿ ಸೇರಿಸಿ',
-      'edit_student': 'ವಿದ್ಯಾರ್ಥಿ ಸಂಪಾದಿಸಿ',
+      'add_student': 'ಹೊಸ ವಿದ್ಯಾರ್ಥಿ ಸೇರಿಸಿ',
+      'edit_student': 'ವಿದ್ಯಾರ್ಥಿ ವಿವರಗಳನ್ನು ಸಂಪಾದಿಸಿ',
       'delete_student': 'ಅಳಿಸಿ',
       'search_hint': 'ಹೆಸರು, ರೋಲ್ ನಂ, ಅಥವಾ ತಂದೆ ಹೆಸರಿನಿಂದ ಹುಡುಕಿ...',
       'name': 'ಹೆಸರು',
@@ -403,7 +490,7 @@ class AppLocalizations {
       'fee_status': 'ಶುಲ್ಕ ಸ್ಥಿತಿ',
       'due': 'ಬಾಕಿ',
       'partially_paid': 'ಭಾಗಶಃ ಪಾವತಿ',
-      'paid': 'ಪಾವತಿ ಆಗಿದೆ',
+      'paid': 'ಸಂಪೂರ್ಣ ಪಾವತಿ ಆಗಿದೆ',
       'attendance': 'ಹಾಜರಾತಿ',
       'present': 'ಹಾಜರು',
       'absent': 'ಗೈರುಹಾಜರು',
@@ -436,14 +523,37 @@ class AppLocalizations {
       'total_due_amount': 'ಒಟ್ಟು ಬಾಕಿ ಮೊತ್ತ',
       'total_paid_amount': 'ಒಟ್ಟು ಪಾವತಿ ಮೊತ್ತ',
       'attendance_rate': 'ಹಾಜರಾತಿ ದರ',
+      'select_role': 'ನಿಮ್ಮ ಪಾತ್ರವನ್ನು ಆಯ್ಕೆಮಾಡಿ',
+      'welcome': 'ಸ್ವಾಗತ',
+      'continue_btn': 'ಮುಂದುವರಿಸಿ',
+      'login': 'ಲಾಗಿನ್',
+      'new_admission': 'ಹೊಸ ಪ್ರವೇಶ',
+      'old_admission': 'ಹಳೆಯ ವಿದ್ಯಾರ್ಥಿ',
+      'batch_group': 'ಬ್ಯಾಚ್ ಗ್ರೂಪ್',
+      'advanced_dashboard': 'ಅಡ್ವಾನ್ಸ್ಡ್ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್',
+      'staff_logins': 'ಸಿಬ್ಬಂದಿ ಲಾಗಿನ್ ನಿರ್ವಹಣೆ',
+      'parent_logins': 'ಪೋಷಕರ ಲಾಗಿನ್ ನಿರ್ವಹಣೆ',
+      'create_group': 'ಗುಂಪು ರಚಿಸಿ',
+      'attendance_ledger': 'ಹಾಜರಾತಿ ಪುಸ್ತಕ',
+      'lesson_plan': 'ಪಾಠ ಯೋಜನೆ',
+      'overview': 'ಅವಲೋಕನ',
+      'quick_actions': 'ತ್ವರಿತ ಕ್ರಿಯೆಗಳು',
+      'mark_attendance': 'ಹಾಜರಾತಿ ನಮೂದಿಸಿ',
+      'fee_portal': 'ಶುಲ್ಕ ಪೋರ್ಟಲ್',
+      'community_chat': 'ಸಮುದಾಯ ಚಾಟ್',
+      'results_performance': 'ಫಲಿತಾಂಶ ಮತ್ತು ಪ್ರದರ್ಶನ',
+      'admin_control': 'ಅಡ್ಮಿನ್ ಕಂಟ್ರೋಲ್ ಪೋರ್ಟಲ್',
+      'leave_portal': 'ರಜೆ ಪೋರ್ಟಲ್',
+      'fee_collection': 'ಶುಲ್ಕ ಸಂಗ್ರಹ',
+      'attendance_result': 'ಹಾಜರಾತಿ ಫಲಿತಾಂಶ',
     },
 
     // ─────────────── TAMIL ───────────────
     'ta': {
       'app_title': 'மக்தப் மேலாளர்',
       'students_list': 'மாணவர் பட்டியல்',
-      'add_student': 'மாணவரை சேர்க்கவும்',
-      'edit_student': 'மாணவரை திருத்தவும்',
+      'add_student': 'புதிய மாணவரை சேர்க்கவும்',
+      'edit_student': 'மாணவர் விவரங்களை திருத்தவும்',
       'delete_student': 'நீக்கு',
       'search_hint': 'பெயர், சுருட்டு எண், அல்லது தந்தை பெயரால் தேடுங்கள்...',
       'name': 'பெயர்',
@@ -469,7 +579,7 @@ class AppLocalizations {
       'fee_status': 'கட்டண நிலை',
       'due': 'நிலுவை',
       'partially_paid': 'பகுதியாக செலுத்தப்பட்டது',
-      'paid': 'செலுத்தப்பட்டது',
+      'paid': 'முழுமையாக செலுத்தப்பட்டது',
       'attendance': 'வருகை',
       'present': 'வருகை',
       'absent': 'வருகையில்லை',
@@ -483,7 +593,7 @@ class AppLocalizations {
       'arabic': 'அரபிக் (العربية)',
       'hindi': 'இந்தி (हिंदी)',
       'telugu': 'தெலுங்கு (తెలుగు)',
-      'kannada': 'கன்னடம் (ಕನ್ನಡ)',
+      'kannada': 'கன்னடம் (<ctrl42><ctrl42><ctrl42>)',
       'tamil': 'தமிழ்',
       'malayalam': 'மலையாளம் (മലയാളം)',
       'no_students_found': 'மாணவர்கள் எவரும் கண்டுபிடிக்கப்படவில்லை',
@@ -502,14 +612,37 @@ class AppLocalizations {
       'total_due_amount': 'மொத்த நிலுவை தொகை',
       'total_paid_amount': 'மொத்த செலுத்திய தொகை',
       'attendance_rate': 'வருகை விகிதம்',
+      'select_role': 'உங்கள் பாத்திரத்தை தேர்ந்தெடுக்கவும்',
+      'welcome': 'வரவேற்பு',
+      'continue_btn': 'தொடரவும்',
+      'login': 'உள்நுழை',
+      'new_admission': 'புதிய சேர்க்கை',
+      'old_admission': 'பழைய மாணவர்',
+      'batch_group': 'பேட்ச் குழு',
+      'advanced_dashboard': 'மேம்பட்ட டாஷ்போர்டு',
+      'staff_logins': 'ஊழியர் உள்நுழைவு நிர்வாகம்',
+      'parent_logins': 'பெற்றோர் உள்நுழைவு நிர்வாகம்',
+      'create_group': 'குழுவை உருவாக்கவும்',
+      'attendance_ledger': 'வருகை பதிவு',
+      'lesson_plan': 'பாடத் திட்டம்',
+      'overview': 'கண்ணோட்டம்',
+      'quick_actions': 'விரைவு செயல்கள்',
+      'mark_attendance': 'வருகையைப் பதிவு செய்யுங்கள்',
+      'fee_portal': 'கட்டண போர்ட்டல்',
+      'community_chat': 'சமூக அரட்டை',
+      'results_performance': 'முடிவுகள் & செயல்திறன்',
+      'admin_control': 'நிர்வாக கட்டுப்பாட்டு போர்ட்டல்',
+      'leave_portal': 'விடுப்பு போர்ட்டல்',
+      'fee_collection': 'கட்டண வசூல்',
+      'attendance_result': 'வருகை முடிவு',
     },
 
     // ─────────────── MALAYALAM ───────────────
     'ml': {
       'app_title': 'മക്തബ് മാനേജർ',
       'students_list': 'വിദ്യാർത്ഥി പട്ടിക',
-      'add_student': 'വിദ്യാർത്ഥിയെ ചേർക്കുക',
-      'edit_student': 'വിദ്യാർത്ഥിയെ തിരുത്തുക',
+      'add_student': 'പുതിയ വിദ്യാർത്ഥിയെ ചേർക്കുക',
+      'edit_student': 'വിദ്യാർത്ഥി വിവരങ്ങൾ തിരുത്തുക',
       'delete_student': 'ഇല്ലാതാക്കുക',
       'search_hint': 'പേര്, റോൾ നം, അല്ലെങ്കിൽ പിതാവിന്റെ പേര് ഉപയോഗിച്ച് തിരയുക...',
       'name': 'പേര്',
@@ -535,7 +668,7 @@ class AppLocalizations {
       'fee_status': 'ഫീസ് നിലവാരം',
       'due': 'കുടിശ്ശിക',
       'partially_paid': 'ഭാഗികമായി അടച്ചു',
-      'paid': 'അടച്ചു',
+      'paid': 'മുഴുവനായി അടച്ചു',
       'attendance': 'ഹാജർ',
       'present': 'ഹാജർ',
       'absent': 'ഗൈർഹാജർ',
@@ -549,33 +682,55 @@ class AppLocalizations {
       'arabic': 'അറബിക് (العربية)',
       'hindi': 'ഹിന്ദി (हिंदी)',
       'telugu': 'തെലുഗു (తెలుగు)',
-      'kannada': 'കന്നഡ (ಕನ್ನಡ)',
+      'kannada': 'കന്നഡ (<ctrl42><ctrl42><ctrl42>)',
       'tamil': 'തമിഴ് (தமிழ்)',
       'malayalam': 'മലയാളം',
-      'no_students_found': 'വിദ്യാർത്ഥികളെ കണ്ടെത്തിയില്ല',
-      'confirm_delete': 'നിങ്ങൾക്ക് ഈ വിദ്യാർത്ഥിയെ ഇല്ലാതാക്കണോ?',
+      'no_students_found': 'വിദ്യാർത്ഥികളെ കണ്ടെത്താനായില്ല',
+      'confirm_delete': 'ഈ വിദ്യാർത്ഥിയെ നീക്കം ചെയ്യണമെന്ന് ഉറപ്പാണോ?',
       'view_sabaq': 'പാഠം കാണുക',
       'call': 'വിളിക്കുക',
       'whatsapp': 'WhatsApp',
       'all': 'എല്ലാം',
-      'analytics': 'വിശകലനങ്ങൾ & റിപ്പോർട്ടുകൾ',
+      'analytics': 'വിശകലനവും റിപ്പോർട്ടുകളും',
       'theme_mode': 'തീം മാറ്റുക',
       'print_pdf': 'PDF പ്രിന്റ് ചെയ്യുക',
       'fee_receipt': 'ഫീസ് രസീത്',
       'report_card': 'റിപ്പോർട്ട് കാർഡ്',
-      'consecutive_absent_alert': 'തുടർ ഗൈർഹാജർ മുന്നറിയിപ്പ്',
-      'consecutive_absent_desc': 'ഈ വിദ്യാർത്ഥികൾ തുടർച്ചയായി 3+ ദിവസം ഗൈർഹാജരായി',
+      'consecutive_absent_alert': 'തുടർച്ചയായ ഗൈർഹാജർ മുന്നറിയിപ്പ്',
+      'consecutive_absent_desc': 'ഈ വിദ്യാർത്ഥികൾ തുടർച്ചയായി 3+ ദിവസം ഗൈർഹാജരാണ്',
       'total_due_amount': 'ആകെ കുടിശ്ശിക തുക',
       'total_paid_amount': 'ആകെ അടച്ച തുക',
       'attendance_rate': 'ഹാജർ നിരക്ക്',
+      'select_role': 'നിങ്ങളുടെ പങ്ക് തിരഞ്ഞെടുക്കുക',
+      'welcome': 'സ്വാഗതം',
+      'continue_btn': 'തുടരുക',
+      'login': 'ലോഗിൻ',
+      'new_admission': 'പുതിയ പ്രവേശനം',
+      'old_admission': 'പഴയ വിദ്യാർത്ഥി',
+      'batch_group': 'ബാച്ച് ഗ്രൂപ്പ്',
+      'advanced_dashboard': 'അഡ്വാൻസ്ഡ് ഡാഷ്‌ബോർഡ്',
+      'staff_logins': 'സ്റ്റാഫ് ലോഗിൻ മാനേജ്മെന്റ്',
+      'parent_logins': 'രക്ഷിതാക്കളുടെ ലോഗിൻ മാനേജ്മെന്റ്',
+      'create_group': 'ഗ്രൂപ്പ് സൃഷ്ടിക്കുക',
+      'attendance_ledger': 'ഹാജർ രജിസ്റ്റർ',
+      'lesson_plan': 'പാഠ പദ്ധതി',
+      'overview': 'അവലോകനം',
+      'quick_actions': 'ദ്രുത പ്രവർത്തനങ്ങൾ',
+      'mark_attendance': 'ഹാജർ രേഖപ്പെടുത്തുക',
+      'fee_portal': 'ഫീസ് പോർട്ടൽ',
+      'community_chat': 'കമ്മ്യൂണിറ്റി ചാറ്റ്',
+      'results_performance': 'ഫലങ്ങളും പ്രകടനവും',
+      'admin_control': 'അഡ്മിൻ കൺട്രോൾ പോർട്ടൽ',
+      'leave_portal': 'ലീവ് പോർട്ടൽ',
+      'fee_collection': 'ഫീസ് ശേഖരണം',
+      'attendance_result': 'ഹാജർ ഫലം',
     },
   };
 
   String translate(String key) {
     final langCode = locale.languageCode;
-    return _localizedValues[langCode]?[key] ??
-        _localizedValues['ur']?[key] ??
-        key;
+    final dict = _localizedValues[langCode] ?? _localizedValues['ur']!;
+    return dict[key] ?? _localizedValues['ur']?[key] ?? key;
   }
 }
 
@@ -584,8 +739,7 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
 
   @override
   bool isSupported(Locale locale) {
-    return ['ur', 'en', 'ar', 'hi', 'te', 'kn', 'ta', 'ml']
-        .contains(locale.languageCode);
+    return ['ur', 'en', 'ar', 'hi', 'te', 'kn', 'ta', 'ml'].contains(locale.languageCode);
   }
 
   @override
@@ -597,10 +751,39 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   bool shouldReload(AppLocalizationsDelegate old) => false;
 }
 
-/// Language metadata for display in picker
+class LanguageController extends ChangeNotifier {
+  static const String _prefKey = 'selected_language_code';
+  Locale _locale = const Locale('ur');
+
+  Locale get locale => _locale;
+
+  LanguageController() {
+    _loadLanguage();
+  }
+
+  Future<void> _loadLanguage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final langCode = prefs.getString(_prefKey) ?? 'ur';
+      _locale = Locale(langCode);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> setLanguage(String langCode) async {
+    if (_locale.languageCode == langCode) return;
+    _locale = Locale(langCode);
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefKey, langCode);
+    } catch (_) {}
+  }
+}
+
 class LangOption {
   final String code;
-  final String nativeScript; // shown in native script
+  final String nativeScript;
   const LangOption(this.code, this.nativeScript);
 }
 
@@ -626,7 +809,7 @@ class LanguageButton extends StatelessWidget {
     final currentCode = controller.locale.languageCode;
 
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.language),
+      icon: const Icon(Icons.language_rounded),
       tooltip: loc.translate('select_language'),
       onSelected: (String langCode) {
         controller.setLanguage(langCode);
@@ -637,17 +820,17 @@ class LanguageButton extends StatelessWidget {
           value: lang.code,
           child: Row(
             children: [
-              Expanded(
-                child: Text(
-                  lang.nativeScript,
-                  style: TextStyle(
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
+              Text(
+                lang.nativeScript,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? Theme.of(context).primaryColor : Colors.black87,
                 ),
               ),
-              if (isSelected)
-                const Icon(Icons.check, size: 18, color: Colors.green),
+              if (isSelected) ...[
+                const Spacer(),
+                Icon(Icons.check_rounded, color: Theme.of(context).primaryColor, size: 18),
+              ],
             ],
           ),
         );

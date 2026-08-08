@@ -454,6 +454,8 @@ void main() {
     testWidgets('batch PDF button exists in AppBar', (tester) async {
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
       expect(find.byIcon(Icons.picture_as_pdf_rounded), findsOneWidget);
     });
 

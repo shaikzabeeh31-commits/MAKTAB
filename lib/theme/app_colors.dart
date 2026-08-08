@@ -26,8 +26,8 @@ class AppColors {
   static const Color textSecondaryLight = Color(0xFF64748B);
   
   // Neutral Surfaces (Dark)
-  static const Color bgDark = Color(0xFF090D16);
-  static const Color surfaceDark = Color(0xFF131C2E);
+  static const Color bgDark = Color(0xFF000000); // True Black
+  static const Color surfaceDark = Color(0xFF111111); // Deep Grey
   static const Color textPrimaryDark = Color(0xFFF8FAFC);
   static const Color textSecondaryDark = Color(0xFF94A3B8);
 

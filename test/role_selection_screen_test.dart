@@ -40,7 +40,7 @@ void main() {
       )));
       await tester.pumpAndSettle();
 
-      expect(find.text('1. کردار منتخب کریں'), findsOneWidget);
+      expect(find.text('کردار منتخب کریں'), findsOneWidget);
       expect(find.text('اپنا کردار منتخب کریں'), findsOneWidget);
       expect(find.text('مینجر'), findsOneWidget);
       expect(find.text('ایڈمن'), findsOneWidget);
@@ -68,7 +68,7 @@ void main() {
       await tester.tap(find.text('جاری رکھیں'));
       await tester.pumpAndSettle();
 
-      expect(find.text('2. خوش آمدید اسکرین'), findsOneWidget);
+      expect(find.text('خوش آمدید'), findsOneWidget);
       expect(find.text('خوش آمدید استاد صاحب!'), findsOneWidget);
     });
 

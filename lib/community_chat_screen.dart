@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_localizations.dart';
 import 'leave_management_screen.dart';
@@ -372,15 +374,174 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
   late TabController _tabController;
   List<ChatMessage> _messages = [];
   List<PublicAnnouncement> _announcements = [];
+  bool _enableReadReceipts = true;
   final TextEditingController _textCtrl = TextEditingController();
   final String _storageKeyMsg = 'community_chat_messages_v1';
   final String _storageKeyAnn = 'community_announcements_v1';
   String _activeChatName = 'Main Owner';
+  void _showToolsBottomSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const Text(
+                  'کمیونٹی ٹولز اور ایکشنز (Chat Tools & Actions)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                GridView.count(
+                  shrinkWrap: true,
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  children: [
+                    _buildToolItem(
+                      icon: Icons.campaign_rounded,
+                      color: Colors.amber,
+                      label: 'Notice\n(اعلان)',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showSendAnnouncementDialog();
+                      },
+                    ),
+                    _buildToolItem(
+                      icon: Icons.payments_rounded,
+                      color: Colors.green,
+                      label: 'Fee Handover\n(فیس تصفیہ)',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showTeacherFeeHandoverDialog();
+                      },
+                    ),
+                    _buildToolItem(
+                      icon: Icons.event_busy_rounded,
+                      color: Colors.indigo,
+                      label: 'Leave Req\n(رخصت درخواست)',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => LeaveManagementScreen(
+                              currentRole: widget.currentRole,
+                              languageController: widget.languageController,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildToolItem(
+                      icon: Icons.mic_rounded,
+                      color: Colors.purple,
+                      label: 'Voice Note\n(آڈیو پیغام)',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _sendMessage(
+                            text: 'Voice message',
+                            attachmentType: AttachmentType.voice,
+                            voiceDuration: '0:15');
+                      },
+                    ),
+                    _buildToolItem(
+                      icon: Icons.image_rounded,
+                      color: Colors.teal,
+                      label: 'Photos\n(تصاویر)',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _sendMessage(
+                            text: 'Attaching photo gallery',
+                            attachmentType: AttachmentType.images,
+                            imageUrls: ['img1.jpg']);
+                      },
+                    ),
+                    _buildToolItem(
+                      icon: Icons.attach_file_rounded,
+                      color: Colors.deepOrange,
+                      label: 'PDF Doc\n(دستاویز)',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _sendMessage(
+                            text: 'Attached Document',
+                            attachmentType: AttachmentType.pdf,
+                            attachmentSize: '180 KB • PDF');
+                      },
+                    ),
+                    _buildToolItem(
+                      icon: _enableReadReceipts ? Icons.done_all_rounded : Icons.visibility_off_rounded,
+                      color: _enableReadReceipts ? Colors.blue : Colors.grey,
+                      label: _enableReadReceipts ? 'Receipts\n(ON)' : 'Receipts\n(OFF)',
+                      onTap: () {
+                        setState(() {
+                          _enableReadReceipts = !_enableReadReceipts;
+                        });
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(_enableReadReceipts 
+                                ? 'Read receipts enabled (ریڈ رسیدیں آن ہیں)'
+                                : 'Read receipts disabled (ریڈ رسیدیں آف ہیں)'),
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildToolItem({required IconData icon, required Color color, required String label, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: color.withValues(alpha: 0.15),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadData();
     if (widget.initialOpenAnnouncementModal) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -462,6 +623,52 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
     _saveData();
   }
 
+  bool _isSearching = false;
+  String _searchQuery = '';
+
+  Future<void> _callPhone() async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: '+923001234567');
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نہیں کال کر سکتے', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq'))));
+      }
+    }
+  }
+
+  void _showEmojiPicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: ['😊', '😂', '👍', '🙏', '❤️', '🔥', '🎉', '🌟', '✅', '❌'].map((emoji) {
+            return InkWell(
+              onTap: () {
+                _textCtrl.text += emoji;
+                Navigator.pop(ctx);
+              },
+              child: Text(emoji, style: const TextStyle(fontSize: 32)),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showComingSoon() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('یہ فیچر جلد آ رہا ہے (Coming Soon)', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isWide = MediaQuery.of(context).size.width > 700;
@@ -471,15 +678,8 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Communication — مکتب کمیونٹی و پیغام رسانی',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-            Text('Connected: ${widget.currentRole.name.toUpperCase()} ⇆ Manager ⇆ Main Owner',
-                style: const TextStyle(fontSize: 10.5, color: Colors.white70)),
-          ],
-        ),
+        title: const Text('Communication — مکتب کمیونٹی و پیغام رسانی',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
         actions: [
           // Send Announcement Action (Allowed for Manager, Teacher/Ustadh, Admin)
           IconButton(
@@ -497,6 +697,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
           tabs: const [
             Tab(icon: Icon(Icons.chat_bubble_rounded), text: 'چَیٹ (Chats)'),
             Tab(icon: Icon(Icons.group_rounded), text: 'گروپس (Groups)'),
+            Tab(icon: Icon(Icons.contacts_rounded), text: 'رابطے (Contacts)'),
             Tab(icon: Icon(Icons.campaign_rounded), text: 'اعلانات (Notices)'),
           ],
         ),
@@ -511,6 +712,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
               children: [
                 isWide ? _buildSplitView() : _buildChatView(),
                 _buildGroupsView(),
+                _buildContactsView(),
                 _buildAnnouncementsView(),
               ],
             ),
@@ -583,6 +785,56 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
     return _buildChatWindow();
   }
 
+  // ── Contacts Directory ──
+  Widget _buildContactsView() {
+    final contacts = _getFilteredContacts();
+
+    return Container(
+      color: Colors.white,
+      child: ListView.builder(
+        itemCount: contacts.length,
+        itemBuilder: (ctx, i) {
+          final c = contacts[i];
+          return ListTile(
+            leading: CircleAvatar(
+              backgroundColor: c['color'] as Color,
+              child: Text(c['initials'] as String, style: const TextStyle(color: Colors.white, fontSize: 12)),
+            ),
+            title: Text(c['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            subtitle: Text(c['role'] as String, style: const TextStyle(fontSize: 11)),
+            trailing: IconButton(
+              icon: const Icon(Icons.message_rounded, color: Colors.blue, size: 20),
+              onPressed: () {
+                setState(() {
+                  _activeChatName = c['name'] as String;
+                  _tabController.animateTo(0); // Go back to Chat tab
+                });
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> _getFilteredContacts() {
+    final allContacts = [
+      {'name': 'Admin (قاری محمد طارق)', 'role': 'Admin', 'initials': 'AD', 'color': Colors.purple},
+      {'name': 'Manager (مولانا عبداللہ)', 'role': 'Manager', 'initials': 'MA', 'color': Colors.green},
+      {'name': 'Teacher Ahmed', 'role': 'Teacher', 'initials': 'TA', 'color': Colors.blue},
+      {'name': 'Mutawalli (حاجی یوسف)', 'role': 'Mutawalli', 'initials': 'MU', 'color': Colors.amber.shade900},
+      {'name': 'Parent (علی والد محمد احمد)', 'role': 'Parent', 'initials': 'PA', 'color': Colors.orange},
+    ];
+
+    if (widget.currentRole == AppRole.teacher) {
+      return allContacts.where((c) => c['role'] != 'Teacher').toList();
+    } else if (widget.currentRole == AppRole.parent) {
+      return allContacts.where((c) => c['role'] == 'Admin' || c['role'] == 'Manager' || c['role'] == 'Teacher').toList();
+    }
+
+    return allContacts;
+  }
+
   // ── Left Sidebar Conversations ──
   Widget _buildConversationsSidebar() {
     final list = _getSampleConversations();
@@ -590,45 +842,20 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
       color: Colors.white,
       child: Column(
         children: [
-          // Quick Action Tiles
+          // Quick Action Tiles consolidated into a single premium button
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _showSendAnnouncementDialog,
-                    icon: const Icon(Icons.campaign, size: 13, color: Colors.amber),
-                    label: const Text('Notice', style: TextStyle(fontSize: 9.5)),
-                  ),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                 ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _showTeacherFeeHandoverDialog,
-                    icon: const Icon(Icons.payments, size: 13, color: Colors.green),
-                    label: const Text('Fee Handover', style: TextStyle(fontSize: 9.5)),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => LeaveManagementScreen(
-                            currentRole: widget.currentRole,
-                            languageController: widget.languageController,
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.event_busy, size: 13, color: Colors.indigo),
-                    label: const Text('Leave Req', style: TextStyle(fontSize: 9.5)),
-                  ),
-                ),
-              ],
+                onPressed: _showToolsBottomSheet,
+                icon: const Icon(Icons.build_rounded, size: 16, color: Colors.amberAccent),
+                label: const Text('Chat Tools & Actions (ٹولز مینو)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
             ),
           ),
           const Divider(height: 1),
@@ -682,6 +909,17 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
 
   // ── Main Chat Thread Window ──
   Widget _buildChatWindow() {
+    bool changed = false;
+    for (var m in _messages) {
+      if (!m.isMe && !m.isRead && (m.senderName.toLowerCase().contains(_activeChatName.toLowerCase()) || _activeChatName.toLowerCase().contains(m.senderName.toLowerCase()))) {
+        m.isRead = true;
+        changed = true;
+      }
+    }
+    if (changed) {
+      _saveData();
+    }
+
     return Column(
       children: [
         // Active Chat Header
@@ -708,23 +946,64 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
                 ],
               ),
               const Spacer(),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _enableReadReceipts ? Colors.blue.shade50 : Colors.grey.shade200,
+                  foregroundColor: _enableReadReceipts ? Colors.blue.shade700 : Colors.grey.shade700,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  minimumSize: const Size(0, 32),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _enableReadReceipts = !_enableReadReceipts;
+                  });
+                },
+                icon: Icon(
+                  _enableReadReceipts ? Icons.done_all_rounded : Icons.visibility_off_rounded,
+                  size: 16,
+                ),
+                label: Text(
+                  _enableReadReceipts ? 'Receipts ON' : 'Receipts OFF',
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(width: 8),
               IconButton(
-                  onPressed: () {},
+                  onPressed: _callPhone,
                   icon: const Icon(Icons.phone_rounded, color: Color(0xFF0F172A))),
               IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.search_rounded, color: Color(0xFF0F172A))),
+                  onPressed: () {
+                    setState(() {
+                      _isSearching = !_isSearching;
+                      _searchQuery = '';
+                    });
+                  },
+                  icon: Icon(_isSearching ? Icons.close : Icons.search_rounded, color: const Color(0xFF0F172A))),
             ],
           ),
         ),
+        if (_isSearching)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: TextField(
+              decoration: const InputDecoration(
+                hintText: 'تلاش کریں...',
+                prefixIcon: Icon(Icons.search),
+                isDense: true,
+              ),
+              onChanged: (val) => setState(() => _searchQuery = val),
+            ),
+          ),
         const Divider(height: 1),
         // Messages Thread
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.all(12),
-            itemCount: _messages.length,
+            itemCount: _messages.where((m) => m.text.toLowerCase().contains(_searchQuery.toLowerCase())).length,
             itemBuilder: (ctx, i) {
-              final m = _messages[i];
+              final filteredMessages = _messages.where((m) => m.text.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+              final m = filteredMessages[i];
               return _buildMessageBubble(m);
             },
           ),
@@ -793,8 +1072,8 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
                       style: const TextStyle(fontSize: 9, color: Colors.grey)),
                   if (m.isMe) ...[
                     const SizedBox(width: 4),
-                    const Icon(Icons.done_all_rounded,
-                        size: 14, color: Colors.blue),
+                    Icon(Icons.done_all_rounded,
+                        size: 14, color: (_enableReadReceipts && m.isRead) ? Colors.blue : Colors.grey),
                   ],
                 ],
               ),
@@ -1059,7 +1338,11 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
         children: [
           IconButton(
               icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.grey),
-              onPressed: () {}),
+              onPressed: _showEmojiPicker),
+          IconButton(
+              icon: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF0F172A), size: 24),
+              tooltip: 'ٹولز (Tools)',
+              onPressed: _showToolsBottomSheet),
           Expanded(
             child: TextField(
               controller: _textCtrl,
@@ -1068,34 +1351,6 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
                 border: InputBorder.none,
               ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.mic_rounded, color: Colors.grey),
-            onPressed: () {
-              _sendMessage(
-                  text: 'Voice message',
-                  attachmentType: AttachmentType.voice,
-                  voiceDuration: '0:15');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.image_rounded, color: Colors.grey),
-            onPressed: () {
-              _sendMessage(
-                  text: 'Attaching photo gallery',
-                  attachmentType: AttachmentType.images,
-                  imageUrls: ['img1.jpg']);
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.attach_file_rounded, color: Colors.grey),
-            onPressed: () {
-              _sendMessage(
-                  text: 'Attached Document',
-                  attachmentType: AttachmentType.pdf,
-                  attachmentName: 'Class_List.pdf',
-                  attachmentSize: '180 KB • PDF');
-            },
           ),
           CircleAvatar(
             backgroundColor: const Color(0xFF0F172A),
@@ -1124,7 +1379,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             subtitle: const Text('42 Members • Active'),
             trailing: ElevatedButton(
-              onPressed: () {},
+              onPressed: () => _tabController.animateTo(0),
               child: const Text('میسج کریں'),
             ),
           ),
@@ -1286,41 +1541,29 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
     );
   }
 
-  // ── Bottom Feature Highlights ──
+  // ── Bottom Feature 3-Dots Action Bar ──
   Widget _buildBottomFeatureGrid() {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: const [
-          _FeatureBadge(icon: Icons.chat_rounded, label: 'One to One'),
-          _FeatureBadge(icon: Icons.groups_rounded, label: 'Group Chat'),
-          _FeatureBadge(icon: Icons.mic_rounded, label: 'Voice Notes'),
-          _FeatureBadge(icon: Icons.attach_file_rounded, label: 'PDFs & Photos'),
-          _FeatureBadge(icon: Icons.done_all_rounded, label: 'Read Receipts'),
-          _FeatureBadge(icon: Icons.campaign_rounded, label: 'Public Notices'),
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.forum_rounded, color: Color(0xFF0F172A), size: 20),
+              SizedBox(width: 8),
+              Text('کمیونٹی ٹولز اور سروسز (Community Tools)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          IconButton.filledTonal(
+            style: IconButton.styleFrom(backgroundColor: const Color(0xFFF1F5F9)),
+            icon: const Icon(Icons.more_horiz_rounded, size: 26, color: Color(0xFF0F172A)),
+            tooltip: 'تمام ٹولز دکھائیں (Display All Tools)',
+            onPressed: _showToolsBottomSheet,
+          ),
         ],
       ),
-    );
-  }
-}
-
-class _FeatureBadge extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _FeatureBadge({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: const Color(0xFF0F172A)),
-        const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 8.5, color: Colors.grey)),
-      ],
     );
   }
 }

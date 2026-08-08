@@ -3,10 +3,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeController extends ChangeNotifier {
   static const String _prefKey = 'selected_theme_mode';
-  ThemeMode _themeMode = ThemeMode.light;
+  ThemeMode _themeMode = ThemeMode.system;
 
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
+  bool get isSystemMode => _themeMode == ThemeMode.system;
 
   ThemeController() {
     _loadThemeMode();
@@ -15,28 +16,33 @@ class ThemeController extends ChangeNotifier {
   Future<void> _loadThemeMode() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final modeStr = prefs.getString(_prefKey) ?? 'light';
+      final modeStr = prefs.getString(_prefKey) ?? 'system';
       if (modeStr == 'dark') {
         _themeMode = ThemeMode.dark;
-      } else {
+      } else if (modeStr == 'light') {
         _themeMode = ThemeMode.light;
+      } else {
+        _themeMode = ThemeMode.system;
       }
       notifyListeners();
     } catch (_) {}
   }
 
   Future<void> toggleTheme() async {
-    if (_themeMode == ThemeMode.light) {
+    // Cycle through: System -> Light -> Dark -> System
+    if (_themeMode == ThemeMode.system) {
+      _themeMode = ThemeMode.light;
+    } else if (_themeMode == ThemeMode.light) {
       _themeMode = ThemeMode.dark;
     } else {
-      _themeMode = ThemeMode.light;
+      _themeMode = ThemeMode.system;
     }
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
         _prefKey,
-        _themeMode == ThemeMode.dark ? 'dark' : 'light',
+        _themeMode == ThemeMode.dark ? 'dark' : (_themeMode == ThemeMode.light ? 'light' : 'system'),
       );
     } catch (_) {}
   }
@@ -49,11 +55,23 @@ class ThemeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    IconData icon;
+    String tooltip;
+
+    if (controller.isSystemMode) {
+      icon = Icons.brightness_auto;
+      tooltip = 'System Theme (Tap to switch)';
+    } else if (controller.isDarkMode) {
+      icon = Icons.dark_mode;
+      tooltip = 'Dark Mode (Tap to switch)';
+    } else {
+      icon = Icons.light_mode;
+      tooltip = 'Light Mode (Tap to switch)';
+    }
+
     return IconButton(
-      icon: Icon(
-        controller.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-      ),
-      tooltip: controller.isDarkMode ? 'Light Mode' : 'Dark Mode',
+      icon: Icon(icon),
+      tooltip: tooltip,
       onPressed: () {
         controller.toggleTheme();
       },

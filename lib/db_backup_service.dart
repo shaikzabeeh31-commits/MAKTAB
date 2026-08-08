@@ -1,5 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class DbBackupService {
   static const String _studentsKey = 'students_data';
@@ -73,5 +76,19 @@ class DbBackupService {
       });
       await prefs.setString(_auditLogsKey, jsonEncode(logs.take(100).toList()));
     } catch (_) {}
+  }
+
+  /// Share database backup via WhatsApp/Email using share_plus
+  static Future<void> shareDatabaseBackup() async {
+    try {
+      final jsonString = await exportDatabaseJson();
+      final directory = await getTemporaryDirectory();
+      final dateStr = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
+      final file = File('${directory.path}/maktab_backup_$dateStr.db.json');
+      await file.writeAsString(jsonString);
+      await Share.shareXFiles([XFile(file.path)], text: 'Maktab Database Backup');
+    } catch (e) {
+      print('Error sharing database: $e');
+    }
   }
 }

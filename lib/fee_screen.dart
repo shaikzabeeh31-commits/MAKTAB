@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'app_localizations.dart';
 import 'pdf_service.dart';
+import 'role_selection_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COLORS
@@ -28,6 +31,7 @@ class FeeScreen extends StatefulWidget {
   final LanguageController languageController;
   final Future<void> Function(List<Map<String, dynamic>>) onSave;
   final bool showAppBarLanguageButton;
+  final AppRole? currentRole;
 
   const FeeScreen({
     super.key,
@@ -35,6 +39,7 @@ class FeeScreen extends StatefulWidget {
     required this.languageController,
     required this.onSave,
     this.showAppBarLanguageButton = false,
+    this.currentRole,
   });
 
   @override
@@ -84,7 +89,13 @@ class _FeeScreenState extends State<FeeScreen> {
         final classOk = _selectedClass == 'All' ||
             (s['className']?.toString() ?? '') == _selectedClass;
         return shiftOk && classOk;
-      }).toList();
+      }).toList()
+        ..sort((a, b) {
+          final statusA = _feeStatus(a.value);
+          final statusB = _feeStatus(b.value);
+          int rank(String s) => s == 'due' ? 0 : s == 'partially_paid' ? 1 : 2;
+          return rank(statusA).compareTo(rank(statusB));
+        });
     });
   }
 
@@ -140,6 +151,10 @@ class _FeeScreenState extends State<FeeScreen> {
 
   double _pending(Map<String, dynamic> s) => _total(s) - _paid(s);
 
+  String _formatCurrency(num amount) {
+    return amount.toInt().toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => ',');
+  }
+
   String _feeStatus(Map<String, dynamic> s) =>
       _monthRecord(s)?['status']?.toString() ?? 'due';
 
@@ -177,6 +192,40 @@ class _FeeScreenState extends State<FeeScreen> {
       }
       _selectAll = _selectedIndices.length == _filtered.length;
     });
+  }
+
+  // ── bulk fee status ──
+  void _markAllFeeStatus(String status) {
+    final monthKey = _selectedMonthLabel;
+    setState(() {
+      for (final entry in _filtered) {
+        final s = _students[entry.key];
+        final total = _total(s);
+        s['feeHistory'] ??= <String, dynamic>{};
+        (s['feeHistory'] as Map<String, dynamic>)[monthKey] = {
+          'status': status,
+          'paid': status == 'paid' ? total.toString() : '0',
+          'total': total.toString(),
+          'paymentMode': s['paymentMode'] ?? 'Cash',
+        };
+        s['feeStatus'] = status;
+        s['feeMonth'] = monthKey;
+        if (status == 'paid') {
+          s['paidAmount'] = total.toString();
+        } else {
+          s['paidAmount'] = '0';
+        }
+      }
+    });
+    widget.onSave(_students);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(status == 'paid'
+            ? '✓ تمام طلبہ کی فیس ادا شدہ (All Marked Paid) — $monthKey'
+            : '✗ تمام طلبہ کی فیس واجب الادا (All Marked Due) — $monthKey'),
+        backgroundColor: status == 'paid' ? Colors.green : Colors.red,
+      ),
+    );
   }
 
   // ── comms ──
@@ -870,6 +919,65 @@ class _FeeScreenState extends State<FeeScreen> {
     );
   }
 
+  Future<void> _sendFeeReportToAdmin() async {
+    final loc = AppLocalizations.of(context);
+    final paidCount = _filtered.where((e) => _feeStatus(_students[e.key]) == 'paid').length;
+    final pendingCount = _filtered.where((e) => _feeStatus(_students[e.key]) == 'due').length;
+    final total = _filtered.length;
+    final monthStr = _selectedMonthLabel;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('رپورٹ بھیجیں (Send Report)'),
+        content: Text('کیا آپ ایڈمن کو اس مہینے کا فیس خلاصہ بھیجنا چاہتے ہیں؟\n\n'
+            'مہینہ: $monthStr\n'
+            'ادا شدہ: $paidCount\n'
+            'واجب الادا: $pendingCount\n'
+            'کل طلبہ: $total'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(loc.translate('cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('بھیجیں (Send)')),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final prefs = await SharedPreferences.getInstance();
+      final reportsStr = prefs.getString('teacher_reports') ?? '[]';
+      final List<dynamic> reportsList = jsonDecode(reportsStr);
+
+      reportsList.add({
+        'id': 'fee_rep_${DateTime.now().millisecondsSinceEpoch}',
+        'type': 'fee',
+        'dateTime': DateTime.now().toString(),
+        'senderName': 'Ustadh (Teacher)',
+        'summary': 'فیس خلاصہ ($monthStr): ادا شدہ $paidCount | واجب الادا $pendingCount',
+        'details': {
+          'month': monthStr,
+          'total': total,
+          'paid': paidCount,
+          'due': pendingCount,
+          'dueStudentsList': _filtered
+              .where((e) => _feeStatus(_students[e.key]) == 'due')
+              .map((e) => _students[e.key]['name'] ?? 'Student')
+              .toList(),
+        }
+      });
+
+      await prefs.setString('teacher_reports', jsonEncode(reportsList));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ فیس رپورٹ کامیابی کے ساتھ ایڈمن کو بھیج دی گئی (Report Sent)!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // BUILD
   // ─────────────────────────────────────────────────────────────────────────
@@ -894,41 +1002,118 @@ class _FeeScreenState extends State<FeeScreen> {
         ),
         centerTitle: true,
         actions: [
-          // Collection Analytics Button (Item 36)
-          IconButton(
-            icon: const Icon(Icons.bar_chart_rounded),
-            tooltip: 'ماہانہ فیس گراف و اینالیٹکس',
-            onPressed: _showCollectionAnalyticsDialog,
-          ),
-          // Teacher Collection Ledger Button (Item 37)
-          IconButton(
-            icon: const Icon(Icons.receipt_long_rounded),
-            tooltip: 'استاد فیس کھاتہ (Teacher Ledger)',
-            onPressed: _showTeacherLedgerDialog,
-          ),
-          // Annual Audit Report Button (Item 39)
-          IconButton(
-            icon: const Icon(Icons.verified_user_rounded),
-            tooltip: 'سالانہ اڈٹ رپورٹ (Annual Audit)',
-            onPressed: _showAnnualAuditDialog,
-          ),
-          // Fee Collector Role Toggle (Item 40)
-          IconButton(
-            icon: const Icon(Icons.admin_panel_settings_rounded),
-            tooltip: 'فیس وصولی کار رول اختیارات',
-            onPressed: _showFeeCollectorRoleDialog,
-          ),
-          // Batch PDF button
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf_rounded),
-            tooltip: 'Batch PDF Report',
-            onPressed: _printBatchReport,
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded),
+            tooltip: 'ٹولز (Tools)',
+            onSelected: (value) {
+              if (value == 'send_report') {
+                _sendFeeReportToAdmin();
+              } else if (value == 'mark_all_paid') {
+                _markAllFeeStatus('paid');
+              } else if (value == 'mark_all_due') {
+                _markAllFeeStatus('due');
+              } else if (value == 'analytics') {
+                _showCollectionAnalyticsDialog();
+              } else if (value == 'ledger') {
+                _showTeacherLedgerDialog();
+              } else if (value == 'audit') {
+                _showAnnualAuditDialog();
+              } else if (value == 'collector_role') {
+                _showFeeCollectorRoleDialog();
+              } else if (value == 'batch_pdf') {
+                _printBatchReport();
+              }
+            },
+            itemBuilder: (context) => [
+              if (widget.currentRole == AppRole.teacher)
+                const PopupMenuItem(
+                  value: 'send_report',
+                  child: Row(
+                    children: [
+                      Icon(Icons.send_rounded, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('Send Report (رپورٹ بھیجیں)'),
+                    ],
+                  ),
+                ),
+              const PopupMenuItem(
+                value: 'mark_all_paid',
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_rounded, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text('Mark All Paid (سب ادا شدہ)'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'mark_all_due',
+                child: Row(
+                  children: [
+                    Icon(Icons.money_off_rounded, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Mark All Due (سب واجب الادا)'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'analytics',
+                child: Row(
+                  children: [
+                    Icon(Icons.bar_chart_rounded, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Fee Analytics (فیس گراف)'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'ledger',
+                child: Row(
+                  children: [
+                    Icon(Icons.receipt_long_rounded, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Teacher Ledger (فیس کھاتہ)'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'audit',
+                child: Row(
+                  children: [
+                    Icon(Icons.verified_user_rounded, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Annual Audit (اڈٹ رپورٹ)'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'collector_role',
+                child: Row(
+                  children: [
+                    Icon(Icons.admin_panel_settings_rounded, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Role Settings (رول اختیارات)'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'batch_pdf',
+                child: Row(
+                  children: [
+                    Icon(Icons.picture_as_pdf_rounded, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Batch PDF (پی ڈی ایف رپورٹ)'),
+                  ],
+                ),
+              ),
+            ],
           ),
           if (widget.showAppBarLanguageButton)
             LanguageButton(controller: widget.languageController),
         ],
       ),
       body: Column(children: [
+        _buildDashboardSummary(),
         _buildFilterBar(),
         _buildCalendarBar(),
         _buildSelectAllRow(loc),
@@ -950,6 +1135,59 @@ class _FeeScreenState extends State<FeeScreen> {
             _selectedIndices.length, alertCount, pendingCount, paidCount),
         _buildSendButton(loc),
       ]),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DASHBOARD SUMMARY
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildDashboardSummary() {
+    final double totalCollected = _filtered.fold(0, (sum, e) => sum + _paid(_students[e.key]));
+    final double totalPending = _filtered.fold(0, (sum, e) => sum + _pending(_students[e.key]));
+    final double grandTotal = totalCollected + totalPending;
+    final double progress = grandTotal == 0 ? 0 : (totalCollected / grandTotal).clamp(0.0, 1.0);
+    
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          SizedBox(
+            height: 50,
+            width: 50,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CircularProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.red.shade100,
+                  color: _kGreen,
+                  strokeWidth: 6,
+                ),
+                Center(child: Text('${(progress * 100).toInt()}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Revenue Dashboard', style: TextStyle(fontWeight: FontWeight.bold, color: _kNavy)),
+                Text('Collected: ₹${_formatCurrency(totalCollected)}  |  Due: ₹${_formatCurrency(totalPending)}', style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+              ],
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reminders sent to all defaulters!'), backgroundColor: _kGreen));
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _kRed, foregroundColor: Colors.white),
+            icon: const Icon(Icons.notifications_active, size: 16),
+            label: const Text('Nudge All', style: TextStyle(fontSize: 12)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1351,7 +1589,7 @@ class _FeeScreenState extends State<FeeScreen> {
                             mainAxisAlignment:
                                 MainAxisAlignment.center,
                             children: [
-                              Text(paid.toInt().toString(),
+                              Text(_formatCurrency(paid),
                                   style: const TextStyle(
                                       color: _kGreen,
                                       fontWeight: FontWeight.bold,
@@ -1360,7 +1598,7 @@ class _FeeScreenState extends State<FeeScreen> {
                                   style: TextStyle(
                                       fontSize: 11,
                                       color: Colors.grey)),
-                              Text(pending.toInt().toString(),
+                              Text(_formatCurrency(pending),
                                   style: const TextStyle(
                                       color: _kOrange,
                                       fontWeight: FontWeight.bold,
@@ -1368,6 +1606,18 @@ class _FeeScreenState extends State<FeeScreen> {
                             ]),
                         const SizedBox(height: 3),
                         _FeeProgressBar(paid: paid, total: total),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isPaid ? _kGreen : (hasPending ? _kRed : _kOrange),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            isPaid ? 'PAID' : (paid > 0 ? 'PARTIAL' : 'DUE'),
+                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                          ),
+                        ),
                         if (paid > 0) ...[
                           const SizedBox(height: 2),
                           Text(

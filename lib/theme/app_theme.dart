@@ -2,9 +2,20 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 import 'app_spacing.dart';
 
+import 'package:google_fonts/google_fonts.dart';
+
 class AppTheme {
-  static ThemeData lightTheme() {
+  static TextTheme _getTextTheme(String langCode) {
+    if (langCode == 'ur' || langCode == 'ar') {
+      return GoogleFonts.notoNastaliqUrduTextTheme();
+    }
+    return GoogleFonts.interTextTheme();
+  }
+
+  static ThemeData lightTheme([String langCode = 'en']) {
+    final textTheme = _getTextTheme(langCode);
     return ThemeData(
+      textTheme: textTheme,
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
@@ -14,6 +25,12 @@ class AppTheme {
         surface: AppColors.surfaceLight,
       ),
       scaffoldBackgroundColor: AppColors.bgLight,
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
       cardTheme: const CardThemeData(
         color: AppColors.surfaceLight,
         elevation: 1.5,
@@ -34,8 +51,13 @@ class AppTheme {
     );
   }
 
-  static ThemeData darkTheme() {
+  static ThemeData darkTheme([String langCode = 'en']) {
+    final textTheme = _getTextTheme(langCode);
     return ThemeData(
+      textTheme: textTheme.apply(
+        bodyColor: AppColors.textPrimaryDark,
+        displayColor: AppColors.textPrimaryDark,
+      ),
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
@@ -45,6 +67,12 @@ class AppTheme {
         surface: AppColors.surfaceDark,
       ),
       scaffoldBackgroundColor: AppColors.bgDark,
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
       cardTheme: const CardThemeData(
         color: AppColors.surfaceDark,
         elevation: 2,

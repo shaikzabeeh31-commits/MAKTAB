@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'app_localizations.dart';
-import 'pdf_service.dart';
 import 'theme_controller.dart';
 
 class LessonScreen extends StatefulWidget {
+  final List<Map<String, dynamic>>? students;
   final LanguageController? languageController;
   final ThemeController? themeController;
 
   const LessonScreen({
     super.key,
+    this.students,
     this.languageController,
     this.themeController,
   });
@@ -21,949 +24,641 @@ class LessonScreen extends StatefulWidget {
 
 class _LessonScreenState extends State<LessonScreen> {
   DateTime selectedDate = DateTime.now();
-  List<String> subjects = [
-    'Diniyat',
-    'Quran Hifz',
-    'Nazra',
-    'Tajweed',
-    'Arabic',
-    'Hadith',
-    'Seerat',
-  ];
-  int selectedSubjectIndex = 0;
+  String selectedGroup = 'all';
+  String teacherName = 'محمد عمران';
+  String currentShift = 'صبح';
+  String currentBook = 'قرآن کریم';
+  String currentChapter = 'سورۃ الفاتحہ — تلاوت اور معنی';
+  
+  final TextEditingController globalSubjectController = TextEditingController(text: 'قرآن کریم - سورۃ الفاتحہ');
 
-  String get selectedSubject {
-    if (subjects.isEmpty) return 'Diniyat';
-    return subjects[selectedSubjectIndex];
-  }
-
-  final TextEditingController todayLessonController = TextEditingController(
-    text: 'رَّبِّ زِدْنِي عِلْمًا وَارْزُقْنِي فَهْمًا\nRabb Zidni Ilman Warzuqni Fahman',
-  );
-
-  // Student Dars State List
-  final List<Map<String, dynamic>> studentDarsList = [
-    {'name': 'Mohammad Ahmed', 'lesson': '', 'rating': 'Yaad Hai', 'remarks': ''},
-    {'name': 'Abdullah Khan', 'lesson': '', 'rating': 'Yaad Hai', 'remarks': ''},
-    {'name': 'Ali Raza', 'lesson': '', 'rating': 'Yaad Hai', 'remarks': ''},
-    {'name': 'Tahir Hussain', 'lesson': '', 'rating': 'Kam Yaad Hai', 'remarks': ''},
-    {'name': 'Yousuf Ali', 'lesson': '', 'rating': 'Yaad Hai', 'remarks': ''},
-    {'name': 'Zaid Hasan', 'lesson': '', 'rating': 'Yaad Nahi', 'remarks': ''},
-    {'name': 'Hassan Mahmood', 'lesson': '', 'rating': 'Iaadah', 'remarks': ''},
-    {'name': 'Abbas Haider', 'lesson': '', 'rating': 'Yaad Hai', 'remarks': ''},
-    {'name': 'Salman Farooq', 'lesson': '', 'rating': 'Yaad Hai', 'remarks': ''},
-    {'name': 'Abdul Rehman', 'lesson': '', 'rating': 'Yaad Hai', 'remarks': ''},
-  ];
+  List<Map<String, dynamic>> studentDarsList = [];
+  List<String> _availableGroups = ['all'];
+  
+  final List<TextEditingController> studentLessonControllers = [];
+  final List<String?> studentImagePaths = [];
 
   late stt.SpeechToText speech;
   bool isListening = false;
-  int? listeningStudentIndex;
-  final List<TextEditingController> studentLessonControllers = [];
-  final List<TextEditingController> studentRemarksControllers = [];
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
     speech = stt.SpeechToText();
-    loadSubjects();
+    _loadTeacherInfo();
+
+    if (widget.students != null && widget.students!.isNotEmpty) {
+      final groups = <String>{};
+      studentDarsList = widget.students!.map((s) {
+        if (s['group'] != null && s['group'].toString().isNotEmpty) {
+          groups.add(s['group'].toString());
+        }
+        return {
+          'name': s['name'] ?? 'Unknown',
+          'fatherName': s['fatherName'] ?? '-',
+          'group': s['group'] ?? '',
+        };
+      }).toList();
+      _availableGroups = ['all', ...groups.toList()..sort()];
+    } else {
+      studentDarsList = [
+        {'name': 'محمد احمد', 'fatherName': 'عبد الرحمٰن', 'group': 'حفظ گروپ A'},
+        {'name': 'علی رضا', 'fatherName': 'فاروق احمد', 'group': 'حفظ گروپ A'},
+        {'name': 'حسن حیدر', 'fatherName': 'حیدر علی', 'group': 'حفظ گروپ A'},
+        {'name': 'عبداللہ', 'fatherName': 'سلیم خان', 'group': 'حفظ گروپ A'},
+        {'name': 'محمد اسامہ', 'fatherName': 'اکرم خان', 'group': 'حفظ گروپ A'},
+        {'name': 'زید خان', 'fatherName': 'یوسف خان', 'group': 'ناظرہ گروپ B'},
+        {'name': 'عمران', 'fatherName': 'ندیم احمد', 'group': 'ناظرہ گروپ B'},
+        {'name': 'سعید احمد', 'fatherName': 'رشید احمد', 'group': 'ناظرہ گروپ B'},
+        {'name': 'فیضان علی', 'fatherName': 'شکیل احمد', 'group': 'ناظرہ گروپ B'},
+      ];
+      _availableGroups = ['all', 'حفظ گروپ A', 'ناظرہ گروپ B'];
+    }
 
     for (var i = 0; i < studentDarsList.length; i++) {
-      studentLessonControllers.add(
-        TextEditingController(text: todayLessonController.text),
-      );
-      studentRemarksControllers.add(
-        TextEditingController(text: studentDarsList[i]['remarks']),
-      );
+      studentLessonControllers.add(TextEditingController(text: 'قرآن کریم - سورۃ الفاتحہ'));
+      studentImagePaths.add(null);
     }
+  }
+
+  Future<void> _loadTeacherInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      teacherName = prefs.getString('cred_teacher_name') ?? 'محمد عمران';
+    });
   }
 
   @override
   void dispose() {
-    speech.stop();
-    todayLessonController.dispose();
-    for (final c in studentLessonControllers) {
-      c.dispose();
-    }
-    for (final c in studentRemarksControllers) {
+    globalSubjectController.dispose();
+    for (var c in studentLessonControllers) {
       c.dispose();
     }
     super.dispose();
   }
 
-  Future<void> loadSubjects() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList('subjects');
-    if (saved != null && saved.isNotEmpty) {
-      setState(() {
-        subjects = saved;
-      });
-    }
-  }
-
-  Future<void> saveSubjects() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('subjects', subjects);
-  }
-
-  // Real-time sync: text entered in lesson entry updates all student lessons
-  void _syncLessonToAllStudents() {
-    final text = todayLessonController.text;
+  void _applySubjectToAll() {
+    final text = globalSubjectController.text;
+    if (text.isEmpty) return;
     setState(() {
-      for (var i = 0; i < studentLessonControllers.length; i++) {
-        studentLessonControllers[i].text = text;
-        studentDarsList[i]['lesson'] = text;
+      for (int i = 0; i < studentDarsList.length; i++) {
+        if (selectedGroup == 'all' || studentDarsList[i]['group'] == selectedGroup) {
+          studentLessonControllers[i].text = text;
+        }
       }
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('سبق تمام طلبہ پر لاگو کر دیا گیا (Lesson synced to all students)!'),
-        backgroundColor: Color(0xFF047857),
+        content: Text('سبجیکٹ تمام طلبہ پر لاگو کر دیا گیا!', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+        backgroundColor: Colors.green,
       ),
     );
   }
 
-  void _markAllRatings(String rating) {
-    setState(() {
-      for (var i = 0; i < studentDarsList.length; i++) {
-        studentDarsList[i]['rating'] = rating;
+  Future<void> _listenForStudent(int index) async {
+    if (!isListening) {
+      bool available = await speech.initialize();
+      if (available) {
+        setState(() => isListening = true);
+        speech.listen(
+          onResult: (val) => setState(() {
+            studentLessonControllers[index].text = val.recognizedWords;
+          }),
+          listenOptions: stt.SpeechListenOptions(localeId: 'ur_PK'),
+        );
       }
-    });
+    } else {
+      setState(() => isListening = false);
+      speech.stop();
+    }
   }
 
-  void _clearAllRatings() {
-    setState(() {
-      for (var i = 0; i < studentDarsList.length; i++) {
-        studentDarsList[i]['rating'] = '';
-        studentRemarksControllers[i].clear();
-        studentDarsList[i]['remarks'] = '';
+  Future<void> _capturePhotoForStudent(int index) async {
+    try {
+      final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 50);
+      if (photo != null) {
+        setState(() {
+          studentImagePaths[index] = photo.path;
+        });
       }
-    });
+    } catch (e) {
+      debugPrint('Error capturing photo: $e');
+    }
+  }
+
+  void _showComingSoon() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('یہ فیچر جلد آ رہا ہے (Coming Soon)', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
+
+  void _showNotificationsDialog() {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('نوٹیفکیشنز (Notifications)', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 20, fontWeight: FontWeight.bold)),
+            const Divider(),
+            ListTile(leading: const Icon(Icons.check_circle, color: Colors.green), title: const Text('پچھلی حاضری کامیابی سے محفوظ ہو گئی۔', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq'))),
+            ListTile(leading: const Icon(Icons.message, color: Colors.blue), title: const Text('ایڈمن کی جانب سے نیا پیغام موصول ہوا۔', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq'))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _editShiftDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        String tempShift = currentShift;
+        return StatefulBuilder(
+          builder: (context, setStateSB) {
+            return AlertDialog(
+              title: const Text('شفٹ تبدیل کریں', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: ['صبح', 'دوپہر', 'شام', 'رات'].map((shift) => RadioListTile(
+                  title: Text(shift, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+                  value: shift,
+                  groupValue: tempShift,
+                  onChanged: (val) => setStateSB(() => tempShift = val.toString()),
+                )).toList(),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('کینسل')),
+                ElevatedButton(onPressed: () {
+                  setState(() => currentShift = tempShift);
+                  Navigator.pop(ctx);
+                }, child: const Text('محفوظ کریں')),
+              ],
+            );
+          }
+        );
+      },
+    );
+  }
+
+  void _editTeacherDialog() {
+    final ctrl = TextEditingController(text: teacherName);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('استاد کا نام تبدیل کریں', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+        content: TextField(controller: ctrl, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('کینسل')),
+          ElevatedButton(onPressed: () async {
+            setState(() => teacherName = ctrl.text);
+            final prefs = await SharedPreferences.getInstance();
+            prefs.setString('cred_teacher_name', ctrl.text);
+            if (ctx.mounted) Navigator.pop(ctx);
+          }, child: const Text('محفوظ کریں')),
+        ],
+      ),
+    );
+  }
+
+  void _editTopicDialog() {
+    final bookCtrl = TextEditingController(text: currentBook);
+    final chapterCtrl = TextEditingController(text: currentChapter);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('آج کا موضوع تبدیل کریں', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: bookCtrl, decoration: const InputDecoration(labelText: 'کتاب کا نام'), style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+            const SizedBox(height: 8),
+            TextField(controller: chapterCtrl, decoration: const InputDecoration(labelText: 'سبق/سورت'), style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('کینسل')),
+          ElevatedButton(onPressed: () {
+            setState(() {
+              currentBook = bookCtrl.text;
+              currentChapter = chapterCtrl.text;
+            });
+            Navigator.pop(ctx);
+          }, child: const Text('محفوظ کریں')),
+        ],
+      ),
+    );
+  }
+
+  String _getIslamicDate() {
+    return '07 ذو القعدہ 1445';
+  }
+
+  Map<String, List<int>> _getGroupedStudents() {
+    Map<String, List<int>> grouped = {};
+    for (int i = 0; i < studentDarsList.length; i++) {
+      if (selectedGroup == 'all' || studentDarsList[i]['group'] == selectedGroup) {
+        String group = studentDarsList[i]['group'] as String;
+        if (!grouped.containsKey(group)) {
+          grouped[group] = [];
+        }
+        grouped[group]!.add(i);
+      }
+    }
+    return grouped;
   }
 
   @override
   Widget build(BuildContext context) {
-    final isRtl = widget.languageController?.locale.languageCode != 'en';
-
     return Directionality(
-      textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+      textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: const Color(0xFFF4F6F9),
         appBar: AppBar(
-          backgroundColor: const Color(0xFF074E32),
+          backgroundColor: const Color(0xFF0F172A),
           foregroundColor: Colors.white,
-          leading: Builder(
-            builder: (ctx) => IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () => Scaffold.of(ctx).openDrawer(),
-            ),
-          ),
-          title: Row(
+          title: const Column(
             children: [
-              const Icon(Icons.mosque, color: Colors.amberAccent, size: 24),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Madrasa AIB',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    'Group & Wanther System',
-                    style: TextStyle(fontSize: 10, color: Colors.amber.shade200),
-                  ),
-                ],
-              ),
+              Text('مدرسہ خیر العلوم اشرفیہ', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 24, fontWeight: FontWeight.bold)),
+              Text('(Lessons) سبق', style: TextStyle(color: Colors.amberAccent, fontSize: 14)),
             ],
           ),
+          centerTitle: true,
           actions: [
-            IconButton(
-              icon: const Icon(Icons.calendar_month_rounded),
-              tooltip: 'Calendar',
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: selectedDate,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2030),
-                );
-                if (picked != null) {
-                  setState(() => selectedDate = picked);
-                }
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.assessment_rounded),
-              tooltip: 'Reports',
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Dars Report History Log Ready')),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.settings_rounded),
-              tooltip: 'Settings',
-              onPressed: () {},
-            ),
-            if (widget.languageController != null)
-              LanguageButton(controller: widget.languageController!),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(icon: const Icon(Icons.notifications_none_rounded), onPressed: _showNotificationsDialog),
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                    child: const Text('5', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+                )
+              ],
+            )
           ],
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              // SECTION 1: Select Subject
-              _buildSectionCard(
-                stepNum: '1',
-                title: 'Select Subject',
-                child: Column(
-                  children: [
-                    Row(
+        body: Column(
+          children: [
+            // TOP INFO BAR
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildTopInfoBox(
+                    title: 'شفٹ',
+                    icon: Icons.people,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), side: const BorderSide(color: Colors.blue)),
+                      onPressed: _editShiftDialog,
+                      icon: const Icon(Icons.edit, size: 12),
+                      label: Text(currentShift, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 14)),
+                    ),
+                  ),
+                  _buildTopInfoBox(
+                    title: 'دن / تاریخ',
+                    icon: Icons.calendar_today,
+                    child: Column(
                       children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            initialValue: selectedSubject,
-                            decoration: InputDecoration(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            items: subjects.map((subj) {
-                              return DropdownMenuItem(value: subj, child: Text(subj));
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() {
-                                  selectedSubjectIndex = subjects.indexOf(val);
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Choose any subject\nfrom the list',
-                          style: TextStyle(fontSize: 11, color: Colors.indigo.shade900, fontWeight: FontWeight.w600),
+                        const Text('ہفتہ Saturday', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                        Text(DateFormat('dd-MM-yyyy').format(selectedDate), style: const TextStyle(fontSize: 10)),
+                        Text(_getIslamicDate(), style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  _buildTopInfoBox(
+                    title: 'استاد',
+                    icon: Icons.person,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.edit, size: 12, color: Colors.blue),
+                        const SizedBox(width: 4),
+                        InkWell(
+                          onTap: _editTeacherDialog,
+                          child: Text(teacherName, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 14, decoration: TextDecoration.underline)),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    // Subject Edit / Add / Delete & Navigation Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back_ios_rounded, color: Color(0xFF074E32), size: 22),
-                              onPressed: () {
-                                if (selectedSubjectIndex > 0) {
-                                  setState(() => selectedSubjectIndex--);
-                                }
-                              },
-                              tooltip: 'Previous Subject',
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF074E32), size: 22),
-                              onPressed: () {
-                                if (selectedSubjectIndex < subjects.length - 1) {
-                                  setState(() => selectedSubjectIndex++);
-                                }
-                              },
-                              tooltip: 'Next Subject',
-                            ),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            OutlinedButton.icon(
-                              onPressed: _showAddSubjectDialog,
-                              icon: const Icon(Icons.add, size: 14),
-                              label: const Text('Add', style: TextStyle(fontSize: 11)),
-                            ),
-                            const SizedBox(width: 4),
-                            OutlinedButton.icon(
-                              onPressed: _showEditSubjectDialog,
-                              icon: const Icon(Icons.edit, size: 14, color: Colors.orange),
-                              label: const Text('Edit', style: TextStyle(fontSize: 11)),
-                            ),
-                            const SizedBox(width: 4),
-                            OutlinedButton.icon(
-                              onPressed: _showDeleteSubjectDialog,
-                              icon: const Icon(Icons.delete, size: 14, color: Colors.red),
-                              label: const Text('Delete', style: TextStyle(fontSize: 11)),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // SECTION 2: Lesson Entry (Speak or Type)
-              _buildSectionCard(
-                stepNum: '2',
-                title: 'Lesson Entry (Speak or Type)',
-                headerTrailing: Wrap(
-                  spacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      'Date: ${selectedDate.day} July ${selectedDate.year}',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade100,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Voice Entry ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF047857))),
-                          Icon(Icons.mic, size: 14, color: Color(0xFF047857)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: todayLessonController,
-                      maxLines: 3,
+                  ),
+                  _buildTopInfoBox(
+                    title: 'گروپ سلیکشن',
+                    icon: Icons.groups,
+                    child: DropdownButton<String>(
+                      value: selectedGroup,
+                      isDense: true,
+                      underline: const SizedBox(),
+                      style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', color: Colors.black, fontSize: 14),
+                      items: _availableGroups.map((g) {
+                        return DropdownMenuItem(value: g, child: Text(g == 'all' ? 'تمام گروپس' : g));
+                      }).toList(),
                       onChanged: (val) {
-                        for (var i = 0; i < studentLessonControllers.length; i++) {
-                          studentLessonControllers[i].text = val;
-                          studentDarsList[i]['lesson'] = val;
-                        }
+                        if (val != null) setState(() => selectedGroup = val);
                       },
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        contentPadding: const EdgeInsets.all(12),
-                        hintText: 'سبق یا دعا درج کریں (Enter Lesson or Dua)...',
-                      ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.indigo,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          ),
-                          onPressed: _listenTodayLesson,
-                          icon: const Icon(Icons.mic, size: 16),
-                          label: const Text('آواز انٹری (Mic)', style: TextStyle(fontSize: 11)),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade800,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          ),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('کتاب کی تصویر محفوظ کر لی گئی (Textbook Photo Captured)!')),
-                            );
-                          },
-                          icon: const Icon(Icons.camera_alt, size: 16),
-                          label: const Text('کیمرہ (Camera)', style: TextStyle(fontSize: 11)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF047857),
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: _syncLessonToAllStudents,
-                          icon: const Icon(Icons.check, size: 16),
-                          label: const Text('Save Lesson'),
-                        ),
-                        OutlinedButton(
-                          onPressed: () {
-                            todayLessonController.clear();
-                            _syncLessonToAllStudents();
-                          },
-                          child: const Text('Clear'),
-                        ),
-                        const Text(
-                          'This lesson will appear below for all students. ↓',
-                          style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: Colors.indigo),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
 
-              const SizedBox(height: 12),
-
-              // SECTION 3: Dars Entry (In Class)
-              _buildSectionCard(
-                stepNum: '3',
-                title: 'Dars Entry (In Class)',
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   children: [
-                    // Quick Mark All Row
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
+                    // TODAY'S TOPIC
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Column(
                         children: [
-                          const Text('Mark All Students: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 4),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(foregroundColor: Colors.green),
-                            onPressed: () => _markAllRatings('Yaad Hai'),
-                            icon: const Icon(Icons.check, size: 14),
-                            label: const Text('Mark All Yaad Hai', style: TextStyle(fontSize: 10)),
+                          const Align(
+                            alignment: Alignment.topRight,
+                            child: Text('آج کا موضوع', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', color: Colors.green, fontSize: 16)),
                           ),
-                          const SizedBox(width: 4),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
-                            onPressed: () => _markAllRatings('Kam Yaad Hai'),
-                            icon: const Icon(Icons.error_outline, size: 14),
-                            label: const Text('Mark All Kam Yaad Hai', style: TextStyle(fontSize: 10)),
-                          ),
-                          const SizedBox(width: 4),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                            onPressed: () => _markAllRatings('Yaad Nahi'),
-                            icon: const Icon(Icons.cancel_outlined, size: 14),
-                            label: const Text('Mark All Yaad Nahi', style: TextStyle(fontSize: 10)),
-                          ),
-                          const SizedBox(width: 4),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(foregroundColor: Colors.blue),
-                            onPressed: () => _markAllRatings('Iaadah'),
-                            icon: const Icon(Icons.autorenew, size: 14),
-                            label: const Text('Mark All Iaadah', style: TextStyle(fontSize: 10)),
-                          ),
-                          const SizedBox(width: 4),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(foregroundColor: Colors.grey),
-                            onPressed: _clearAllRatings,
-                            icon: const Icon(Icons.refresh, size: 14),
-                            label: const Text('Clear All Marks', style: TextStyle(fontSize: 10)),
-                          ),
+                          const Icon(Icons.menu_book_rounded, size: 40, color: Colors.green),
+                          const SizedBox(height: 8),
+                          Text(currentBook, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 28, fontWeight: FontWeight.bold)),
+                          Text(currentChapter, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 16, color: Colors.grey)),
+                          Align(
+                            alignment: Alignment.bottomLeft,
+                            child: IconButton(icon: const Icon(Icons.edit, color: Colors.green), onPressed: _editTopicDialog),
+                          )
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 12),
 
-                    // Student Dars Cards / Rows
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: studentDarsList.length,
-                      itemBuilder: (ctx, idx) {
-                        return _buildStudentDarsRow(idx);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Bottom Action Bar: Back, Save All Entries, Save as PDF & Dispatch
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
-                      label: const Text('Back'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF047857),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                    // GLOBAL SUBJECT SELECTION
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue.shade200),
                       ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('تمام طلبہ کے درس کے اندراجات محفوظ کر لیے گئے (All Dars Entries Saved)!'),
-                            backgroundColor: Color(0xFF047857),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('سبجیکٹ سلیکشن', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', color: Colors.blue, fontSize: 16)),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: _showComingSoon),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: globalSubjectController,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 18, height: 1.6),
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.check_circle_rounded),
-                      label: const Text('Save All Entries'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E3A8A),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF0F3A8C),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              onPressed: _applySubjectToAll,
+                              icon: const Icon(Icons.sync),
+                              label: const Text('کیا سب پر لاگو کریں', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 18)),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Center(
+                            child: Text('اوپر والے سبجیکٹ کو تمام طلبہ کے سبجیکٹ باکس میں کاپی کرنے کے لئے یہاں کلک کریں',
+                                style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 12, color: Colors.grey)),
+                          ),
+                        ],
                       ),
-                      onPressed: _generateAndDispatchDarsPdf,
-                      icon: const Icon(Icons.picture_as_pdf_rounded),
-                      label: const Text('Save as PDF'),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Row(
-                children: [
-                  Icon(Icons.lightbulb_outline, size: 14, color: Colors.amber),
-                  SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      'Tip: Tap Mic and speak lesson details (e.g. Para 2, Page 18 / Lesson 5). PDF auto-dispatches to Parent notice channel.',
-                      style: TextStyle(fontSize: 10, color: Colors.grey),
+                    const SizedBox(height: 12),
+
+                    // GROUPED TABLES
+                    ..._buildGroupedTables(),
+
+                    const SizedBox(height: 12),
+                    // NOTE BOX
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        border: Border.all(color: Colors.orange.shade200),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'نوٹ: اگر آپ کسی خاص طالب علم کے لئے سبجیکٹ تبدیل کریں گے (جیسے سبق نمبر 6) تو صرف اسی طالب علم کے باقی طلبہ پر اوپر والا سبجیکٹ لاگو رہے گا۔',
+                              style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 14),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionCard({
-    required String stepNum,
-    required String title,
-    Widget? headerTrailing,
-    required Widget child,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                Container(
-                  width: 22,
-                  height: 22,
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF1E3A8A),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    stepNum,
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
-                ),
-                if (headerTrailing != null) ...[
-                  const SizedBox(width: 12),
-                  headerTrailing,
-                ],
-              ],
-            ),
-          ),
-          const Divider(height: 16),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStudentDarsRow(int idx) {
-    final s = studentDarsList[idx];
-    final currentRating = s['rating'] as String;
-    final lessonCtrl = studentLessonControllers[idx];
-    final remarksCtrl = studentRemarksControllers[idx];
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: idx.isEven ? Colors.grey.shade50 : Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              const CircleAvatar(
-                radius: 14,
-                backgroundColor: Color(0xFF047857),
-                child: Icon(Icons.person, size: 16, color: Colors.white),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 110,
-                child: Text(
-                  s['name'],
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Expanded(
-                child: TextField(
-                  controller: lessonCtrl,
-                  maxLines: 1,
-                  style: const TextStyle(fontSize: 11),
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                    hintText: 'Lesson / Dua',
-                  ),
-                  onChanged: (val) {
-                    s['lesson'] = val;
-                  },
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.mic, size: 16, color: Colors.indigo),
-                onPressed: () => _listenStudentLesson(idx),
-                tooltip: 'Mic',
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit, size: 16, color: Colors.orange),
-                onPressed: () => _modifyStudentPlanDialog(idx),
-                tooltip: 'Modify Plan for this Student',
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          // Quality Rating Buttons & Remarks Row
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildRatingChip(idx, 'Yaad Hai', Colors.green, currentRating == 'Yaad Hai'),
-                const SizedBox(width: 4),
-                _buildRatingChip(idx, 'Kam Yaad Hai', Colors.orange, currentRating == 'Kam Yaad Hai'),
-                const SizedBox(width: 4),
-                _buildRatingChip(idx, 'Yaad Nahi', Colors.red, currentRating == 'Yaad Nahi'),
-                const SizedBox(width: 4),
-                _buildRatingChip(idx, 'Iaadah', Colors.blue, currentRating == 'Iaadah'),
-                const SizedBox(width: 4),
-                IconButton(
-                  icon: const Icon(Icons.refresh, size: 16, color: Colors.grey),
-                  onPressed: () {
-                    setState(() {
-                      studentDarsList[idx]['rating'] = '';
-                    });
-                  },
-                  tooltip: 'Reset Rating',
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          TextField(
-            controller: remarksCtrl,
-            maxLines: 1,
-            style: const TextStyle(fontSize: 11),
-            decoration: const InputDecoration(
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              isDense: true,
-              border: OutlineInputBorder(),
-              hintText: 'Remarks (Write Quality)...',
-            ),
-            onChanged: (val) {
-              s['remarks'] = val;
-            },
-          ),
-          const SizedBox(height: 6),
-          // ITEM 12, 14, 16, 18: Tajweed Markers, Sabqi/Manzil Trackers, Star Badges & Private Note
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Colors.blue.shade100),
-            ),
-            child: Row(
-              children: [
-                // Star Reward Badge (Item 18)
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      int stars = (s['stars'] as int? ?? 3);
-                      s['stars'] = stars >= 5 ? 1 : stars + 1;
-                    });
-                  },
-                  child: Row(
-                    children: [
-                      const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
-                      Text(' ${s['stars'] ?? 5}⭐', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Sabqi & Manzil Tracker (Item 14)
-                Text('سبقی: ${s['sabqi'] ?? 'صفحہ 5'} | منزل: ${s['manzil'] ?? 'پارہ 1'}',
-                    style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF074E32))),
-                const Spacer(),
-                // Tajweed Correction Badges (Item 12)
-                Wrap(
-                  spacing: 4,
-                  children: [
-                    _tajweedBadge('مخارج', Colors.purple),
-                    _tajweedBadge('غنہ', Colors.indigo),
-                    _tajweedBadge('اخفاء', Colors.teal),
-                    _tajweedBadge('قلقلہ', Colors.orange),
                   ],
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopInfoBox({required String title, required IconData icon, required Widget child}) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 14, color: Colors.blue),
+                const SizedBox(width: 4),
+                Text(title, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 12, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const Divider(height: 8),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildGroupedTables() {
+    final grouped = _getGroupedStudents();
+    List<Widget> tables = [];
+
+    grouped.forEach((groupName, indices) {
+      tables.add(
+        Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 4, spreadRadius: 1)],
+          ),
+          child: Column(
+            children: [
+              // Group Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.people, color: Colors.blue),
+                        const SizedBox(width: 8),
+                        Text(groupName, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
+                      ],
+                    ),
+                    Text('طلبہ: ${indices.length}', style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 16, color: Colors.blue)),
+                  ],
+                ),
+              ),
+              // Table Header
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                child: Row(
+                  children: [
+                    SizedBox(width: 24, child: Text('#', style: TextStyle(fontSize: 10, color: Colors.grey), textAlign: TextAlign.center)),
+                    Expanded(flex: 2, child: Text('طالب علم کا نام', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+                    Expanded(flex: 3, child: Text('سبجیکٹ (ایڈٹ کیا جا سکتا ہے)', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+                    SizedBox(width: 60, child: Text('ریکارڈنگ / تصویر', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 10, color: Colors.grey), textAlign: TextAlign.center)),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Table Rows
+              ...indices.asMap().entries.map((entry) {
+                int rowIdx = entry.key + 1;
+                int globalIdx = entry.value;
+                return _buildStudentRow(rowIdx, globalIdx);
+              }),
+            ],
+          ),
+        ),
+      );
+    });
+
+    return tables;
+  }
+
+  Widget _buildStudentRow(int displayIndex, int globalIndex) {
+    final student = studentDarsList[globalIndex];
+    final bool hasPhoto = studentImagePaths[globalIndex] != null;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(width: 24, child: Text(displayIndex.toString(), style: const TextStyle(fontSize: 12), textAlign: TextAlign.center)),
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(student['name'], style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 15, fontWeight: FontWeight.bold, height: 1.5)),
+                const SizedBox(height: 4),
+                Text('والد/سرپرست: ${student['fatherName']}', style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 11, color: Colors.grey, height: 1.5)),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: TextFormField(
+                controller: studentLessonControllers[globalIndex],
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 14, height: 1.6),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 60,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                InkWell(
+                  onTap: () => _capturePhotoForStudent(globalIndex),
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: hasPhoto ? Colors.green.shade50 : Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: hasPhoto ? Colors.green : Colors.blue.shade200),
+                    ),
+                    child: Icon(hasPhoto ? Icons.image : Icons.camera_alt, size: 14, color: hasPhoto ? Colors.green : Colors.blue),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => _listenForStudent(globalIndex),
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: Icon(isListening ? Icons.mic : Icons.mic_none, size: 14, color: isListening ? Colors.red : Colors.blue),
+                  ),
+                ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _tajweedBadge(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: color),
-      ),
-    );
-  }
-
-  Widget _buildRatingChip(int idx, String label, Color color, bool isSelected) {
-    return InkWell(
-      onTap: () {
-        setState(() {
-          studentDarsList[idx]['rating'] = label;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected ? color : color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: color),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            color: isSelected ? Colors.white : color,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _listenTodayLesson() async {
-    final available = await speech.initialize();
-    if (available) {
-      speech.listen(
-        onResult: (result) {
-          if (result.finalResult) {
-            setState(() {
-              todayLessonController.text = result.recognizedWords;
-              _syncLessonToAllStudents();
-            });
-          }
-        },
-      );
-    }
-  }
-
-  Future<void> _listenStudentLesson(int idx) async {
-    final available = await speech.initialize();
-    if (available) {
-      speech.listen(
-        onResult: (result) {
-          if (result.finalResult) {
-            setState(() {
-              studentLessonControllers[idx].text = result.recognizedWords;
-              studentDarsList[idx]['lesson'] = result.recognizedWords;
-            });
-          }
-        },
-      );
-    }
-  }
-
-  void _modifyStudentPlanDialog(int idx) {
-    final ctrl = TextEditingController(text: studentLessonControllers[idx].text);
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Modify Lesson Plan: ${studentDarsList[idx]['name']}'),
-        content: TextField(
-          controller: ctrl,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText: 'Enter custom lesson plan for this student...',
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                studentLessonControllers[idx].text = ctrl.text;
-                studentDarsList[idx]['lesson'] = ctrl.text;
-              });
-              Navigator.pop(ctx);
-            },
-            child: const Text('Save Plan'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddSubjectDialog() {
-    final ctrl = TextEditingController();
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add Subject (نیا مضمون)'),
-        content: TextField(
-          controller: ctrl,
-          decoration: const InputDecoration(hintText: 'Enter subject name...'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              final text = ctrl.text.trim();
-              if (text.isNotEmpty) {
-                setState(() {
-                  subjects.add(text);
-                  selectedSubjectIndex = subjects.length - 1;
-                });
-                saveSubjects();
-              }
-              Navigator.pop(ctx);
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditSubjectDialog() {
-    final ctrl = TextEditingController(text: selectedSubject);
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Subject (مضمون تبدیل کریں)'),
-        content: TextField(
-          controller: ctrl,
-          decoration: const InputDecoration(hintText: 'Enter new subject name...'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              final text = ctrl.text.trim();
-              if (text.isNotEmpty) {
-                setState(() {
-                  subjects[selectedSubjectIndex] = text;
-                });
-                saveSubjects();
-              }
-              Navigator.pop(ctx);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteSubjectDialog() {
-    if (subjects.isEmpty) return;
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Subject'),
-        content: Text('Are you sure you want to delete "$selectedSubject"?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              setState(() {
-                subjects.removeAt(selectedSubjectIndex);
-                if (selectedSubjectIndex >= subjects.length) {
-                  selectedSubjectIndex = subjects.isEmpty ? 0 : subjects.length - 1;
-                }
-              });
-              saveSubjects();
-              Navigator.pop(ctx);
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _generateAndDispatchDarsPdf() async {
-    final pdf = await PdfService.buildDarsReportPdf(
-      subject: selectedSubject,
-      dateLabel: '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
-      todayLesson: todayLessonController.text,
-      studentDarsList: studentDarsList,
-    );
-
-    // Save and preview/print PDF
-    await PdfService.printOrSharePdf(pdf, 'Dars_Evaluation_Report_${selectedSubject}');
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('📄 Dars Report PDF Generated & Dispatched to Registered Parents, Manager, Admin & History Log!'),
-        backgroundColor: Color(0xFF047857),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 import 'app_spacing.dart';
@@ -148,44 +149,256 @@ class EmptyStateWidget extends StatelessWidget {
 }
 
 class ContactPickerHelper {
-  /// Import contact from phone or present quick selector dialog
-  static Future<Map<String, String>?> pickContact(BuildContext context) async {
-    final List<Map<String, String>> sampleContacts = [
-      {'name': 'حافظ محمد طارق', 'phone': '9876543210'},
-      {'name': 'عبداللہ علی سرپرست', 'phone': '9123456789'},
-      {'name': 'تنویر احمد والد', 'phone': '9988776655'},
-      {'name': 'سید خلیل پاشاہ', 'phone': '9440112233'},
-    ];
+  /// Import actual contact linked by phone number or select from student contacts
+  static Future<Map<String, String>?> pickContact(BuildContext context, [List<Map<String, dynamic>>? studentsList]) async {
+    final Map<String, Map<String, String>> actualContactsMap = {};
+
+    if (studentsList != null && studentsList.isNotEmpty) {
+      for (final st in studentsList) {
+        final fName = st['fatherName']?.toString().trim() ?? '';
+        final fPhone = st['fatherPhone']?.toString().trim() ?? '';
+        final sName = st['name']?.toString().trim() ?? '';
+        if (fPhone.isNotEmpty) {
+          final displayName = fName.isNotEmpty ? '$fName (والد $sName)' : 'والد $sName';
+          actualContactsMap[fPhone] = {'name': displayName, 'phone': fPhone};
+        }
+      }
+    }
+
+    final List<Map<String, String>> actualContacts = actualContactsMap.values.toList();
+    final searchCtrl = TextEditingController();
+    final customNameCtrl = TextEditingController();
+    final customPhoneCtrl = TextEditingController();
+    List<Map<String, String>> filtered = List.from(actualContacts);
 
     return showDialog<Map<String, String>>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.contacts_rounded, color: AppColors.primary),
-            SizedBox(width: 8),
-            Text('فون کانٹیکٹس سے نام منتخب کریں', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('موبائل فون بک سے سرپرست کا نمبر و نام ڈائریکٹ امپورٹ کریں:', style: TextStyle(fontSize: 11, color: Colors.grey)),
-            const SizedBox(height: 8),
-            ...sampleContacts.map((c) => ListTile(
-                  dense: true,
-                  leading: const CircleAvatar(radius: 14, child: Icon(Icons.person, size: 14)),
-                  title: Text(c['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(c['phone']!),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 12),
-                  onTap: () => Navigator.pop(ctx, c),
-                )),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('منسوخ')),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDlgState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.contacts_rounded, color: AppColors.primary),
+                SizedBox(width: 8),
+                Text('کانٹیکٹس کا انتخاب کریں (Select Contact)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (actualContacts.isNotEmpty) ...[
+                      TextField(
+                        controller: searchCtrl,
+                        decoration: InputDecoration(
+                          hintText: 'نام یا نمبر سے تلاش کریں...',
+                          prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onChanged: (query) {
+                          setDlgState(() {
+                            filtered = actualContacts.where((c) =>
+                              c['name']!.toLowerCase().contains(query.toLowerCase()) ||
+                              c['phone']!.contains(query)
+                            ).toList();
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 180),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: filtered.length,
+                          itemBuilder: (context, idx) {
+                            final c = filtered[idx];
+                            return ListTile(
+                              dense: true,
+                              leading: const CircleAvatar(radius: 14, child: Icon(Icons.person, size: 14)),
+                              title: Text(c['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                              subtitle: Text(c['phone']!, style: const TextStyle(fontSize: 11)),
+                              trailing: const Icon(Icons.check_circle_outline_rounded, size: 16, color: Colors.green),
+                              onTap: () => Navigator.pop(ctx, c),
+                            );
+                          },
+                        ),
+                      ),
+                      const Divider(height: 20),
+                    ],
+                    const Text('یا نیا حقیقی نمبر اور نام درج کریں:', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: customNameCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'نام (Contact Name)',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: customPhoneCtrl,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: 'موبائل نمبر (Phone Number)',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('منسوخ')),
+              FilledButton(
+                onPressed: () {
+                  final p = customPhoneCtrl.text.trim();
+                  final n = customNameCtrl.text.trim();
+                  if (p.isNotEmpty) {
+                    Navigator.pop(ctx, {'name': n.isNotEmpty ? n : 'والد / سرپرست', 'phone': p});
+                  }
+                },
+                child: const Text('انتخاب کریں'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+}
+
+class MaktabLogo extends StatelessWidget {
+  final double size;
+  const MaktabLogo({super.key, this.size = 120});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.rectangle,
+        borderRadius: BorderRadius.circular(size * 0.2),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF042E1B), Color(0xFF0A4F30)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: const Color(0xFFD4AF37), width: size * 0.04),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Center(
+        child: CustomPaint(
+          size: Size(size * 0.8, size * 0.8),
+          painter: _LogoPainter(),
+        ),
+      ),
+    );
+  }
+}
+
+class _LogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // Golden Paint
+    final goldPaint = Paint()
+      ..color = const Color(0xFFD4AF37)
+      ..style = PaintingStyle.fill;
+
+    final goldStroke = Paint()
+      ..color = const Color(0xFFD4AF37)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.03;
+
+    // 1. Crescent & Star at top
+    final crescentPath = Path()
+      ..addOval(Rect.fromCircle(center: Offset(w * 0.5, h * 0.22), radius: w * 0.08));
+    final crescentCut = Path()
+      ..addOval(Rect.fromCircle(center: Offset(w * 0.54, h * 0.2), radius: w * 0.08));
+    final crescentFinal = Path.combine(PathOperation.difference, crescentPath, crescentCut);
+    canvas.drawPath(crescentFinal, goldPaint);
+
+    // Star
+    final starPath = Path();
+    final centerX = w * 0.5;
+    final centerY = h * 0.11;
+    final starSize = w * 0.025;
+    for (int i = 0; i < 5; i++) {
+      final double angle = (i * 4 * 3.14159) / 5 - 3.14159 / 2;
+      final x = centerX + starSize * 0.5 * math.cos(angle);
+      final y = centerY + starSize * 0.5 * math.sin(angle);
+      if (i == 0) {
+        starPath.moveTo(x, y);
+      } else {
+        starPath.lineTo(x, y);
+      }
+    }
+    starPath.close();
+    canvas.drawPath(starPath, goldPaint);
+
+    // 2. Dome
+    final domePath = Path()
+      ..moveTo(w * 0.3, h * 0.6)
+      ..quadraticBezierTo(w * 0.3, h * 0.35, w * 0.5, h * 0.25)
+      ..quadraticBezierTo(w * 0.7, h * 0.35, w * 0.7, h * 0.6)
+      ..lineTo(w * 0.3, h * 0.6);
+    canvas.drawPath(domePath, goldPaint);
+
+    // Dome base
+    canvas.drawRect(Rect.fromLTRB(w * 0.28, h * 0.6, w * 0.72, h * 0.63), goldPaint);
+
+    // Dome tip
+    canvas.drawRect(Rect.fromLTRB(w * 0.485, h * 0.2, w * 0.515, h * 0.25), goldPaint);
+
+    // 3. Minarets (left & right)
+    // Left Minaret
+    canvas.drawRect(Rect.fromLTRB(w * 0.22, h * 0.45, w * 0.26, h * 0.63), goldPaint);
+    final leftCap = Path()
+      ..moveTo(w * 0.22, h * 0.45)
+      ..lineTo(w * 0.24, h * 0.41)
+      ..lineTo(w * 0.26, h * 0.45)
+      ..close();
+    canvas.drawPath(leftCap, goldPaint);
+
+    // Right Minaret
+    canvas.drawRect(Rect.fromLTRB(w * 0.74, h * 0.45, w * 0.78, h * 0.63), goldPaint);
+    final rightCap = Path()
+      ..moveTo(w * 0.74, h * 0.45)
+      ..lineTo(w * 0.76, h * 0.41)
+      ..lineTo(w * 0.78, h * 0.45)
+      ..close();
+    canvas.drawPath(rightCap, goldPaint);
+
+    // 4. Open Book (at bottom)
+    final bookPath = Path()
+      ..moveTo(w * 0.1, h * 0.8)
+      ..quadraticBezierTo(w * 0.3, h * 0.68, w * 0.5, h * 0.8)
+      ..quadraticBezierTo(w * 0.7, h * 0.68, w * 0.9, h * 0.8)
+      ..lineTo(w * 0.9, h * 0.84)
+      ..quadraticBezierTo(w * 0.7, h * 0.72, w * 0.5, h * 0.84)
+      ..quadraticBezierTo(w * 0.3, h * 0.72, w * 0.1, h * 0.84)
+      ..close();
+    canvas.drawPath(bookPath, goldPaint);
+
+    // Book center line
+    canvas.drawLine(Offset(w * 0.5, h * 0.8), Offset(w * 0.5, h * 0.84), goldStroke);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
