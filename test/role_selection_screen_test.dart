@@ -3,6 +3,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maktab_management_system/app_localizations.dart';
 import 'package:maktab_management_system/role_selection_screen.dart';
+import 'package:maktab_management_system/theme_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(
@@ -28,12 +30,14 @@ void _useSize(WidgetTester tester, double width, double height) {
 }
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   group('Role Selection Screen Tests', () {
     testWidgets('renders Step 1 with 6 role choices', (tester) async {
       _useSize(tester, 1080, 2400);
       final ctrl = LanguageController();
       await tester.pumpWidget(_wrap(RoleSelectionScreen(
         languageController: ctrl,
+        themeController: ThemeController(),
         students: const [],
         onSave: (_) async {},
         onRoleSelected: (_) {},
@@ -55,6 +59,7 @@ void main() {
       final ctrl = LanguageController();
       await tester.pumpWidget(_wrap(RoleSelectionScreen(
         languageController: ctrl,
+        themeController: ThemeController(),
         students: const [],
         onSave: (_) async {},
         onRoleSelected: (_) {},
@@ -79,6 +84,7 @@ void main() {
       AppRole? selected;
       await tester.pumpWidget(_wrap(RoleSelectionScreen(
         languageController: ctrl,
+        themeController: ThemeController(),
         students: const [],
         onSave: (_) async {},
         onRoleSelected: (r) => selected = r,
@@ -103,12 +109,14 @@ void main() {
         (tester) async {
       final ctrl = LanguageController();
       await tester.pumpWidget(_wrap(RoleDashboardScreen(
+        themeController: ThemeController(),
         currentRole: AppRole.manager,
         languageController: ctrl,
         students: const [
           {'name': 'Ahmed', 'feeStatus': 'paid', 'isPresent': true}
         ],
-        onSave: (_) async {},
+        onSave: (_
+      ) async {},
         onChangeRole: () {},
       )));
       await tester.pumpAndSettle();
@@ -122,12 +130,14 @@ void main() {
         (tester) async {
       final ctrl = LanguageController();
       await tester.pumpWidget(_wrap(RoleDashboardScreen(
+        themeController: ThemeController(),
         currentRole: AppRole.parent,
         languageController: ctrl,
         students: const [
           {'name': 'Faizan', 'feeStatus': 'paid', 'isPresent': true}
         ],
-        onSave: (_) async {},
+        onSave: (_
+      ) async {},
         onChangeRole: () {},
       )));
       await tester.pumpAndSettle();

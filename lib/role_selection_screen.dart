@@ -821,18 +821,18 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                       await prefs.setString('cred_parent_${fatherPhone}_pin', '1234');
                     }
 
-                    if (context.mounted && dialogCtx.mounted) {
-                      Navigator.pop(dialogCtx);
-                      setState(() {
-                        _selectedIndex = 0; // Show Students List
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('نیا طالب علم ($name) کامیابی سے تمام پورٹلز (حاضری، فیس، بیچ) میں شامل ہو گیا!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
+                    if (!dialogCtx.mounted) return;
+                    Navigator.pop(dialogCtx);
+                    setState(() {
+                      _selectedIndex = 0; // Show Students List
+                    });
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('نیا طالب علم ($name) کامیابی سے تمام پورٹلز (حاضری، فیس، بیچ) میں شامل ہو گیا!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
                   },
                   label: const Text('داخلہ محفوظ کریں'),
                 ),

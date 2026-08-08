@@ -361,15 +361,15 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 await prefs.setString('cred_parent_${fatherPhone}_pin', newPin);
               }
               await saveStudentsToStorage();
-              if (context.mounted && ctx.mounted) {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${student['name']} کے والد کا PIN ($newPin) محفوظ ہو گیا!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${student['name']} کے والد کا PIN ($newPin) محفوظ ہو گیا!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
             },
             child: const Text('محفوظ کریں'),
           ),
@@ -1011,7 +1011,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
 
       final guardianNameController = TextEditingController(text: 'سرپرست (ولی)');
       final guardianRelationController = TextEditingController(text: 'والد / چچا');
-      int currentStep = 0;
 
       showDialog<void>(
       context: context,

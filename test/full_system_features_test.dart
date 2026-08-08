@@ -4,6 +4,8 @@ import 'package:maktab_management_system/app_localizations.dart';
 import 'package:maktab_management_system/community_chat_screen.dart';
 import 'package:maktab_management_system/results_screen.dart';
 import 'package:maktab_management_system/role_selection_screen.dart';
+import 'package:maktab_management_system/theme_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _wrap(Widget child) {
@@ -47,10 +49,12 @@ void main() {
     testWidgets('RoleDashboardScreen renders bottom navigation and role overview', (tester) async {
       final ctrl = LanguageController();
       await tester.pumpWidget(_wrap(RoleDashboardScreen(
+        themeController: ThemeController(),
         currentRole: AppRole.manager,
         languageController: ctrl,
         students: const [],
-        onSave: (s) async {},
+        onSave: (s
+      ) async {},
         onChangeRole: () {},
       )));
       await tester.pumpAndSettle();

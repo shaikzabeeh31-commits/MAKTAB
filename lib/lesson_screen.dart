@@ -189,7 +189,9 @@ class _LessonScreenState extends State<LessonScreen> {
                 children: ['صبح', 'دوپہر', 'شام', 'رات'].map((shift) => RadioListTile(
                   title: Text(shift, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
                   value: shift,
+                  // ignore: deprecated_member_use
                   groupValue: tempShift,
+                  // ignore: deprecated_member_use
                   onChanged: (val) => setStateSB(() => tempShift = val.toString()),
                 )).toList(),
               ),
@@ -359,6 +361,7 @@ class _LessonScreenState extends State<LessonScreen> {
                     child: DropdownButton<String>(
                       value: selectedGroup,
                       isDense: true,
+                      isExpanded: true,
                       underline: const SizedBox(),
                       style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', color: Colors.black, fontSize: 14),
                       items: _availableGroups.map((g) {

@@ -4,6 +4,8 @@ import 'package:maktab_management_system/app_localizations.dart';
 import 'package:maktab_management_system/community_chat_screen.dart';
 import 'package:maktab_management_system/results_screen.dart';
 import 'package:maktab_management_system/role_selection_screen.dart';
+import 'package:maktab_management_system/theme_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _wrap(Widget child) {
@@ -91,13 +93,14 @@ void main() {
       await tester.pumpWidget(_wrap(RoleDashboardScreen(
         currentRole: AppRole.teacher,
         languageController: ctrl,
+        themeController: ThemeController(),
         students: const [],
         onSave: (s) async {},
         onChangeRole: () {},
       )));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('فیس پورٹل'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('فیس کا کھاتہ'), findsAtLeastNWidgets(1));
       expect(find.textContaining('حاضری'), findsAtLeastNWidgets(1));
     });
   });

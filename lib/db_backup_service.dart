@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -88,7 +89,7 @@ class DbBackupService {
       await file.writeAsString(jsonString);
       await Share.shareXFiles([XFile(file.path)], text: 'Maktab Database Backup');
     } catch (e) {
-      print('Error sharing database: $e');
+      debugPrint('Error sharing database: $e');
     }
   }
 }

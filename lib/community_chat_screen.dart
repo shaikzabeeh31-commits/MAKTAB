@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_localizations.dart';
@@ -658,18 +657,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
       ),
     );
   }
-
-  void _showComingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('یہ فیچر جلد آ رہا ہے (Coming Soon)', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 1),
-      ),
-    );
-  }
-
-  @override
+@override
   Widget build(BuildContext context) {
     final bool isWide = MediaQuery.of(context).size.width > 700;
 

@@ -10,20 +10,23 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  test('ThemeController initializes with light theme', () {
+  test('ThemeController initializes with system theme', () {
     final controller = ThemeController();
-    expect(controller.themeMode, ThemeMode.light);
-    expect(controller.isDarkMode, false);
+    expect(controller.themeMode, ThemeMode.system);
+    expect(controller.isSystemMode, true);
   });
 
-  test('ThemeController toggles theme', () async {
+  test('ThemeController toggles theme (system -> light -> dark -> system)', () async {
     final controller = ThemeController();
+    expect(controller.themeMode, ThemeMode.system);
+
+    await controller.toggleTheme();
     expect(controller.themeMode, ThemeMode.light);
 
     await controller.toggleTheme();
     expect(controller.themeMode, ThemeMode.dark);
 
     await controller.toggleTheme();
-    expect(controller.themeMode, ThemeMode.light);
+    expect(controller.themeMode, ThemeMode.system);
   });
 }
