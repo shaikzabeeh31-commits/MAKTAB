@@ -4,6 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:maktab_management_system/app_localizations.dart';
 import 'package:maktab_management_system/attendance_screen.dart';
 
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:maktab_management_system/role_selection_screen.dart';
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -22,20 +25,29 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('ur'),
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('ur'), Locale('en')],
         home: AttendanceScreen(
           students: sampleStudents,
           languageController: languageController,
+          currentRole: AppRole.teacher,
         ),
       ),
     );
     await tester.pumpAndSettle();
 
     // Verify student name and details
-    expect(find.text('احمد علی'), findsOneWidget);
+    expect(find.textContaining('احمد علی'), findsOneWidget);
     expect(find.textContaining('101'), findsOneWidget);
 
     // Tap Absent chip
-    final absentChip = find.text('غائب');
+    final absentChip = find.text('غیر حاضر');
     expect(absentChip, findsOneWidget);
     await tester.tap(absentChip);
     await tester.pumpAndSettle();

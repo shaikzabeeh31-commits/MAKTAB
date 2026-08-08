@@ -6,8 +6,18 @@ import 'package:maktab_management_system/db_backup_service.dart';
 import 'package:maktab_management_system/lesson_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _wrap(Widget child) {
+import 'package:flutter_localizations/flutter_localizations.dart';
+
+Widget _wrap(Widget child, {Locale locale = const Locale('ur')}) {
   return MaterialApp(
+    locale: locale,
+    localizationsDelegates: const [
+      AppLocalizationsDelegate(),
+      GlobalMaterialLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+    ],
+    supportedLocales: const [Locale('ur'), Locale('en')],
     home: child,
   );
 }
@@ -41,7 +51,7 @@ void main() {
       )));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('خلاصہ رپورٹ'), findsOneWidget);
+      expect(find.textContaining('ایڈوانسڈ ڈیش بورڈ'), findsAtLeastNWidgets(1));
       expect(find.textContaining('شناختی کارڈ'), findsOneWidget);
       expect(find.textContaining('ترقیِ درجہ'), findsOneWidget);
       expect(find.textContaining('سندِ فراغت'), findsOneWidget);

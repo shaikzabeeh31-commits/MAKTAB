@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_localizations.dart';
 import 'role_selection_screen.dart';
@@ -32,6 +33,13 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = true;
   String _errorMsg = '';
   String _lastLoginTimeStr = '';
+  
+  // Advanced PIN Pad state
+  String _pinDigits = '';
+  String _confirmPinDigits = '';
+  bool _isConfirmPinMode = false;
+  final GlobalKey<_PinDotsRowState> _pinDotsKey = GlobalKey<_PinDotsRowState>();
+  final GlobalKey<_PinDotsRowState> _confirmPinDotsKey = GlobalKey<_PinDotsRowState>();
 
   // Failed Attempt Lockout State
   int _failedAttempts = 0;
@@ -120,10 +128,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _triggerLockoutTimer() {
+    final loc = AppLocalizations(widget.languageController.locale);
     setState(() {
       _isLockedOut = true;
       _lockoutSeconds = 30;
-      _errorMsg = 'بہت سی غلط کوششیں! سیکیورٹی کے لیے 30 سیکنڈز بعد دوبارہ کوشش کریں۔';
+      _errorMsg = '${loc.translate('too_many_attempts')} ${loc.translate('security_lock')}: 30 ${loc.translate('seconds_remaining')}';
     });
 
     Future.doWhile(() async {
@@ -132,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (_lockoutSeconds > 1) {
         setState(() {
           _lockoutSeconds--;
-          _errorMsg = 'سیکیورٹی لاک: $_lockoutSeconds سیکنڈز باقی ہیں...';
+          _errorMsg = '${loc.translate('security_lock')}: $_lockoutSeconds ${loc.translate('seconds_remaining')}...';
         });
         return true;
       } else {
@@ -147,6 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    final loc = AppLocalizations(widget.languageController.locale);
     if (_isLockedOut) return;
 
     final name = _nameCtrl.text.trim();
@@ -154,7 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final pin = _pinCtrl.text.trim();
 
     if (phone.isEmpty || pin.isEmpty) {
-      setState(() => _errorMsg = 'براہ کرم فون نمبر اور 4 ہندسوں کا پن (PIN) درج کریں۔');
+      setState(() => _errorMsg = loc.translate('error_phone_pin'));
       return;
     }
 
@@ -213,32 +223,33 @@ class _LoginScreenState extends State<LoginScreen> {
         _triggerLockoutTimer();
       } else {
         setState(() {
-          _errorMsg = 'غلط فون نمبر یا پن (PIN)۔ باقی کوششیں: ${5 - _failedAttempts}';
+          _errorMsg = '${loc.translate('error_wrong_pin')}. ${loc.translate('attempts_remaining')}: ${5 - _failedAttempts}';
         });
       }
     }
   }
 
   Future<void> _handleNewUserRegistration() async {
+    final loc = AppLocalizations(widget.languageController.locale);
     final name = _nameCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
     final pin = _pinCtrl.text.trim();
     final confirmPin = _confirmPinCtrl.text.trim();
 
     if (name.isEmpty) {
-      setState(() => _errorMsg = 'براہ کرم اپنا پورا نام درج کریں۔');
+      setState(() => _errorMsg = loc.translate('error_name_required'));
       return;
     }
     if (phone.isEmpty || phone.length < 8) {
-      setState(() => _errorMsg = 'براہ کرم درست موبائل فون نمبر درج کریں۔');
+      setState(() => _errorMsg = loc.translate('error_phone_invalid'));
       return;
     }
     if (pin.length < 4) {
-      setState(() => _errorMsg = 'پن (PIN) کم از کم 4 ہندسوں کا ہونا چاہیے۔');
+      setState(() => _errorMsg = loc.translate('error_pin_short'));
       return;
     }
     if (pin != confirmPin) {
-      setState(() => _errorMsg = 'پن (PIN) کی تصدیق میچ نہیں ہوئی۔');
+      setState(() => _errorMsg = loc.translate('error_pin_mismatch'));
       return;
     }
 
@@ -257,7 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('نیا اکاؤنٹ ($name) کامیابی سے رجسٹر ہو گیا!'),
+          content: Text('${loc.translate('account_created')} ($name)'),
           backgroundColor: Colors.green,
         ),
       );
@@ -273,24 +284,25 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showForgotPinDialog() {
+    final loc = AppLocalizations(widget.languageController.locale);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.help_outline_rounded, color: Colors.indigo),
-            SizedBox(width: 8),
-            Text('پن (PIN) کی بازیابی / Forgotten PIN', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            const Icon(Icons.help_outline_rounded, color: Colors.indigo),
+            const SizedBox(width: 8),
+            Text(loc.translate('pin_recovery'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: const Text(
-          'اگر آپ اپنا PIN بھول گئے ہیں تو ایڈمن یا متعلقہ استاد سے رابطہ کریں۔ وہ "اسٹاف و والدین PIN انتظام" سے آپ کا نیا PIN چند سیکنڈز میں سیٹ کر سکتے ہیں۔\n\nDefault PIN: 1234',
+        content: Text(
+          '${loc.translate('pin_recovery_msg')}\n\nDefault PIN: 1234',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('ٹھیک ہے (OK)'),
+            child: Text(loc.translate('ok')),
           ),
         ],
       ),
@@ -315,19 +327,20 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   String get _roleTitleUrdu {
+    final loc = AppLocalizations(widget.languageController.locale);
     switch (widget.role) {
       case AppRole.admin:
-        return 'ایڈمن لاگ ان (Administrator)';
+        return loc.translate('admin_login');
       case AppRole.manager:
-        return 'مینجر لاگ ان (Manager)';
+        return loc.translate('manager_login');
       case AppRole.teacher:
-        return 'استاد لاگ ان (Teacher)';
+        return loc.translate('teacher_login');
       case AppRole.parent:
-        return 'والدین لاگ ان (Parent)';
+        return loc.translate('parent_login');
       case AppRole.mutawalli:
-        return 'متولی لاگ ان (Mutawalli)';
+        return loc.translate('mutawalli_login');
       case AppRole.other:
-        return 'صارف لاگ ان (User)';
+        return loc.translate('user_login');
     }
   }
 
@@ -351,11 +364,16 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isRtl = widget.languageController.locale.languageCode != 'en';
+    final loc = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final inputBgColor = isDark ? const Color(0xFF1C2541) : const Color(0xFFF8FAFC);
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final fieldLabelColor = isDark ? Colors.tealAccent : const Color(0xFF074E32);
 
     return Directionality(
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF1F5F9),
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
         appBar: AppBar(
           backgroundColor: _roleColor,
           foregroundColor: Colors.white,
@@ -429,9 +447,9 @@ class _LoginScreenState extends State<LoginScreen> {
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: isDark ? const Color(0xFF334155) : Colors.grey.shade300),
                 ),
                 child: Row(
                   children: [
@@ -440,6 +458,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         onTap: () => setState(() {
                           _isNewUserMode = false;
                           _errorMsg = '';
+                          _pinDigits = '';
+                          _confirmPinDigits = '';
+                          _isConfirmPinMode = false;
+                          _pinCtrl.clear();
+                          _confirmPinCtrl.clear();
                         }),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
@@ -449,12 +472,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            'پہلے سے اکاؤنٹ ہے (Login)',
+                            loc.translate('login'),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
-                              color: !_isNewUserMode ? Colors.white : Colors.black87,
+                              color: !_isNewUserMode ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
                             ),
                           ),
                         ),
@@ -465,6 +488,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         onTap: () => setState(() {
                           _isNewUserMode = true;
                           _errorMsg = '';
+                          _pinDigits = '';
+                          _confirmPinDigits = '';
+                          _isConfirmPinMode = false;
+                          _pinCtrl.clear();
+                          _confirmPinCtrl.clear();
                         }),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
@@ -474,12 +502,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            'نیا اکاؤنٹ بنائیں (Create Account)',
+                            loc.locale.languageCode == 'ur' ? 'نیا اکاؤنٹ بنائیں' : 'Create Account',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
-                              color: _isNewUserMode ? Colors.white : Colors.black87,
+                              color: _isNewUserMode ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
                             ),
                           ),
                         ),
@@ -527,11 +555,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Form Input 1: Full Name
                       TextFormField(
                         controller: _nameCtrl,
+                        style: TextStyle(color: textColor),
                         decoration: InputDecoration(
-                          labelText: 'صارف کا نام (Full Name)',
-                          prefixIcon: const Icon(Icons.person),
+                          labelText: loc.translate('full_name'),
+                          labelStyle: TextStyle(color: fieldLabelColor),
+                          prefixIcon: Icon(Icons.person, color: fieldLabelColor),
                           filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
+                          fillColor: inputBgColor,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         textInputAction: TextInputAction.next,
@@ -541,12 +571,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Form Input 2: Mobile Phone Number
                       TextFormField(
                         controller: _phoneCtrl,
+                        style: TextStyle(color: textColor),
                         keyboardType: TextInputType.phone,
                         decoration: InputDecoration(
-                          labelText: 'موبائل نمبر / فون (Phone Number)',
-                          prefixIcon: const Icon(Icons.phone),
+                          labelText: loc.translate('phone_number'),
+                          labelStyle: TextStyle(color: fieldLabelColor),
+                          prefixIcon: Icon(Icons.phone, color: fieldLabelColor),
                           filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
+                          fillColor: inputBgColor,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         textInputAction: TextInputAction.next,
@@ -557,21 +589,25 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Role Selection for Registration
                         DropdownButtonFormField<AppRole>(
                           initialValue: _selectedRoleForRegistration,
+                          dropdownColor: isDark ? const Color(0xFF0B1329) : null,
+                          style: TextStyle(color: textColor),
                           decoration: InputDecoration(
-                            labelText: 'کردار منتخب کریں (Select User Role)',
-                            prefixIcon: const Icon(Icons.badge_rounded),
+                            labelText: loc.translate('select_role'),
+                            labelStyle: TextStyle(color: fieldLabelColor),
+                            prefixIcon: Icon(Icons.badge_rounded, color: fieldLabelColor),
                             filled: true,
-                            fillColor: const Color(0xFFF8FAFC),
+                            fillColor: inputBgColor,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           items: _allowedRegistrationRoles.map((r) {
                             String rTitle = r.name.toUpperCase();
-                            if (r == AppRole.admin) rTitle = 'ایڈمن (Admin)';
-                            if (r == AppRole.manager) rTitle = 'مینجر (Manager)';
-                            if (r == AppRole.teacher) rTitle = 'استاد (Teacher)';
-                            if (r == AppRole.parent) rTitle = 'والدین (Parent)';
-                            if (r == AppRole.mutawalli) rTitle = 'متولی (Mutawalli)';
-                            return DropdownMenuItem(value: r, child: Text(rTitle));
+                            final isUr = loc.locale.languageCode == 'ur';
+                            if (r == AppRole.admin) rTitle = isUr ? 'ایڈمن' : 'Admin';
+                            if (r == AppRole.manager) rTitle = isUr ? 'مینجر' : 'Manager';
+                            if (r == AppRole.teacher) rTitle = isUr ? 'استاد' : 'Teacher';
+                            if (r == AppRole.parent) rTitle = isUr ? 'والدین/سرپرست' : 'Parent/Guardian';
+                            if (r == AppRole.mutawalli) rTitle = isUr ? 'متولی' : 'Mutawalli';
+                            return DropdownMenuItem(value: r, child: Text(rTitle, style: TextStyle(color: textColor)));
                           }).toList(),
                           onChanged: (val) {
                             if (val != null) {
@@ -582,45 +618,70 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                       ],
 
-                      // Form Input 3: 4-Digit PIN
-                      TextFormField(
-                        controller: _pinCtrl,
-                        obscureText: _obscurePin,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                        decoration: InputDecoration(
-                          labelText: _isNewUserMode ? 'نیا 4 ہندسوں کا پن (New PIN)' : '4 ہندسوں کا پن (PIN)',
-                          prefixIcon: const Icon(Icons.lock),
-                          suffixIcon: IconButton(
-                            icon: Icon(_obscurePin ? Icons.visibility_off : Icons.visibility),
-                            onPressed: () => setState(() => _obscurePin = !_obscurePin),
+                      // Advanced PIN Pad
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1C2541) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF334155) : Colors.grey.shade300,
                           ),
-                          filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          counterText: '',
                         ),
-                        textInputAction: _isNewUserMode ? TextInputAction.next : TextInputAction.done,
+                        child: Column(
+                          children: [
+                            // PIN Label
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.lock_rounded, size: 18, color: fieldLabelColor),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _isNewUserMode && _isConfirmPinMode
+                                      ? loc.translate('confirm_pin')
+                                      : loc.translate('pin'),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: fieldLabelColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            // Animated PIN Dots
+                             _PinDotsRow(
+                              key: _isConfirmPinMode ? _confirmPinDotsKey : _pinDotsKey,
+                              pinText: _isConfirmPinMode ? _confirmPinDigits : _pinDigits,
+                              maxLength: 4,
+                              obscure: _obscurePin,
+                              activeColor: isDark ? Colors.tealAccent : _roleColor,
+                              inactiveColor: isDark ? Colors.white30 : Colors.grey.shade300,
+                            ),
+                            const SizedBox(height: 6),
+                            // Show/hide toggle
+                            TextButton.icon(
+                              onPressed: () => setState(() => _obscurePin = !_obscurePin),
+                              icon: Icon(
+                                _obscurePin ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                size: 16,
+                                color: isDark ? Colors.white54 : Colors.grey,
+                              ),
+                              label: Text(
+                                _obscurePin ? 'Show' : 'Hide',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? Colors.white54 : Colors.grey,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            // 3x4 Numeric Grid
+                            _buildPinGrid(isDark, textColor),
+                          ],
+                        ),
                       ),
-
-                      if (_isNewUserMode) ...[
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _confirmPinCtrl,
-                          obscureText: _obscurePin,
-                          keyboardType: TextInputType.number,
-                          maxLength: 6,
-                          decoration: InputDecoration(
-                            labelText: 'پن کی تصدیق (Confirm PIN)',
-                            prefixIcon: const Icon(Icons.lock_reset_rounded),
-                            filled: true,
-                            fillColor: const Color(0xFFF8FAFC),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            counterText: '',
-                          ),
-                          textInputAction: TextInputAction.done,
-                        ),
-                      ],
 
                       if (!_isNewUserMode) ...[
                         const SizedBox(height: 12),
@@ -633,11 +694,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                 if (val != null) setState(() => _rememberMe = val);
                               },
                             ),
-                            const Text('معلومات یاد رکھیں (Remember Me)', style: TextStyle(fontSize: 12.5)),
+                            Text(loc.translate('remember_me'), style: const TextStyle(fontSize: 12.5)),
                             const Spacer(),
                             TextButton(
                               onPressed: _showForgotPinDialog,
-                              child: const Text('PIN بھول گئے؟', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              child: Text(loc.translate('forgot_pin'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),
@@ -656,7 +717,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           icon: Icon(_isNewUserMode ? Icons.person_add_rounded : Icons.login_rounded),
                           label: Text(
-                            _isNewUserMode ? 'نیا اکاؤنٹ بنائیں اور داخل ہوں' : 'لاگ ان کریں (Login)',
+                            _isNewUserMode ? loc.translate('create_account_btn') : loc.translate('login_btn'),
                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           onPressed: _isLockedOut
@@ -674,9 +735,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
                           icon: const Icon(Icons.fingerprint_rounded, size: 22),
-                          label: const Text(
-                            'فنگر پرنٹ / بائیو میٹرک لاگ ان (Biometric Login)',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          label: Text(
+                            loc.translate('biometric_login'),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           onPressed: _handleBiometricLogin,
                         ),
@@ -694,7 +755,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const Icon(Icons.history_rounded, size: 14, color: Colors.grey),
                     const SizedBox(width: 6),
                     Text(
-                      'آخری کامیاب لاگ ان: $_lastLoginTimeStr',
+                      '${loc.translate('last_login')}: $_lastLoginTimeStr',
                       style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
                     ),
                   ],
@@ -706,4 +767,230 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
+  // ─── PIN Pad Grid ───────────────────────────────────────────
+  Widget _buildPinGrid(bool isDark, Color textColor) {
+    final buttonColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF334155) : Colors.grey.shade200;
+
+    Widget pinBtn(String label, {IconData? icon, Color? bgColor, VoidCallback? onTap}) {
+      return Expanded(
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Material(
+            color: bgColor ?? buttonColor,
+            borderRadius: BorderRadius.circular(14),
+            elevation: isDark ? 0 : 1,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: onTap,
+              child: Container(
+                height: 56,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: borderColor, width: 0.5),
+                ),
+                alignment: Alignment.center,
+                child: icon != null
+                    ? Icon(icon, color: textColor, size: 24)
+                    : Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                          color: textColor,
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        Row(children: [
+          pinBtn('1', onTap: () => _onPinDigitTap('1')),
+          pinBtn('2', onTap: () => _onPinDigitTap('2')),
+          pinBtn('3', onTap: () => _onPinDigitTap('3')),
+        ]),
+        Row(children: [
+          pinBtn('4', onTap: () => _onPinDigitTap('4')),
+          pinBtn('5', onTap: () => _onPinDigitTap('5')),
+          pinBtn('6', onTap: () => _onPinDigitTap('6')),
+        ]),
+        Row(children: [
+          pinBtn('7', onTap: () => _onPinDigitTap('7')),
+          pinBtn('8', onTap: () => _onPinDigitTap('8')),
+          pinBtn('9', onTap: () => _onPinDigitTap('9')),
+        ]),
+        Row(children: [
+          pinBtn('', icon: Icons.fingerprint_rounded,
+            bgColor: _roleColor.withValues(alpha: 0.15),
+            onTap: _handleBiometricLogin,
+          ),
+          pinBtn('0', onTap: () => _onPinDigitTap('0')),
+          pinBtn('', icon: Icons.backspace_rounded,
+            bgColor: isDark ? const Color(0xFF2D1B1B) : Colors.red.shade50,
+            onTap: _onPinBackspace,
+          ),
+        ]),
+      ],
+    );
+  }
+
+  void _onPinDigitTap(String digit) {
+    HapticFeedback.lightImpact();
+    setState(() {
+      if (_isNewUserMode && _isConfirmPinMode) {
+        if (_confirmPinDigits.length < 4) {
+          _confirmPinDigits += digit;
+          _confirmPinCtrl.text = _confirmPinDigits;
+        }
+      } else {
+        if (_pinDigits.length < 4) {
+          _pinDigits += digit;
+          _pinCtrl.text = _pinDigits;
+        }
+        // In registration mode, auto-switch to confirm PIN after 4 digits
+        if (_isNewUserMode && _pinDigits.length == 4 && !_isConfirmPinMode) {
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) {
+              setState(() => _isConfirmPinMode = true);
+            }
+          });
+        }
+      }
+    });
+  }
+
+  void _onPinBackspace() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      if (_isNewUserMode && _isConfirmPinMode) {
+        if (_confirmPinDigits.isNotEmpty) {
+          _confirmPinDigits = _confirmPinDigits.substring(0, _confirmPinDigits.length - 1);
+          _confirmPinCtrl.text = _confirmPinDigits;
+        } else {
+          // Go back to PIN entry mode
+          _isConfirmPinMode = false;
+        }
+      } else {
+        if (_pinDigits.isNotEmpty) {
+          _pinDigits = _pinDigits.substring(0, _pinDigits.length - 1);
+          _pinCtrl.text = _pinDigits;
+        }
+      }
+    });
+  }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// PIN Dots Row Widget - Animated dots showing PIN entry progress
+// ═══════════════════════════════════════════════════════════════
+class _PinDotsRow extends StatefulWidget {
+  final String pinText;
+  final int maxLength;
+  final bool obscure;
+  final Color activeColor;
+  final Color inactiveColor;
+
+  const _PinDotsRow({
+    super.key,
+    required this.pinText,
+    required this.maxLength,
+    required this.obscure,
+    required this.activeColor,
+    required this.inactiveColor,
+  });
+
+  @override
+  State<_PinDotsRow> createState() => _PinDotsRowState();
+}
+
+class _PinDotsRowState extends State<_PinDotsRow> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+  }
+
+  @override
+  void didUpdateWidget(_PinDotsRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.pinText.length != oldWidget.pinText.length && widget.pinText.length > oldWidget.pinText.length) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(widget.maxLength, (i) {
+        final isFilled = i < widget.pinText.length;
+        final isLatest = i == widget.pinText.length - 1 && widget.pinText.isNotEmpty;
+
+        return AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final scale = isLatest ? 1.0 + (_controller.value * 0.3) : 1.0;
+            return Transform.scale(
+              scale: scale,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                width: isFilled ? (widget.obscure ? 18 : 24) : 16,
+                height: isFilled ? (widget.obscure ? 18 : 24) : 16,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isFilled ? widget.activeColor : Colors.transparent,
+                  border: Border.all(
+                    color: isFilled ? widget.activeColor : widget.inactiveColor,
+                    width: 2.5,
+                  ),
+                  boxShadow: isFilled
+                      ? [
+                          BoxShadow(
+                            color: widget.activeColor.withValues(alpha: 0.4),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: isFilled && !widget.obscure
+                    ? Center(
+                        child: Text(
+                          widget.pinText[i],
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.black87 : Colors.white,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+            );
+          },
+        );
+      }),
+    );
+  }
+}
+

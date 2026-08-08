@@ -1032,7 +1032,7 @@ class _FeeScreenState extends State<FeeScreen> {
                     children: [
                       Icon(Icons.send_rounded, color: Colors.blue),
                       SizedBox(width: 8),
-                      Text('Send Report (رپورٹ بھیجیں)'),
+                      Expanded(child: Text('Send Report (رپورٹ بھیجیں)', overflow: TextOverflow.ellipsis)),
                     ],
                   ),
                 ),
@@ -1042,7 +1042,7 @@ class _FeeScreenState extends State<FeeScreen> {
                   children: [
                     Icon(Icons.check_circle_rounded, color: Colors.green),
                     SizedBox(width: 8),
-                    Text('Mark All Paid (سب ادا شدہ)'),
+                    Expanded(child: Text('Mark All Paid (سب ادا شدہ)', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
@@ -1052,7 +1052,7 @@ class _FeeScreenState extends State<FeeScreen> {
                   children: [
                     Icon(Icons.money_off_rounded, color: Colors.red),
                     SizedBox(width: 8),
-                    Text('Mark All Due (سب واجب الادا)'),
+                    Expanded(child: Text('Mark All Due (سب واجب الادا)', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
@@ -1062,7 +1062,7 @@ class _FeeScreenState extends State<FeeScreen> {
                   children: [
                     Icon(Icons.bar_chart_rounded, color: Colors.blue),
                     SizedBox(width: 8),
-                    Text('Fee Analytics (فیس گراف)'),
+                    Expanded(child: Text('Fee Analytics (فیس گراف)', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
@@ -1072,7 +1072,7 @@ class _FeeScreenState extends State<FeeScreen> {
                   children: [
                     Icon(Icons.receipt_long_rounded, color: Colors.blue),
                     SizedBox(width: 8),
-                    Text('Teacher Ledger (فیس کھاتہ)'),
+                    Expanded(child: Text('Teacher Ledger (فیس کھاتہ)', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
@@ -1082,7 +1082,7 @@ class _FeeScreenState extends State<FeeScreen> {
                   children: [
                     Icon(Icons.verified_user_rounded, color: Colors.blue),
                     SizedBox(width: 8),
-                    Text('Annual Audit (اڈٹ رپورٹ)'),
+                    Expanded(child: Text('Annual Audit (اڈٹ رپورٹ)', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
@@ -1092,7 +1092,7 @@ class _FeeScreenState extends State<FeeScreen> {
                   children: [
                     Icon(Icons.admin_panel_settings_rounded, color: Colors.blue),
                     SizedBox(width: 8),
-                    Text('Role Settings (رول اختیارات)'),
+                    Expanded(child: Text('Role Settings (رول اختیارات)', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
@@ -1102,7 +1102,7 @@ class _FeeScreenState extends State<FeeScreen> {
                   children: [
                     Icon(Icons.picture_as_pdf_rounded, color: Colors.blue),
                     SizedBox(width: 8),
-                    Text('Batch PDF (پی ڈی ایف رپورٹ)'),
+                    Expanded(child: Text('Batch PDF (پی ڈی ایف رپورٹ)', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
@@ -1114,22 +1114,100 @@ class _FeeScreenState extends State<FeeScreen> {
       ),
       body: Column(children: [
         _buildDashboardSummary(),
+        // Quick Actions Row
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.bar_chart_rounded, size: 14, color: Colors.blue),
+                  label: const Text('Collection Analytics', style: TextStyle(fontSize: 10)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black87,
+                    elevation: 1,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    side: BorderSide(color: Colors.grey.shade200),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.receipt_long_rounded, size: 14, color: Colors.orange),
+                  label: const Text('Teacher Ledger', style: TextStyle(fontSize: 10)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black87,
+                    elevation: 1,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    side: BorderSide(color: Colors.grey.shade200),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.verified_user_rounded, size: 14, color: Colors.green),
+                  label: const Text('Annual Audit', style: TextStyle(fontSize: 10)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black87,
+                    elevation: 1,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    side: BorderSide(color: Colors.grey.shade200),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.admin_panel_settings_rounded, size: 14, color: Colors.purple),
+                  label: const Text('Collector Role', style: TextStyle(fontSize: 10)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black87,
+                    elevation: 1,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    side: BorderSide(color: Colors.grey.shade200),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         _buildFilterBar(),
         _buildCalendarBar(),
-        _buildSelectAllRow(loc),
-        _buildTableHeader(loc),
         Expanded(
-          child: _filtered.isEmpty
-              ? Center(
-                  child: Text(loc.translate('no_students_found'),
-                      style: const TextStyle(color: Colors.grey)))
-              : ListView.builder(
-                  itemCount: _filtered.length,
-                  itemBuilder: (ctx, i) {
-                    final entry = _filtered[i];
-                    return _buildStudentRow(entry, i + 1, loc);
-                  },
-                ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: 580,
+              child: Column(
+                children: [
+                  _buildSelectAllRow(loc),
+                  _buildTableHeader(loc),
+                  Expanded(
+                    child: _filtered.isEmpty
+                        ? Center(
+                            child: Text(loc.translate('no_students_found'),
+                                style: const TextStyle(color: Colors.grey)))
+                        : ListView.builder(
+                            itemCount: _filtered.length,
+                            itemBuilder: (ctx, i) {
+                              final entry = _filtered[i];
+                              return _buildStudentRow(entry, i + 1, loc);
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
         _buildSummaryFooter(
             _selectedIndices.length, alertCount, pendingCount, paidCount),
@@ -1420,53 +1498,55 @@ class _FeeScreenState extends State<FeeScreen> {
   Widget _buildTableHeader(AppLocalizations loc) {
     const style = TextStyle(
         fontSize: 9.5, fontWeight: FontWeight.bold, color: _kNavy);
-    const orange =
-        TextStyle(fontSize: 9, color: _kOrange, fontWeight: FontWeight.bold);
-    const green =
-        TextStyle(fontSize: 9, color: _kGreen, fontWeight: FontWeight.bold);
+    final isEn = widget.languageController.locale.languageCode == 'en';
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: Row(children: [
-        const SizedBox(width: 36),
-        const SizedBox(
-            width: 90,
-            child: Text('Student Name\n(Parent Name)', style: style)),
-        Expanded(
-          child: Column(children: [
-            Text(
-              '${_kMonths[_selectedMonthIndex]} Fee Status',
-              style: style,
-            ),
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Text('Paid(₹)', style: green),
-              const Text(' / ', style: style),
-              const Text('Pend(₹)', style: orange),
-            ]),
-          ]),
+        const SizedBox(width: 44),
+        const SizedBox(width: 4),
+        SizedBox(
+          width: 150,
+          child: Text(
+            isEn ? 'Student / Father Name' : 'طالب علم / والد کا نام',
+            style: style,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
+        const SizedBox(width: 4),
+        SizedBox(
+          width: 90,
+          child: Center(
+            child: Text(
+              isEn ? 'Fee Status' : 'فیس کی حالت',
+              style: style,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
         const SizedBox(
-            width: 28,
+            width: 32,
             child: Center(
-                child: Text('Edit\nPay', style: style, textAlign: TextAlign.center))),
+                child: Text('Edit', style: style, textAlign: TextAlign.center))),
+        const SizedBox(width: 4),
         const SizedBox(
-            width: 26,
-            child: Center(child: Text('Alert', style: style))),
+            width: 32,
+            child: Center(child: Text('Alert', style: style, textAlign: TextAlign.center))),
+        const SizedBox(width: 4),
         const SizedBox(
-            width: 26,
+            width: 32,
             child: Center(
-                child: Text('₹\nPend', style: style, textAlign: TextAlign.center))),
+                child: Text('Paid', style: style, textAlign: TextAlign.center))),
+        const SizedBox(width: 4),
         const SizedBox(
-            width: 26,
+            width: 80,
             child: Center(
-                child: Text('Paid\n✓', style: style, textAlign: TextAlign.center))),
+                child: Text('Lang/App', style: style, textAlign: TextAlign.center))),
+        const SizedBox(width: 4),
         const SizedBox(
-            width: 72,
-            child: Center(
-                child: Text('Lang\n/App', style: style, textAlign: TextAlign.center))),
-        const SizedBox(
-            width: 28,
-            child: Center(child: Text('Call', style: style))),
+            width: 32,
+            child: Center(child: Text('Call', style: style, textAlign: TextAlign.center))),
       ]),
     );
   }
@@ -1493,13 +1573,19 @@ class _FeeScreenState extends State<FeeScreen> {
         orElse: () => kAllLanguages.first);
     final isExpanded = _expandedRows.contains(globalIdx);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBgColor = Theme.of(context).cardTheme.color ?? (isDark ? const Color(0xFF1E2541) : Colors.white);
+    final selectedColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFEBF3FF);
+    final textColor = isDark ? Colors.white : _kNavy;
+    final subColor = isDark ? Colors.white70 : Colors.grey.shade600;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 3.5),
       decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFFEBF3FF) : Colors.white,
+        color: isSelected ? selectedColor : cardBgColor,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: isSelected ? const Color(0xFF0A1F5C) : Colors.grey.shade200,
+          color: isSelected ? (isDark ? Colors.tealAccent : const Color(0xFF0A1F5C)) : (isDark ? const Color(0xFF334155) : Colors.grey.shade200),
           width: isSelected ? 2.5 : 1,
         ),
         boxShadow: [
@@ -1524,67 +1610,64 @@ class _FeeScreenState extends State<FeeScreen> {
             });
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // checkbox
                   SizedBox(
-                    width: 20,
+                    width: 24,
                     child: Checkbox(
                       value: isSelected,
-                      activeColor: _kNavy,
+                      activeColor: isDark ? Colors.tealAccent : _kNavy,
                       materialTapTargetSize:
                           MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
                       onChanged: (v) => _toggleStudent(globalIdx, v),
                     ),
                   ),
                   // serial
                   SizedBox(
-                    width: 18,
+                    width: 20,
                     child: Text('$serial',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: _kNavy)),
+                            fontSize: 12,
+                            color: textColor)),
                   ),
-                  // name + parent + phone
+                  const SizedBox(width: 4),
+                  // name + parent
                   SizedBox(
-                    width: 90,
+                    width: 150,
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          TranslatedText(
                             s['name']?.toString() ?? '-',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
-                                color: _kNavy),
+                                color: textColor),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
+                          TranslatedText(
                             s['fatherName']?.toString() ?? '-',
                             style: TextStyle(
                                 fontSize: 10,
-                                color: Colors.grey.shade600),
+                                color: subColor),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            s['fatherPhone']?.toString() ?? '-',
-                            style: const TextStyle(
-                                fontSize: 10,
-                                color: _kNavy,
-                                fontWeight: FontWeight.w500),
-                          ),
                         ]),
                   ),
-                  // fee status
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Column(children: [
+                  const SizedBox(width: 4),
+                  // fee status compact
+                  SizedBox(
+                    width: 90,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                         Row(
                             mainAxisAlignment:
                                 MainAxisAlignment.center,
@@ -1593,20 +1676,20 @@ class _FeeScreenState extends State<FeeScreen> {
                                   style: const TextStyle(
                                       color: _kGreen,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 12)),
-                              const Text(' / ',
+                                      fontSize: 11)),
+                              const Text('/',
                                   style: TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 10,
                                       color: Colors.grey)),
                               Text(_formatCurrency(pending),
                                   style: const TextStyle(
                                       color: _kOrange,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 12)),
+                                      fontSize: 11)),
                             ]),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
                         _FeeProgressBar(paid: paid, total: total),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
@@ -1615,31 +1698,16 @@ class _FeeScreenState extends State<FeeScreen> {
                           ),
                           child: Text(
                             isPaid ? 'PAID' : (paid > 0 ? 'PARTIAL' : 'DUE'),
-                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                            style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
                           ),
                         ),
-                        if (paid > 0) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            _paymentMode(s) == 'UPI'
-                                ? '📱 UPI'
-                                : _paymentMode(s) == 'Bank Transfer'
-                                    ? '🏦 Bank'
-                                    : _paymentMode(s) == 'Cheque'
-                                        ? '📝 Cheque'
-                                        : '💵 Cash',
-                            style: TextStyle(
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.blueGrey.shade700),
-                          ),
-                        ],
-                      ]),
+                      ],
                     ),
                   ),
+                  const SizedBox(width: 4),
                   // edit
                   SizedBox(
-                    width: 28,
+                    width: 32,
                     child: _IconBtn(
                       icon: Icons.edit_note_rounded,
                       color: _kNavy,
@@ -1647,9 +1715,10 @@ class _FeeScreenState extends State<FeeScreen> {
                       onTap: () => _showEditFeeDialog(globalIdx),
                     ),
                   ),
+                  const SizedBox(width: 4),
                   // alert bell
                   SizedBox(
-                    width: 26,
+                    width: 32,
                     child: _IconBtn(
                       icon: hasPending
                           ? Icons.notifications_active_rounded
@@ -1668,42 +1737,10 @@ class _FeeScreenState extends State<FeeScreen> {
                       },
                     ),
                   ),
-                  // pending rupee (interactive toggle to due)
-                  SizedBox(
-                    width: 26,
-                    child: GestureDetector(
-                      onTap: () {
-                        final tot = s['feeAmount']?.toString() ?? '300';
-                        _updateMonthRecord(globalIdx, 'due', '0');
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('Marked ${s['name']} fee as Pending (₹$tot)'),
-                          duration: const Duration(seconds: 2),
-                          backgroundColor: _kOrange,
-                        ));
-                      },
-                      child: Container(
-                        width: 26,
-                        height: 26,
-                        decoration: BoxDecoration(
-                          color: hasPending
-                              ? _kOrange.withValues(alpha: 0.15)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Icon(
-                          Icons.currency_rupee_rounded,
-                          color: hasPending
-                              ? _kOrange
-                              : Colors.grey.shade400,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 2),
+                  const SizedBox(width: 4),
                   // paid check (interactive 1-tap toggle to paid)
                   SizedBox(
-                    width: 26,
+                    width: 32,
                     child: GestureDetector(
                       onTap: () {
                         final tot = s['feeAmount']?.toString() ?? '300';
@@ -1719,7 +1756,7 @@ class _FeeScreenState extends State<FeeScreen> {
                         ));
                       },
                       child: Container(
-                        width: 26,
+                        width: 32,
                         height: 26,
                         decoration: BoxDecoration(
                           color: isPaid
@@ -1737,10 +1774,10 @@ class _FeeScreenState extends State<FeeScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 2),
+                  const SizedBox(width: 4),
                   // language + app method toggle
                   SizedBox(
-                    width: 72,
+                    width: 80,
                     child: Row(children: [
                       Expanded(
                         child: GestureDetector(
@@ -1821,14 +1858,15 @@ class _FeeScreenState extends State<FeeScreen> {
                       ),
                     ]),
                   ),
+                  const SizedBox(width: 4),
                   // call
                   SizedBox(
-                    width: 28,
+                    width: 32,
                     child: GestureDetector(
                       onTap: () => _openCall(
                           s['fatherPhone']?.toString() ?? ''),
                       child: Container(
-                        width: 28,
+                        width: 32,
                         height: 28,
                         decoration: BoxDecoration(
                           color: _kGreen,

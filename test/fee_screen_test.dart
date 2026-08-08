@@ -73,6 +73,7 @@ List<Map<String, dynamic>> _makeStudents() => [
 /// Wrap in a minimal test app with localizations.
 Widget _wrap(Widget child) {
   return MaterialApp(
+    locale: const Locale('en'),
     localizationsDelegates: const [
       AppLocalizationsDelegate(),
       GlobalMaterialLocalizations.delegate,
@@ -85,6 +86,7 @@ Widget _wrap(Widget child) {
 
 Widget _feeScreen({
   List<Map<String, dynamic>>? students,
+  bool showAppBarLanguageButton = true,
 }) {
   final ctrl = LanguageController();
   final studs = students ?? _makeStudents();
@@ -92,8 +94,8 @@ Widget _feeScreen({
     FeeScreen(
       students: studs,
       languageController: ctrl,
+      showAppBarLanguageButton: showAppBarLanguageButton,
       onSave: (updated) async {},
-      showAppBarLanguageButton: true,
     ),
   );
 }
@@ -229,6 +231,7 @@ void main() {
     });
 
     testWidgets('shows correct number of morning students', (tester) async {
+      _useSize(tester, 1080, 1920);
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
       // 3 morning students in default data
@@ -240,6 +243,7 @@ void main() {
     });
 
     testWidgets('switching to Shaam shows evening students', (tester) async {
+      _useSize(tester, 1080, 1920);
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
       await tester.tap(find.text('Shaam'));
@@ -404,6 +408,7 @@ void main() {
     });
 
     testWidgets('edit payment icon opens fee dialog', (tester) async {
+      _useSize(tester, 1080, 2400);
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
       await tester.tap(find.byIcon(Icons.edit_note_rounded).first);
@@ -414,6 +419,7 @@ void main() {
 
     testWidgets('fee dialog has Receipt PDF and Timeline PDF buttons',
         (tester) async {
+      _useSize(tester, 1080, 2400);
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
       await tester.tap(find.byIcon(Icons.edit_note_rounded).first);
@@ -454,31 +460,36 @@ void main() {
     testWidgets('batch PDF button exists in AppBar', (tester) async {
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.tap(find.byType(PopupMenuButton<String>).first);
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.picture_as_pdf_rounded), findsOneWidget);
     });
 
     testWidgets('language button exists in AppBar', (tester) async {
-      await tester.pumpWidget(_feeScreen());
+      await tester.pumpWidget(_feeScreen(showAppBarLanguageButton: true));
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.language), findsOneWidget);
+      expect(find.byType(LanguageButton), findsOneWidget);
     });
 
     testWidgets('WhatsApp icon shown for WhatsApp method students',
         (tester) async {
+      _useSize(tester, 1080, 1920);
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.chat_rounded), findsWidgets);
     });
 
     testWidgets('SMS icon shown for SMS method students', (tester) async {
+      _useSize(tester, 1080, 1920);
       await tester.pumpWidget(_feeScreen());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Shaam'));
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.sms_rounded), findsWidgets);
     });
 
     testWidgets('call button shown for each student', (tester) async {
+      _useSize(tester, 1080, 1920);
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.phone_rounded), findsWidgets);

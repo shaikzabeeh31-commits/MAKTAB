@@ -90,10 +90,10 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
     return Directionality(
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF074E32),
-          foregroundColor: Colors.white,
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -126,7 +126,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
               const SizedBox(height: 16),
 
               // SECURITY & LOGINS MANAGEMENT
-              const Text('Security & Logins / سیکیورٹی و لاگ ان انتظام', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              Text(loc.translate('security_logins'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -173,13 +173,13 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
               const SizedBox(height: 16),
 
               // ITEM 8, 19, 30: Quick Student Actions
-              const Text('Student & Academic Controls / طلبہ و تعلیمی انتظامیہ', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              Text(loc.translate('student_academic_controls'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
                     child: _QuickAdminCard(
-                      title: 'ID Card / شناختی کارڈ',
+                      title: loc.translate('id_card'),
                       icon: Icons.badge_rounded,
                       color: Colors.blue.shade800,
                       onTap: _showIdCardGeneratorDialog,
@@ -188,7 +188,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _QuickAdminCard(
-                      title: 'Promote / ترقیِ درجہ',
+                      title: loc.translate('promote'),
                       icon: Icons.grade_rounded,
                       color: Colors.green.shade800,
                       onTap: _showClassPromotionDialog,
@@ -197,7 +197,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _QuickAdminCard(
-                      title: 'Cert / سندِ فراغت',
+                      title: loc.translate('certificate'),
                       icon: Icons.school_rounded,
                       color: Colors.indigo.shade800,
                       onTap: _showLeavingCertDialog,
@@ -235,7 +235,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _showRulesPortalDialog,
                       icon: const Icon(Icons.gavel_rounded, color: Color(0xFF074E32)),
-                      label: const Text('Maktab Rules / قواعد'),
+                      label: Text(loc.translate('maktab_rules')),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -243,7 +243,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _showPermissionsMatrixDialog,
                       icon: const Icon(Icons.admin_panel_settings_rounded, color: Colors.purple),
-                      label: const Text('Permissions / اجازتیں'),
+                      label: Text(loc.translate('permissions')),
                     ),
                   ),
                 ],
@@ -559,14 +559,16 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
   void _showDbImportExportDialog() {
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.storage_rounded, color: Colors.green),
-            SizedBox(width: 8),
-            Text('.db داتابیس ایکسپورٹ / امپورٹ', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-          ],
-        ),
+      builder: (ctx) {
+        final loc = AppLocalizations.of(ctx);
+        return AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.storage_rounded, color: Colors.green),
+              const SizedBox(width: 8),
+              Text(loc.translate('db_import_export'), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            ],
+          ),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -615,8 +617,8 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
             label: const Text('Import .db'),
           ),
         ],
-      ),
-    );
+      );
+    });
   }
 
   void _showIdCardGeneratorDialog() {

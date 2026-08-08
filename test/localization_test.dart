@@ -14,21 +14,21 @@ void main() {
     test('translates keys correctly in Urdu', () {
       final loc = AppLocalizations(const Locale('ur'));
       expect(loc.translate('app_title'), equals('مکتب مینیجر'));
-      expect(loc.translate('add_student'), equals('طالب علم شامل کریں'));
+      expect(loc.translate('add_student'), equals('نیا طالب علم شامل کریں'));
       expect(loc.translate('attendance'), equals('حاضری'));
     });
 
     test('translates keys correctly in English', () {
       final loc = AppLocalizations(const Locale('en'));
       expect(loc.translate('app_title'), equals('Maktab Manager'));
-      expect(loc.translate('add_student'), equals('Add Student'));
+      expect(loc.translate('add_student'), equals('Add New Student'));
       expect(loc.translate('attendance'), equals('Attendance'));
     });
 
     test('translates keys correctly in Arabic', () {
       final loc = AppLocalizations(const Locale('ar'));
       expect(loc.translate('app_title'), equals('مدير المكتب'));
-      expect(loc.translate('add_student'), equals('إضافة طالب'));
+      expect(loc.translate('add_student'), equals('إضافة طالب جديد'));
       expect(loc.translate('attendance'), equals('التحضير'));
     });
 

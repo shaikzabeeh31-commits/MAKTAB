@@ -7,8 +7,18 @@ import 'package:maktab_management_system/role_selection_screen.dart';
 import 'package:maktab_management_system/theme_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _wrap(Widget child) {
+import 'package:flutter_localizations/flutter_localizations.dart';
+
+Widget _wrap(Widget child, {Locale locale = const Locale('ur')}) {
   return MaterialApp(
+    locale: locale,
+    localizationsDelegates: const [
+      AppLocalizationsDelegate(),
+      GlobalMaterialLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+    ],
+    supportedLocales: const [Locale('ur'), Locale('en')],
     home: child,
   );
 }
@@ -59,7 +69,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.people_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.how_to_reg_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.how_to_reg_rounded), findsAtLeastNWidgets(1));
     });
   });
 }

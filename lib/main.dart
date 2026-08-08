@@ -4,15 +4,15 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'app_localizations.dart';
 import 'attendance_screen.dart';
 import 'fee_screen.dart';
 import 'role_selection_screen.dart';
 import 'login_screen.dart';
-import 'theme/app_components.dart';
+
 import 'theme/app_theme.dart';
 import 'theme_controller.dart';
 
@@ -217,7 +217,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
 
   List<Map<String, dynamic>> studentsList = [];
   bool isLoading = true;
-  int _currentStep = 0;
 
   Future<void> initializeNotifications() async {
     try {
@@ -386,6 +385,15 @@ class _StudentListScreenState extends State<StudentListScreen> {
     initializeNotifications();
     loadStudentsFromStorage();
     _loadTeacherName();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.9) {
+        if (_displayCount < studentsList.length) {
+          setState(() {
+            _displayCount += 20;
+          });
+        }
+      }
+    });
   }
 
   Future<void> _loadTeacherName() async {
@@ -996,473 +1004,511 @@ class _StudentListScreenState extends State<StudentListScreen> {
     ).whenComplete(feeAmountController.dispose);
   }
 
-  void showAddStudentDialog() {
+  Future<void> showAddStudentDialog() async {
     final loc = AppLocalizations.of(context);
-    final studentNameController = TextEditingController();
-    final fatherNameController = TextEditingController();
-    final fatherPhoneController = TextEditingController();
-    final dobController = TextEditingController();
-    final teacherNameController = TextEditingController();
+    final prefs = await SharedPreferences.getInstance();
+
+    final studentNameController = TextEditingController(text: prefs.getString('draft_student_name') ?? '');
+    final fatherNameController = TextEditingController(text: prefs.getString('draft_father_name') ?? '');
+    final fatherPhoneController = TextEditingController(text: prefs.getString('draft_father_phone') ?? '');
+    final dobController = TextEditingController(text: prefs.getString('draft_dob') ?? '');
+    final teacherNameController = TextEditingController(text: prefs.getString('draft_teacher_name') ?? '');
+    
+    void saveDrafts() {
+      prefs.setString('draft_student_name', studentNameController.text);
+      prefs.setString('draft_father_name', fatherNameController.text);
+      prefs.setString('draft_father_phone', fatherPhoneController.text);
+      prefs.setString('draft_dob', dobController.text);
+      prefs.setString('draft_teacher_name', teacherNameController.text);
+    }
+
+    studentNameController.addListener(saveDrafts);
+    fatherNameController.addListener(saveDrafts);
+    fatherPhoneController.addListener(saveDrafts);
+    dobController.addListener(saveDrafts);
+    teacherNameController.addListener(saveDrafts);
+
+    void clearDrafts() {
+      prefs.remove('draft_student_name');
+      prefs.remove('draft_father_name');
+      prefs.remove('draft_father_phone');
+      prefs.remove('draft_dob');
+      prefs.remove('draft_teacher_name');
+    }
+
     String selectedGroup = 'Hifz Group A';
     String selectedShift = 'morning';
     String selectedGender = 'male';
     String selectedLanguage = 'ur';
     String selectedMessageMethod = 'SMS';
 
-      final guardianNameController = TextEditingController(text: 'سرپرست (ولی)');
-      final guardianRelationController = TextEditingController(text: 'والد / چچا');
+    final guardianNameController = TextEditingController(text: 'سرپرست (ولی)');
+    final guardianRelationController = TextEditingController(text: 'والد / چچا');
 
-      showDialog<void>(
+    if (!mounted) return;
+    showDialog<void>(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             final isRtl = widget.languageController.locale.languageCode != 'en';
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final inputBgColor = isDark ? const Color(0xFF1C2541) : Colors.grey.shade100;
+            final textColor = isDark ? Colors.white : Colors.black87;
+            final fieldLabelColor = isDark ? Colors.tealAccent : const Color(0xFF074E32);
+
             return Directionality(
               textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
-              child: AlertDialog(
-                title: Text(
-                  loc.translate('add_student'),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                content: SizedBox(
-                  width: double.maxFinite,
-                  height: 400,
-                  child: Stepper(
-                    type: StepperType.horizontal,
-                    currentStep: _currentStep,
-                    onStepTapped: (index) => setDialogState(() => _currentStep = index),
-                    onStepContinue: () {
-                      if (_currentStep < 1) {
-                        setDialogState(() => _currentStep += 1);
-                      }
-                    },
-                    onStepCancel: () {
-                      if (_currentStep > 0) {
-                        setDialogState(() => _currentStep -= 1);
-                      }
-                    },
-                    controlsBuilder: (context, details) {
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 16),
-                        child: Row(
-                          children: [
-                            if (_currentStep < 1)
-                              FilledButton(onPressed: details.onStepContinue, child: const Text('Next')),
-                            const SizedBox(width: 8),
-                            if (_currentStep > 0)
-                              TextButton(onPressed: details.onStepCancel, child: const Text('Back')),
-                          ],
-                        ),
-                      );
-                    },
-                    steps: [
-                      Step(
-                        title: const Text('Personal'),
-                        isActive: _currentStep >= 0,
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                      TextFormField(
-                        controller: studentNameController,
-                        decoration: InputDecoration(
-                          labelText: loc.translate('name'),
-                          prefixIcon: const Icon(Icons.person_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                        ),
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final contact = await ContactPickerHelper.pickContact(context, studentsList);
-                          if (contact != null) {
-                            setDialogState(() {
-                              fatherNameController.text = contact['name'] ?? '';
-                              fatherPhoneController.text = contact['phone'] ?? '';
-                            });
-                          }
-                        },
-                        icon: const Icon(Icons.contacts_rounded, size: 16),
-                        label: const Text('فون کانٹیکٹ سے نام و نمبر امپورٹ کریں (Import Contact)', style: TextStyle(fontSize: 11)),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: fatherNameController,
-                        decoration: InputDecoration(
-                          labelText: loc.translate('father_name'),
-                          prefixIcon: const Icon(Icons.escalator_warning_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                        ),
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: guardianNameController,
-                        decoration: InputDecoration(
-                          labelText: 'سرپرست کا نام (Guardian Name)',
-                          prefixIcon: const Icon(Icons.shield_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                        ),
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: guardianRelationController,
-                        decoration: InputDecoration(
-                          labelText: 'سرپرست سے رشتہ (Guardian Relation)',
-                          prefixIcon: const Icon(Icons.family_restroom_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                        ),
-                        textInputAction: TextInputAction.done,
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: fatherPhoneController,
-                              decoration: InputDecoration(
-                                labelText: loc.translate('phone_number'),
-                                prefixIcon: const Icon(Icons.phone_rounded),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                filled: true,
-                                fillColor: Colors.grey.shade100,
-                              ),
-                              keyboardType: TextInputType.phone,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton.filled(
-                            icon: const Icon(Icons.contacts_rounded),
-                            tooltip: 'Import from Contacts',
-                            style: IconButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                            ),
-                            onPressed: () async {
-                              try {
-                                final contact = await FlutterContacts.native.showPicker(
-                                  properties: {ContactProperty.phone, ContactProperty.name},
-                                );
-                                if (contact != null) {
-                                  setDialogState(() {
-                                    if (contact.name?.first != null && contact.name!.first!.isNotEmpty) {
-                                      fatherNameController.text = '${contact.name!.first ?? ''} ${contact.name!.last ?? ''}'.trim();
-                                    }
-                                    if (contact.phones.isNotEmpty) {
-                                      fatherPhoneController.text = contact.phones.first.number;
-                                    }
-                                  });
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error picking contact: $e'), backgroundColor: Colors.red),
-                                  );
-                                }
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                            ],
-                          ),
-                        ),
-                        Step(
-                          title: const Text('Details'),
-                          isActive: _currentStep >= 1,
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: dobController,
-                        readOnly: true,
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime(1900),
-                            lastDate: DateTime.now(),
-                          );
-                          if (date != null) {
-                            setDialogState(() {
-                              dobController.text = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-                            });
-                          }
-                        },
-                        decoration: InputDecoration(
-                          labelText: 'Date of Birth (YYYY-MM-DD)',
-                          prefixIcon: const Icon(Icons.calendar_today_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedGroup,
-                        decoration: InputDecoration(
-                          labelText: 'گروپ (Batch Group Option)',
-                          prefixIcon: Icon(Icons.groups_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'Hifz Group A', child: Text('حفظ گروپ (Hifz Group A)')),
-                          DropdownMenuItem(value: 'Nazira Group B', child: Text('ناظرہ گروپ (Nazira Group B)')),
-                          DropdownMenuItem(value: 'Tajweed Group C', child: Text('تجوید گروپ (Tajweed Group C)')),
-                          DropdownMenuItem(value: 'Primary Group D', child: Text('ابتدائی گروپ (Primary Group D)')),
-                        ],
-                        onChanged: (newValue) {
-                          if (newValue != null) {
-                            setDialogState(() {
-                              selectedGroup = newValue;
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: teacherNameController,
-                        decoration: InputDecoration(
-                          labelText: loc.translate('teacher_name'),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedShift,
-                        decoration: InputDecoration(
-                          labelText: loc.translate('shift'),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                        ),
-                        items: [
-                          DropdownMenuItem(
-                            value: 'morning',
-                            child: Text(loc.translate('morning')),
-                          ),
-                          DropdownMenuItem(
-                            value: 'evening',
-                            child: Text(loc.translate('evening')),
-                          ),
-                        ],
-                        onChanged: (newValue) {
-                          if (newValue != null) {
-                            setDialogState(() {
-                              selectedShift = newValue;
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedMessageMethod,
-                        decoration: InputDecoration(
-                          labelText: loc.translate('notice_channel'),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'SMS', child: Text('SMS')),
-                          DropdownMenuItem(
-                            value: 'WhatsApp',
-                            child: Text('WhatsApp'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Notification',
-                            child: Text('App Notification'),
-                          ),
-                        ],
-                        onChanged: (newValue) {
-                          if (newValue != null) {
-                            setDialogState(() {
-                              selectedMessageMethod = newValue;
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedGender,
-                        decoration: InputDecoration(
-                          labelText: loc.translate('gender'),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                        ),
-                        items: [
-                          DropdownMenuItem(
-                            value: 'male',
-                            child: Text(loc.translate('male')),
-                          ),
-                          DropdownMenuItem(
-                            value: 'female',
-                            child: Text(loc.translate('female')),
-                          ),
-                        ],
-                        onChanged: (newValue) {
-                          if (newValue != null) {
-                            setDialogState(() {
-                              selectedGender = newValue;
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedLanguage,
-                        decoration: InputDecoration(
-                          labelText: loc.translate('message_language'),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'ur', child: Text('🇵🇰 Urdu (اردو)')),
-                          DropdownMenuItem(value: 'en', child: Text('🇬🇧 English')),
-                          DropdownMenuItem(value: 'ar', child: Text('🇸🇦 Arabic (العربية)')),
-                          DropdownMenuItem(value: 'hi', child: Text('🇮🇳 Hindi (हिंदी)')),
-                          DropdownMenuItem(value: 'te', child: Text('🇮🇳 Telugu (తెలుగు)')),
-                          DropdownMenuItem(value: 'kn', child: Text('🇮🇳 Kannada (ಕನ್ನಡ)')),
-                          DropdownMenuItem(value: 'ta', child: Text('🇮🇳 Tamil (தமிழ்)')),
-                          DropdownMenuItem(value: 'ml', child: Text('🇮🇳 Malayalam (മലയാളം)')),
-                        ],
-                        onChanged: (newValue) {
-                          if (newValue != null) {
-                            setDialogState(() {
-                              selectedLanguage = newValue;
-                            });
-                          }
-                        },
-                      ),
-                            ],
-                          ),
-                        ),
-                    ],
+              child: Dialog.fullscreen(
+                backgroundColor: isDark ? const Color(0xFF0B1329) : Colors.white,
+                child: Scaffold(
+                  backgroundColor: isDark ? const Color(0xFF0B1329) : Colors.white,
+                  appBar: AppBar(
+                    backgroundColor: const Color(0xFF074E32),
+                    foregroundColor: Colors.white,
+                    title: Text(loc.translate('add_student')),
+                    leading: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(dialogContext),
+                    ),
                   ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(dialogContext),
-                    child: Text(loc.translate('cancel')),
-                  ),
-                  FilledButton(
-                    onPressed: () async {
-                      final studentName = studentNameController.text.trim();
-
-                      if (studentName.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${loc.translate('name')} required'),
-                          ),
-                        );
-                        return;
-                      }
-
-                      final now = DateTime.now();
-                      final formattedDate = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-                      final fatherPhone = fatherPhoneController.text.trim();
-
-                      setState(() {
-                        studentsList.add({
-                          'name': studentName,
-                          'fatherName': fatherNameController.text.trim(),
-                          'fatherPhone': fatherPhone,
-                          'dob': dobController.text.trim(),
-                          'group': selectedGroup,
-                          'className': selectedGroup,
-                          'teacherName': teacherNameController.text.trim().isNotEmpty ? teacherNameController.text.trim() : 'حافظ احمد حسن',
-                          'shift': selectedShift,
-                          'gender': selectedGender,
-                          'language': selectedLanguage,
-                          'messageMethod': selectedMessageMethod,
-                          'feeAmount': '500',
-                          'feeMonth': 'August 2026',
-                          'feeStatus': 'due',
-                          'isPresent': true,
-                          'isNewAdmission': true,
-                          'admissionDate': formattedDate,
-                          'parentPin': '1234',
-                        });
-                      });
-
-                      if (fatherPhone.isNotEmpty) {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setString('cred_parent_${fatherPhone}_pin', '1234');
-                      }
-
-                      await saveStudentsToStorage();
-
-                      // Ask to save parent contact to phone
-                      final fatherName = fatherNameController.text.trim();
-                      if (fatherPhone.isNotEmpty && fatherName.isNotEmpty && dialogContext.mounted) {
-                        final saveContact = await showDialog<bool>(
-                          context: dialogContext,
-                          builder: (ctx) => AlertDialog(
-                            icon: const Icon(Icons.contact_phone_rounded, color: Colors.green, size: 40),
-                            title: const Text('Save to Contacts?'),
-                            content: Text(
-                              'کیا آپ "$fatherName" ($fatherPhone) کو اپنے فون رابطوں میں محفوظ کرنا چاہتے ہیں؟\n\n'
-                              'Do you want to save "$fatherName" to your phone contacts?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx, false),
-                                child: Text(loc.translate('cancel')),
-                              ),
-                              FilledButton.icon(
-                                onPressed: () => Navigator.pop(ctx, true),
-                                icon: const Icon(Icons.save_rounded),
-                                label: Text(loc.translate('save')),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        if (saveContact == true) {
-                          try {
-                            final permStatus = await FlutterContacts.permissions.request(PermissionType.readWrite);
-                            if (permStatus == PermissionStatus.granted || permStatus == PermissionStatus.limited) {
-                              final nameParts = fatherName.split(' ');
-                              final newContact = Contact(
-                                name: Name(
-                                  first: nameParts.first,
-                                  last: nameParts.skip(1).join(' '),
-                                ),
-                                phones: [Phone(number: fatherPhone)],
-                                organizations: [Organization(name: 'Maktab — $studentName Parent')],
-                              );
-                              await FlutterContacts.create(newContact);
-                              if (dialogContext.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('✓ $fatherName contact saved!'),
-                                    backgroundColor: Colors.green,
+                  body: SafeArea(
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // SECTION 1: Student Details
+                                Card(
+                                  elevation: 0,
+                                  color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade50,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          isRtl ? 'طالب علم کی معلومات' : 'Student Information',
+                                          style: TextStyle(fontWeight: FontWeight.bold, color: fieldLabelColor),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        TextFormField(
+                                          controller: studentNameController,
+                                          style: TextStyle(color: textColor),
+                                          decoration: InputDecoration(
+                                            labelText: loc.translate('name'),
+                                            labelStyle: TextStyle(color: fieldLabelColor),
+                                            prefixIcon: Icon(Icons.person_rounded, color: fieldLabelColor),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                            filled: true,
+                                            fillColor: inputBgColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        TextFormField(
+                                          controller: dobController,
+                                          style: TextStyle(color: textColor),
+                                          readOnly: true,
+                                          onTap: () async {
+                                            final date = await showDatePicker(
+                                              context: context,
+                                              initialDate: DateTime.now(),
+                                              firstDate: DateTime(1900),
+                                              lastDate: DateTime.now(),
+                                            );
+                                            if (date != null) {
+                                              setDialogState(() {
+                                                dobController.text = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+                                              });
+                                            }
+                                          },
+                                          decoration: InputDecoration(
+                                            labelText: isRtl ? 'تاریخِ پیدائش' : 'Date of Birth (YYYY-MM-DD)',
+                                            labelStyle: TextStyle(color: fieldLabelColor),
+                                            prefixIcon: Icon(Icons.calendar_today_rounded, color: fieldLabelColor),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                            filled: true,
+                                            fillColor: inputBgColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        DropdownButtonFormField<String>(
+                                          initialValue: selectedGender,
+                                          dropdownColor: isDark ? const Color(0xFF0B1329) : Colors.white,
+                                          style: TextStyle(color: textColor),
+                                          decoration: InputDecoration(
+                                            labelText: loc.translate('gender'),
+                                            labelStyle: TextStyle(color: fieldLabelColor),
+                                            prefixIcon: Icon(Icons.wc_rounded, color: fieldLabelColor),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                            filled: true,
+                                            fillColor: inputBgColor,
+                                          ),
+                                          items: [
+                                            DropdownMenuItem(value: 'male', child: TranslatedText('male', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'female', child: TranslatedText('female', style: TextStyle(color: textColor))),
+                                          ],
+                                          onChanged: (newValue) {
+                                            if (newValue != null) {
+                                              setDialogState(() => selectedGender = newValue);
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                );
-                              }
-                            }
-                          } catch (e) {
-                            if (dialogContext.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Could not save contact: $e'), backgroundColor: Colors.red),
-                              );
-                            }
-                          }
-                        }
-                      }
+                                ),
+                                const SizedBox(height: 16),
 
-                      if (dialogContext.mounted) {
-                        Navigator.pop(dialogContext);
-                      }
-                    },
-                    child: Text(loc.translate('save')),
+                                // SECTION 2: Guardian & Contacts
+                                Card(
+                                  elevation: 0,
+                                  color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade50,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              isRtl ? 'سرپرست اور رابطہ' : 'Guardian & Contact Info',
+                                              style: TextStyle(fontWeight: FontWeight.bold, color: fieldLabelColor),
+                                            ),
+                                            // Modern "Import from Contacts" button!
+                                            TextButton.icon(
+                                              onPressed: () async {
+                                                try {
+                                                  final perm = await FlutterContacts.permissions.request(PermissionType.readWrite);
+                                                  if (perm == PermissionStatus.granted || perm == PermissionStatus.limited) {
+                                                    final contact = await FlutterContacts.native.showPicker(
+                                                      properties: {ContactProperty.phone, ContactProperty.name},
+                                                    );
+                                                    if (contact != null) {
+                                                      setDialogState(() {
+                                                        if (contact.name != null) {
+                                                          fatherNameController.text = '${contact.name!.first ?? ''} ${contact.name!.last ?? ''}'.trim();
+                                                        }
+                                                        if (contact.phones.isNotEmpty) {
+                                                          fatherPhoneController.text = contact.phones.first.number;
+                                                        }
+                                                      });
+                                                    }
+                                                  } else {
+                                                    if (context.mounted) {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(content: Text('Phone contacts permission denied'), backgroundColor: Colors.red),
+                                                      );
+                                                    }
+                                                  }
+                                                } catch (e) {
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text('Error loading phone contacts: $e'), backgroundColor: Colors.red),
+                                                    );
+                                                  }
+                                                }
+                                              },
+                                              icon: const Icon(Icons.contacts_rounded, size: 16),
+                                              label: Text(isRtl ? 'فون سے لائیں' : 'Import from Phone', style: const TextStyle(fontSize: 11)),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        TextFormField(
+                                          controller: fatherNameController,
+                                          style: TextStyle(color: textColor),
+                                          decoration: InputDecoration(
+                                            labelText: loc.translate('father_name'),
+                                            labelStyle: TextStyle(color: fieldLabelColor),
+                                            prefixIcon: Icon(Icons.escalator_warning_rounded, color: fieldLabelColor),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                            filled: true,
+                                            fillColor: inputBgColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        TextFormField(
+                                          controller: fatherPhoneController,
+                                          style: TextStyle(color: textColor),
+                                          decoration: InputDecoration(
+                                            labelText: loc.translate('phone_number'),
+                                            labelStyle: TextStyle(color: fieldLabelColor),
+                                            prefixIcon: Icon(Icons.phone_rounded, color: fieldLabelColor),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                            filled: true,
+                                            fillColor: inputBgColor,
+                                          ),
+                                          keyboardType: TextInputType.phone,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        TextFormField(
+                                          controller: guardianNameController,
+                                          style: TextStyle(color: textColor),
+                                          decoration: InputDecoration(
+                                            labelText: isRtl ? 'سرپرست کا نام' : 'Guardian Name',
+                                            labelStyle: TextStyle(color: fieldLabelColor),
+                                            prefixIcon: Icon(Icons.shield_rounded, color: fieldLabelColor),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                            filled: true,
+                                            fillColor: inputBgColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        TextFormField(
+                                          controller: guardianRelationController,
+                                          style: TextStyle(color: textColor),
+                                          decoration: InputDecoration(
+                                            labelText: isRtl ? 'سرپرست سے رشتہ' : 'Guardian Relation',
+                                            labelStyle: TextStyle(color: fieldLabelColor),
+                                            prefixIcon: Icon(Icons.family_restroom_rounded, color: fieldLabelColor),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                            filled: true,
+                                            fillColor: inputBgColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+
+                                // SECTION 3: Maktab details
+                                Card(
+                                  elevation: 0,
+                                  color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade50,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          isRtl ? 'مکتب کی تفصیلات' : 'Maktab Details',
+                                          style: TextStyle(fontWeight: FontWeight.bold, color: fieldLabelColor),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        DropdownButtonFormField<String>(
+                                          initialValue: selectedGroup,
+                                          dropdownColor: isDark ? const Color(0xFF0B1329) : Colors.white,
+                                          style: TextStyle(color: textColor),
+                                          decoration: InputDecoration(
+                                            labelText: loc.translate('batch_group'),
+                                            labelStyle: TextStyle(color: fieldLabelColor),
+                                            prefixIcon: Icon(Icons.groups_rounded, color: fieldLabelColor),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                            filled: true,
+                                            fillColor: inputBgColor,
+                                          ),
+                                          items: [
+                                            DropdownMenuItem(value: 'Hifz Group A', child: TranslatedText('Hifz Group A', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'Nazira Group B', child: TranslatedText('Nazira Group B', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'Tajweed Group C', child: TranslatedText('Tajweed Group C', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'Primary Group D', child: TranslatedText('Primary Group D', style: TextStyle(color: textColor))),
+                                          ],
+                                          onChanged: (newValue) {
+                                            if (newValue != null) {
+                                              setDialogState(() => selectedGroup = newValue);
+                                            }
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        TextFormField(
+                                          controller: teacherNameController,
+                                          style: TextStyle(color: textColor),
+                                          decoration: InputDecoration(
+                                            labelText: loc.translate('teacher_name'),
+                                            labelStyle: TextStyle(color: fieldLabelColor),
+                                            prefixIcon: Icon(Icons.school, color: fieldLabelColor),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                            filled: true,
+                                            fillColor: inputBgColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        DropdownButtonFormField<String>(
+                                          initialValue: selectedShift,
+                                          dropdownColor: isDark ? const Color(0xFF0B1329) : Colors.white,
+                                          style: TextStyle(color: textColor),
+                                          decoration: InputDecoration(
+                                            labelText: loc.translate('shift'),
+                                            labelStyle: TextStyle(color: fieldLabelColor),
+                                            prefixIcon: Icon(Icons.access_time_rounded, color: fieldLabelColor),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                            filled: true,
+                                            fillColor: inputBgColor,
+                                          ),
+                                          items: [
+                                            DropdownMenuItem(value: 'morning', child: TranslatedText('Morning Shift', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'evening', child: TranslatedText('Evening Shift', style: TextStyle(color: textColor))),
+                                          ],
+                                          onChanged: (newValue) {
+                                            if (newValue != null) {
+                                              setDialogState(() => selectedShift = newValue);
+                                            }
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        DropdownButtonFormField<String>(
+                                          initialValue: selectedMessageMethod,
+                                          dropdownColor: isDark ? const Color(0xFF0B1329) : Colors.white,
+                                          style: TextStyle(color: textColor),
+                                          decoration: InputDecoration(
+                                            labelText: loc.translate('notice_channel'),
+                                            labelStyle: TextStyle(color: fieldLabelColor),
+                                            prefixIcon: Icon(Icons.message_rounded, color: fieldLabelColor),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                            filled: true,
+                                            fillColor: inputBgColor,
+                                          ),
+                                          items: [
+                                            DropdownMenuItem(value: 'SMS', child: Text('SMS', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'WhatsApp', child: Text('WhatsApp', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'Notification', child: TranslatedText('App Notification', style: TextStyle(color: textColor))),
+                                          ],
+                                          onChanged: (newValue) {
+                                            if (newValue != null) {
+                                              setDialogState(() => selectedMessageMethod = newValue);
+                                            }
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        DropdownButtonFormField<String>(
+                                          initialValue: selectedLanguage,
+                                          dropdownColor: isDark ? const Color(0xFF0B1329) : Colors.white,
+                                          style: TextStyle(color: textColor),
+                                          decoration: InputDecoration(
+                                            labelText: loc.translate('message_language'),
+                                            labelStyle: TextStyle(color: fieldLabelColor),
+                                            prefixIcon: Icon(Icons.language_rounded, color: fieldLabelColor),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                            filled: true,
+                                            fillColor: inputBgColor,
+                                          ),
+                                          items: [
+                                            DropdownMenuItem(value: 'ur', child: Text('🇵🇰 Urdu (اردو)', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'en', child: Text('🇬🇧 English', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'ar', child: Text('🇸🇦 Arabic (العربية)', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'hi', child: Text('🇮🇳 Hindi (हिंदी)', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'te', child: Text('🇮🇳 Telugu (తెలుగు)', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'kn', child: Text('🇮🇳 Kannada (ಕನ್ನಡ)', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'ta', child: Text('🇮🇳 Tamil (தமிழ்)', style: TextStyle(color: textColor))),
+                                            DropdownMenuItem(value: 'ml', child: Text('🇮🇳 Malayalam (മലയാളം)', style: TextStyle(color: textColor))),
+                                          ],
+                                          onChanged: (newValue) {
+                                            if (newValue != null) {
+                                              setDialogState(() => selectedLanguage = newValue);
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Persisted Bottom actions
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF0B1329) : Colors.white,
+                            border: Border(top: BorderSide(color: isDark ? const Color(0xFF334155) : Colors.grey.shade200)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.pop(dialogContext),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  child: Text(loc.translate('cancel')),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 2,
+                                child: FilledButton.icon(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFF074E32),
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  icon: const Icon(Icons.save_rounded),
+                                  label: Text(loc.translate('save')),
+                                  onPressed: () async {
+                                    final studentName = studentNameController.text.trim();
+
+                                    if (studentName.isEmpty) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('${loc.translate('name')} required')),
+                                      );
+                                      return;
+                                    }
+
+                                    final now = DateTime.now();
+                                    final formattedDate = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+                                    final fatherPhone = fatherPhoneController.text.trim();
+
+                                    setState(() {
+                                      studentsList.add({
+                                        'name': studentName,
+                                        'fatherName': fatherNameController.text.trim(),
+                                        'fatherPhone': fatherPhone,
+                                        'dob': dobController.text.trim(),
+                                        'group': selectedGroup,
+                                        'className': selectedGroup,
+                                        'teacherName': teacherNameController.text.trim().isNotEmpty ? teacherNameController.text.trim() : 'حافظ احمد حسن',
+                                        'shift': selectedShift,
+                                        'gender': selectedGender,
+                                        'language': selectedLanguage,
+                                        'messageMethod': selectedMessageMethod,
+                                        'feeAmount': '500',
+                                        'feeMonth': 'August 2026',
+                                        'feeStatus': 'due',
+                                        'isPresent': true,
+                                        'isNewAdmission': true,
+                                        'admissionDate': formattedDate,
+                                        'parentPin': '1234',
+                                      });
+                                    });
+
+                                    if (fatherPhone.isNotEmpty) {
+                                      final prefs = await SharedPreferences.getInstance();
+                                      await prefs.setString('cred_parent_${fatherPhone}_pin', '1234');
+                                    }
+
+                                    clearDrafts();
+                                    await saveStudentsToStorage();
+
+                                    if (dialogContext.mounted) {
+                                      Navigator.pop(dialogContext);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('✓ $studentName added!'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
+                ),
               ),
             );
           },
@@ -1480,24 +1526,481 @@ class _StudentListScreenState extends State<StudentListScreen> {
   bool _isTableView = false;
   String _admissionFilter = 'all'; // 'all', 'new', 'old'
   String _searchQuery = '';
+  bool _isSearching = false;
   String _feeFilter = 'all'; // 'all', 'paid', 'due'
 
+  // Pagination & scrolling
+  int _displayCount = 20;
+  final ScrollController _scrollController = ScrollController();
+
+  // Bulk Selection
+  final Set<int> _bulkSelectedIndices = {};
+
+  // Metrics card selection filter
+  String _metricFilter = 'all'; // 'all', 'present', 'absent'
+
+
+
   @override
-  Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // Feature 14: Localize date output
+  String _localizeDate(String dateStr) {
+    if (dateStr.trim().isEmpty) return '-';
+    try {
+      final parts = dateStr.split('-');
+      if (parts.length != 3) return dateStr;
+      final year = parts[0];
+      final month = int.parse(parts[1]);
+      final day = parts[2];
+      
+      final isUr = widget.languageController.locale.languageCode == 'ur';
+      if (!isUr) return dateStr;
+      
+      const urMonths = [
+        'جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون',
+        'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'
+      ];
+      if (month >= 1 && month <= 12) {
+        return '$day ${urMonths[month - 1]} $year';
+      }
+      return dateStr;
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  // Feature 10: Gender-specific avatars
+  Widget _buildGenderAvatar(String? gender) {
+    final isBoy = (gender ?? 'male') == 'male';
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: isBoy ? Colors.blue.shade100 : Colors.pink.shade100,
+      child: Icon(
+        isBoy ? Icons.face_rounded : Icons.face_3_rounded,
+        size: 20,
+        color: isBoy ? Colors.blue.shade800 : Colors.pink.shade800,
+      ),
+    );
+  }
+
+  // Feature 7: Attendance indicator badge
+  Widget _buildAttendanceBadge(bool isPresent) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isPresent ? Colors.green.shade50 : Colors.red.shade50,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: isPresent ? Colors.green : Colors.red),
+      ),
+      child: Text(
+        isPresent ? 'P' : 'A',
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isPresent ? Colors.green.shade700 : Colors.red.shade700),
+      ),
+    );
+  }
+
+  // Feature 7: Fee status badge
+  Widget _buildFeeStatusBadge(String status) {
+    final isPaid = status == 'paid';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isPaid ? Colors.teal.shade50 : Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: isPaid ? Colors.teal : Colors.amber.shade700),
+      ),
+      child: Text(
+        isPaid ? 'Paid' : 'Due',
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isPaid ? Colors.teal.shade700 : Colors.amber.shade800),
+      ),
+    );
+  }
+
+  // Feature 15: Today's Attendance Overview Metric Cards
+  Widget _buildMetricCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required String filterValue,
+  }) {
+    final isSelected = _metricFilter == filterValue;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _metricFilter = filterValue;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? color.withValues(alpha: isDark ? 0.3 : 0.15)
+                : (isDark ? const Color(0xFF1E293B) : Colors.white),
+            border: Border.all(
+              color: isSelected ? color : (isDark ? const Color(0xFF334155) : Colors.grey.shade300),
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      value,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Feature 4: Comprehensive Profile Detail Views
+  void _showStudentProfile(Map<String, dynamic> student) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isRtl = widget.languageController.locale.languageCode != 'en';
+    final fieldLabelColor = isDark ? Colors.tealAccent : const Color(0xFF074E32);
 
-    final int newCount = studentsList.where((s) => s['isNewAdmission'] == true).length;
-    final int oldCount = studentsList.length - newCount;
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog.fullscreen(
+        backgroundColor: isDark ? const Color(0xFF0B1329) : Colors.white,
+        child: Scaffold(
+          backgroundColor: isDark ? const Color(0xFF0B1329) : Colors.white,
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF074E32),
+            foregroundColor: Colors.white,
+            title: Text(student['name'] ?? 'Profile'),
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.pop(ctx),
+            ),
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 45,
+                        backgroundColor: (student['gender'] ?? 'male') == 'male' ? Colors.blue.shade100 : Colors.pink.shade100,
+                        child: Icon(
+                          (student['gender'] ?? 'male') == 'male' ? Icons.face_rounded : Icons.face_3_rounded,
+                          size: 55,
+                          color: (student['gender'] ?? 'male') == 'male' ? Colors.blue.shade800 : Colors.pink.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        student['name'] ?? '',
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Roll No: ${student['rollNo'] ?? student['roll_no'] ?? '-'}',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Card(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isRtl ? 'بنیادی معلومات' : 'Basic Info',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: fieldLabelColor),
+                        ),
+                        const Divider(),
+                        _buildProfileRow('والد کا نام (Father\'s Name)', student['fatherName'] ?? '-'),
+                        _buildProfileRow('رابطہ نمبر (Phone Number)', student['fatherPhone'] ?? '-'),
+                        _buildProfileRow('گروپ (Group)', student['group'] ?? '-'),
+                        _buildProfileRow('شفٹ (Shift)', student['shift'] ?? '-'),
+                        _buildProfileRow('داخلہ تاریخ (Admission Date)', _localizeDate(student['admissionDate'] ?? '')),
+                        _buildProfileRow('جنس (Gender)', student['gender'] ?? '-'),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Card(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isRtl ? 'حاضری اور فیس کا خلاصہ' : 'Attendance & Fee Summary',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: fieldLabelColor),
+                        ),
+                        const Divider(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            Column(
+                              children: [
+                                const Text('حاضری شرح', style: TextStyle(color: Colors.grey)),
+                                Text(
+                                  student['isPresent'] == false ? '90%' : '100%',
+                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                const Text('فیس کی حالت', style: TextStyle(color: Colors.grey)),
+                                Text(
+                                  (student['feeStatus'] ?? 'due').toString().toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: (student['feeStatus'] ?? 'due') == 'paid' ? Colors.green : Colors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-    final displayedStudents = studentsList.where((student) {
+  Widget _buildProfileRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  // Feature 3: Bulk Batch Actions helper methods
+  void _bulkChangeGroup() {
+    final loc = AppLocalizations.of(context);
+    String targetGroup = 'Hifz Group A';
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(loc.translate('batch_group')),
+        content: DropdownButtonFormField<String>(
+          initialValue: targetGroup,
+          items: const [
+            DropdownMenuItem(value: 'Hifz Group A', child: Text('Hifz Group A')),
+            DropdownMenuItem(value: 'Nazira Group B', child: Text('Nazira Group B')),
+            DropdownMenuItem(value: 'Tajweed Group C', child: Text('Tajweed Group C')),
+            DropdownMenuItem(value: 'Primary Group D', child: Text('Primary Group D')),
+          ],
+          onChanged: (v) {
+            if (v != null) targetGroup = v;
+          },
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              setState(() {
+                final disp = _getDisplayedStudentsList();
+                for (final idx in _bulkSelectedIndices) {
+                  if (idx < disp.length) {
+                    final s = disp[idx];
+                    final realIdx = studentsList.indexOf(s);
+                    if (realIdx != -1) {
+                      studentsList[realIdx]['group'] = targetGroup;
+                      studentsList[realIdx]['className'] = targetGroup;
+                    }
+                  }
+                }
+                _bulkSelectedIndices.clear();
+              });
+              await saveStudentsToStorage();
+              if (mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _bulkChangeShift() {
+    String targetShift = 'morning';
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Change Shift'),
+        content: DropdownButtonFormField<String>(
+          initialValue: targetShift,
+          items: const [
+            DropdownMenuItem(value: 'morning', child: Text('Morning')),
+            DropdownMenuItem(value: 'evening', child: Text('Evening')),
+          ],
+          onChanged: (v) {
+            if (v != null) targetShift = v;
+          },
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              setState(() {
+                final disp = _getDisplayedStudentsList();
+                for (final idx in _bulkSelectedIndices) {
+                  if (idx < disp.length) {
+                    final s = disp[idx];
+                    final realIdx = studentsList.indexOf(s);
+                    if (realIdx != -1) {
+                      studentsList[realIdx]['shift'] = targetShift;
+                    }
+                  }
+                }
+                _bulkSelectedIndices.clear();
+              });
+              await saveStudentsToStorage();
+              if (mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _bulkDelete() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Students'),
+        content: Text('Are you sure you want to delete ${_bulkSelectedIndices.length} students?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              setState(() {
+                final disp = _getDisplayedStudentsList();
+                final toRemove = _bulkSelectedIndices.map((idx) => disp[idx]).toList();
+                studentsList.removeWhere((s) => toRemove.contains(s));
+                _bulkSelectedIndices.clear();
+              });
+              await saveStudentsToStorage();
+              if (mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Feature 11: Academic Session Archiving
+  void _triggerSessionArchive() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Archive Current Session?'),
+        content: const Text('This will save all current student records to the offline archives and clear/reset their fee statuses for the new year. Continue?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+              await prefs.setString('archived_session_$timestamp', jsonEncode(studentsList));
+              
+              setState(() {
+                for (var s in studentsList) {
+                  s['feeStatus'] = 'due';
+                  s['isNewAdmission'] = false; 
+                }
+              });
+              await saveStudentsToStorage();
+              if (mounted) Navigator.pop(ctx);
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('✓ Session archived successfully! All students reset for new year.'), backgroundColor: Colors.green),
+              );
+            },
+            child: const Text('Archive & Reset'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> _getDisplayedStudentsList() {
+    return studentsList.where((student) {
       final isNew = student['isNewAdmission'] == true;
       if (_admissionFilter == 'new' && !isNew) return false;
       if (_admissionFilter == 'old' && isNew) return false;
 
+      // Feature 6: Smart Search Tagging
       if (_searchQuery.isNotEmpty) {
-        final name = (student['name'] ?? '').toString().toLowerCase();
-        if (!name.contains(_searchQuery.toLowerCase())) return false;
+        final q = _searchQuery.toLowerCase().trim();
+        if (q.startsWith('#')) {
+          final tag = q.substring(1);
+          if (tag == 'due') {
+            if (student['feeStatus'] == 'paid') return false;
+          } else if (tag == 'paid') {
+            if (student['feeStatus'] != 'paid') return false;
+          } else if (tag == 'morning') {
+            if ((student['shift'] ?? 'morning') != 'morning') return false;
+          } else if (tag == 'evening') {
+            if ((student['shift'] ?? 'morning') != 'evening') return false;
+          } else if (tag == 'male') {
+            if ((student['gender'] ?? 'male') != 'male') return false;
+          } else if (tag == 'female') {
+            if ((student['gender'] ?? 'male') != 'female') return false;
+          } else if (tag == 'new') {
+            if (student['isNewAdmission'] != true) return false;
+          } else {
+            final name = (student['name'] ?? '').toString().toLowerCase();
+            if (!name.contains(q)) return false;
+          }
+        } else {
+          final name = (student['name'] ?? '').toString().toLowerCase();
+          if (!name.contains(q)) return false;
+        }
       }
 
       if (_feeFilter == 'paid') {
@@ -1506,8 +2009,27 @@ class _StudentListScreenState extends State<StudentListScreen> {
         if (student['feeStatus'] == 'paid') return false;
       }
 
+      // Feature 15 filtering
+      if (_metricFilter == 'present') {
+        if (student['isPresent'] == false) return false;
+      } else if (_metricFilter == 'absent') {
+        if (student['isPresent'] != false) return false;
+      }
+
       return true;
     }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final isRtl = widget.languageController.locale.languageCode != 'en';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final int newCount = studentsList.where((s) => s['isNewAdmission'] == true).length;
+    final int oldCount = studentsList.length - newCount;
+
+    final displayedStudents = _getDisplayedStudentsList();
 
     return Directionality(
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
@@ -1515,14 +2037,42 @@ class _StudentListScreenState extends State<StudentListScreen> {
         appBar: widget.hideAppBar
             ? null
             : AppBar(
-          title: Text(
-            loc.translate('students_list'),
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          centerTitle: true,
+          title: _isSearching
+              ? TextField(
+                  autofocus: true,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: loc.translate('search_hint') + ' (Use #due, #paid, #new)',
+                    hintStyle: const TextStyle(color: Colors.white70),
+                    border: InputBorder.none,
+                    prefixIcon: const Icon(Icons.search, color: Colors.white),
+                  ),
+                  onChanged: (val) => setState(() => _searchQuery = val),
+                )
+              : Text(
+                  loc.translate('students_list'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+          centerTitle: !_isSearching,
           backgroundColor: Colors.green,
           foregroundColor: Colors.white,
           actions: [
+            if (_isSearching)
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () {
+                  setState(() {
+                    _isSearching = false;
+                    _searchQuery = '';
+                  });
+                },
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.search_rounded),
+                tooltip: loc.translate('search'),
+                onPressed: () => setState(() => _isSearching = true),
+              ),
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert_rounded),
               tooltip: 'ٹولز (Tools)',
@@ -1563,6 +2113,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       ),
                     ),
                   );
+                } else if (value == 'archive_session') {
+                  _triggerSessionArchive();
                 }
               },
               itemBuilder: (context) => [
@@ -1596,32 +2148,77 @@ class _StudentListScreenState extends State<StudentListScreen> {
                     ],
                   ),
                 ),
+                PopupMenuItem(
+                  value: 'archive_session',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.archive_rounded, color: Colors.green),
+                      const SizedBox(width: 8),
+                      const Text('سابقہ سال محفوظ کریں (Archive Year)'),
+                    ],
+                  ),
+                ),
               ],
+            ),
+            IconButton(
+              icon: const Icon(Icons.person_add_rounded),
+              tooltip: loc.translate('add_student'),
+              onPressed: showAddStudentDialog,
             ),
             LanguageButton(controller: widget.languageController),
           ],
         ),
-        floatingActionButton: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FloatingActionButton.extended(
-              heroTag: 'student',
-              onPressed: showAddStudentDialog,
-              icon: const Icon(Icons.person_add),
-              label: Text(loc.translate('add_student')),
-            ),
-          ],
-        ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: FilledButton.icon(
-              onPressed: sendAllMessages,
-              icon: const Icon(Icons.send),
-              label: Text(loc.translate('actions')),
-            ),
-          ),
-        ),
+        floatingActionButton: null,
+        bottomNavigationBar: _bulkSelectedIndices.isNotEmpty
+            ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                color: isDark ? const Color(0xFF1E293B) : Colors.green.shade50,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      isRtl
+                          ? '${_bulkSelectedIndices.length} طلبہ منتخب ہیں'
+                          : '${_bulkSelectedIndices.length} selected',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.group_work_rounded, color: Colors.blue),
+                          tooltip: 'گروپ تبدیل کریں (Change Group)',
+                          onPressed: _bulkChangeGroup,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.schedule_rounded, color: Colors.orange),
+                          tooltip: 'شفٹ تبدیل کریں (Change Shift)',
+                          onPressed: _bulkChangeShift,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_sweep_rounded, color: Colors.red),
+                          tooltip: 'حذف کریں (Delete selected)',
+                          onPressed: _bulkDelete,
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () => setState(() => _bulkSelectedIndices.clear()),
+                          child: Text(isRtl ? 'منسوخ' : 'Clear'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              )
+            : SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: FilledButton.icon(
+                    onPressed: sendAllMessages,
+                    icon: const Icon(Icons.send),
+                    label: Text(loc.translate('actions')),
+                  ),
+                ),
+              ),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : Column(
@@ -1641,26 +2238,43 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       ],
                     ),
                   ),
-                  // Search Bar
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: TextField(
-                      onChanged: (val) => setState(() => _searchQuery = val),
-                      decoration: InputDecoration(
-                        labelText: loc.translate('search'),
-                        prefixIcon: const Icon(Icons.search),
-                        filled: true,
-                        fillColor: Colors.grey.shade100,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+
+                  // Feature 15: Today's Attendance Overview Metric Cards
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    color: isDark ? const Color(0xFF0F172A) : Colors.green.shade50.withValues(alpha: 0.5),
+                    child: Row(
+                      children: [
+                        _buildMetricCard(
+                          title: isRtl ? 'کل طلبہ' : 'Total Students',
+                          value: '${studentsList.length}',
+                          icon: Icons.people_rounded,
+                          color: Colors.blue,
+                          filterValue: 'all',
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        _buildMetricCard(
+                          title: isRtl ? 'حاضر طلبہ' : 'Present Today',
+                          value: '${studentsList.where((s) => s['isPresent'] != false).length}',
+                          icon: Icons.check_circle_rounded,
+                          color: Colors.green,
+                          filterValue: 'present',
+                        ),
+                        const SizedBox(width: 8),
+                        _buildMetricCard(
+                          title: isRtl ? 'غیر حاضر' : 'Absent Today',
+                          value: '${studentsList.where((s) => s['isPresent'] == false).length}',
+                          icon: Icons.cancel_rounded,
+                          color: Colors.red,
+                          filterValue: 'absent',
+                        ),
+                      ],
                     ),
                   ),
+
                   // Filter Chips
                   Container(
-                    color: Colors.grey.shade100,
+                    color: isDark ? const Color(0xFF1C2541) : Colors.grey.shade100,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -1722,260 +2336,369 @@ class _StudentListScreenState extends State<StudentListScreen> {
                     ),
                   ),
 
+                  // Feature 12: Pull-to-Refresh Integration
                   Expanded(
-                    child: displayedStudents.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.group_add, size: 100, color: Colors.green),
-                                const SizedBox(height: 16),
-                                Text(
-                                  loc.translate('no_students_found'),
-                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey),
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        await Future.delayed(const Duration(milliseconds: 800));
+                        await loadStudentsFromStorage();
+                      },
+                      child: displayedStudents.isEmpty
+                          // Feature 9: Interactive Empty States
+                          ? Center(
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.group_add, size: 100, color: Colors.green),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      loc.translate('no_students_found'),
+                                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'Try adjusting your filters or add a new student.',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    OutlinedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _searchQuery = '';
+                                          _admissionFilter = 'all';
+                                          _feeFilter = 'all';
+                                          _metricFilter = 'all';
+                                          _isSearching = false;
+                                        });
+                                      },
+                                      child: const Text('Reset All Filters / فلٹرز ختم کریں'),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Try adjusting your filters or add a new student.',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          )
-                        : _isTableView
-                            ? SingleChildScrollView(
-                                padding: const EdgeInsets.all(12),
-                                scrollDirection: Axis.horizontal,
-                                child: SingleChildScrollView(
-                                  scrollDirection: Axis.vertical,
-                                  child: DataTable(
-                                    headingRowColor: WidgetStateProperty.all(Colors.green.shade100),
-                                    columns: [
-                                      const DataColumn(label: Text('#', style: TextStyle(fontWeight: FontWeight.bold))),
-                                      const DataColumn(label: Text('نام (Name)', style: TextStyle(fontWeight: FontWeight.bold))),
-                                      const DataColumn(label: Text('داخلہ قسم', style: TextStyle(fontWeight: FontWeight.bold))),
-                                      const DataColumn(label: Text('والد (Father)', style: TextStyle(fontWeight: FontWeight.bold))),
-                                      const DataColumn(label: Text('کلاس (Class)', style: TextStyle(fontWeight: FontWeight.bold))),
-                                      const DataColumn(label: Text('شفٹ (Shift)', style: TextStyle(fontWeight: FontWeight.bold))),
-                                      const DataColumn(label: Text('ایکشن (Action)', style: TextStyle(fontWeight: FontWeight.bold))),
-                                    ],
-                                    rows: List.generate(displayedStudents.length, (index) {
-                                      final student = displayedStudents[index];
-                                      final isNew = student['isNewAdmission'] == true;
+                              ),
+                            )
+                          : _isTableView
+                              ? SingleChildScrollView(
+                                  padding: const EdgeInsets.all(12),
+                                  scrollDirection: Axis.horizontal,
+                                  child: SingleChildScrollView(
+                                    controller: _scrollController,
+                                    scrollDirection: Axis.vertical,
+                                    child: DataTable(
+                                      headingRowColor: WidgetStateProperty.all(Colors.green.shade100),
+                                      columns: [
+                                        const DataColumn(label: Text('#', style: TextStyle(fontWeight: FontWeight.bold))),
+                                        const DataColumn(label: Text('نام (Name)', style: TextStyle(fontWeight: FontWeight.bold))),
+                                        const DataColumn(label: Text('داخلہ قسم', style: TextStyle(fontWeight: FontWeight.bold))),
+                                        const DataColumn(label: Text('والد (Father)', style: TextStyle(fontWeight: FontWeight.bold))),
+                                        const DataColumn(label: Text('کلاس (Class)', style: TextStyle(fontWeight: FontWeight.bold))),
+                                        const DataColumn(label: Text('شفٹ (Shift)', style: TextStyle(fontWeight: FontWeight.bold))),
+                                        const DataColumn(label: Text('ایکشن (Action)', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      ],
+                                      rows: List.generate(
+                                        displayedStudents.length < _displayCount ? displayedStudents.length : _displayCount,
+                                        (index) {
+                                          final student = displayedStudents[index];
+                                          final isNew = student['isNewAdmission'] == true;
 
-                                      return DataRow(cells: [
-                                        DataCell(Text('${index + 1}')),
-                                        DataCell(Text(student['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold))),
-                                        DataCell(
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: isNew ? Colors.green.shade100 : Colors.blue.shade100,
-                                              borderRadius: BorderRadius.circular(6),
-                                            ),
-                                            child: Text(
-                                              isNew ? 'نیا داخلہ' : 'سابقہ',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                                color: isNew ? Colors.green.shade800 : Colors.blue.shade800,
+                                          return DataRow(cells: [
+                                            DataCell(Text('${index + 1}')),
+                                            DataCell(Text(student['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold))),
+                                            DataCell(
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: isNew ? Colors.green.shade100 : Colors.blue.shade100,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  isNew ? 'نیا داخلہ' : 'سابقہ',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isNew ? Colors.green.shade800 : Colors.blue.shade800,
+                                                  ),
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ),
-                                        DataCell(Text(student['fatherName'] ?? '')),
-                                        DataCell(Text(student['className'] ?? '-')),
-                                        DataCell(Text(student['shift'] ?? 'morning')),
-                                        DataCell(Row(
-                                          children: [
-                                            IconButton(icon: const Icon(Icons.delete, color: Colors.red, size: 16), onPressed: () => deleteStudent(index)),
-                                          ],
-                                        )),
-                                      ]);
-                                    }),
-                                  ),
-                                ),
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.all(12),
-                                itemCount: displayedStudents.length,
-                                itemBuilder: (context, index) {
-                                  final student = displayedStudents[index];
-                                  final isNew = student['isNewAdmission'] == true;
-
-                          return Dismissible(
-                            key: Key(student['name'] ?? index.toString()),
-                            background: Container(
-                              color: Colors.blue,
-                              alignment: isRtl ? Alignment.centerLeft : Alignment.centerRight,
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              child: const Icon(Icons.call, color: Colors.white),
-                            ),
-                            secondaryBackground: Container(
-                              color: Colors.red,
-                              alignment: isRtl ? Alignment.centerRight : Alignment.centerLeft,
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              child: const Icon(Icons.delete, color: Colors.white),
-                            ),
-                            confirmDismiss: (direction) async {
-                              if (direction == DismissDirection.endToStart) {
-                                await deleteStudent(index);
-                                return false;
-                              } else {
-                                final phone = student['fatherPhone']?.toString() ?? '';
-                                if (phone.isNotEmpty) {
-                                  makePhoneCall(phone);
-                                }
-                                return false;
-                              }
-                            },
-                            child: Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: ExpansionTile(
-                                leading: CircleAvatar(child: Text('${index + 1}')),
-                              title: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Row(
-                                      children: [
-                                        Text(
-                                          student['name'] ?? 'Student',
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: isNew ? Colors.green.shade100 : Colors.blue.shade100,
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(color: isNew ? Colors.green.shade400 : Colors.blue.shade400),
-                                          ),
-                                          child: Text(
-                                            isNew ? 'نیا داخلہ' : 'سابقہ',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: isNew ? Colors.green.shade800 : Colors.blue.shade800,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                            DataCell(Text(student['fatherName'] ?? '')),
+                                            DataCell(Text(student['className'] ?? '-')),
+                                            DataCell(Text(student['shift'] ?? 'morning')),
+                                            DataCell(Row(
+                                              children: [
+                                                IconButton(
+                                                  icon: const Icon(Icons.delete, color: Colors.red, size: 16),
+                                                  onPressed: () => deleteStudent(index),
+                                                ),
+                                              ],
+                                            )),
+                                          ]);
+                                        },
+                                      ),
                                     ),
                                   ),
-                          PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert),
-                            onSelected: (value) {
-                              final fatherPhone = student['fatherPhone']?.toString() ?? '';
-                              if (value == 'call') {
-                                makePhoneCall(fatherPhone);
-                              } else if (value == 'sms') {
-                                openSmsApp(
-                                  phone: fatherPhone,
-                                  message: 'السلام علیکم، مکتب سے پیغام: ${student['name']} کے حوالے سے رابطہ کریں۔',
-                                );
-                              } else if (value == 'whatsapp') {
-                                openWhatsApp(
-                                  phone: fatherPhone,
-                                  message: 'السلام علیکم، مکتب کی اطلاع: ${student['name']} کی پیشرفت کا جائزہ لیں۔',
-                                );
-                              } else if (value == 'set_pin') {
-                                showSetParentPinDialog(index);
-                              } else if (value == 'delete') {
-                                deleteStudent(index);
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'call',
-                                child: Row(
+                                )
+                              : Row(
                                   children: [
-                                    Icon(Icons.call, size: 20, color: Colors.blue),
-                                    SizedBox(width: 8),
-                                    Text('کال کریں (Call)'),
+                                    Expanded(
+                                      child: ListView.builder(
+                                        controller: _scrollController,
+                                        padding: const EdgeInsets.all(12),
+                                        itemCount: displayedStudents.length < _displayCount ? displayedStudents.length : _displayCount,
+                                        itemBuilder: (context, index) {
+                                          final student = displayedStudents[index];
+                                          final isNew = student['isNewAdmission'] == true;
+
+                                          return Dismissible(
+                                            key: Key(student['name'] ?? index.toString()),
+                                            background: Container(
+                                              color: Colors.blue,
+                                              alignment: isRtl ? Alignment.centerLeft : Alignment.centerRight,
+                                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                                              child: const Icon(Icons.call, color: Colors.white),
+                                            ),
+                                            secondaryBackground: Container(
+                                              color: Colors.red,
+                                              alignment: isRtl ? Alignment.centerRight : Alignment.centerLeft,
+                                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                                              child: const Icon(Icons.delete, color: Colors.white),
+                                            ),
+                                            confirmDismiss: (direction) async {
+                                              if (direction == DismissDirection.endToStart) {
+                                                await deleteStudent(index);
+                                                return false;
+                                              } else {
+                                                final phone = student['fatherPhone']?.toString() ?? '';
+                                                if (phone.isNotEmpty) {
+                                                  makePhoneCall(phone);
+                                                }
+                                                return false;
+                                              }
+                                            },
+                                            child: Card(
+                                              margin: const EdgeInsets.only(bottom: 12),
+                                              child: ExpansionTile(
+                                                leading: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Checkbox(
+                                                      value: _bulkSelectedIndices.contains(index),
+                                                      onChanged: (v) {
+                                                        setState(() {
+                                                          if (v == true) {
+                                                            _bulkSelectedIndices.add(index);
+                                                          } else {
+                                                            _bulkSelectedIndices.remove(index);
+                                                          }
+                                                        });
+                                                      },
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    _buildGenderAvatar(student['gender']),
+                                                  ],
+                                                ),
+                                                title: Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    Expanded(
+                                                      child: InkWell(
+                                                        onTap: () => _showStudentProfile(student),
+                                                        child: Row(
+                                                          children: [
+                                                            Text(
+                                                              student['name'] ?? 'Student',
+                                                              style: const TextStyle(fontWeight: FontWeight.bold),
+                                                            ),
+                                                            const SizedBox(width: 8),
+                                                            Container(
+                                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                              decoration: BoxDecoration(
+                                                                color: isNew ? Colors.green.shade100 : Colors.blue.shade100,
+                                                                borderRadius: BorderRadius.circular(8),
+                                                                border: Border.all(color: isNew ? Colors.green.shade400 : Colors.blue.shade400),
+                                                              ),
+                                                              child: Text(
+                                                                isNew ? 'نیا داخلہ' : 'سابقہ',
+                                                                style: TextStyle(
+                                                                  fontSize: 10,
+                                                                  fontWeight: FontWeight.bold,
+                                                                  color: isNew ? Colors.green.shade800 : Colors.blue.shade800,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            const SizedBox(width: 8),
+                                                            _buildAttendanceBadge(student['isPresent'] as bool? ?? true),
+                                                            const SizedBox(width: 4),
+                                                            _buildFeeStatusBadge(student['feeStatus']?.toString() ?? 'due'),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        IconButton(
+                                                          icon: const Icon(Icons.call, color: Colors.blue, size: 18),
+                                                          onPressed: () => makePhoneCall(student['fatherPhone']?.toString() ?? ''),
+                                                        ),
+                                                        IconButton(
+                                                          icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.green, size: 18),
+                                                          onPressed: () => openWhatsApp(
+                                                            phone: student['fatherPhone']?.toString() ?? '',
+                                                            message: 'السلام علیکم، مکتب کی اطلاع: ${student['name']} کے حوالے سے رابطہ کریں۔',
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    PopupMenuButton<String>(
+                                                      icon: const Icon(Icons.more_vert),
+                                                      onSelected: (value) {
+                                                        final fatherPhone = student['fatherPhone']?.toString() ?? '';
+                                                        if (value == 'call') {
+                                                          makePhoneCall(fatherPhone);
+                                                        } else if (value == 'sms') {
+                                                          openSmsApp(
+                                                            phone: fatherPhone,
+                                                            message: 'السلام علیکم، مکتب سے پیغام: ${student['name']} کے حوالے سے رابطہ کریں۔',
+                                                          );
+                                                        } else if (value == 'whatsapp') {
+                                                          openWhatsApp(
+                                                            phone: fatherPhone,
+                                                            message: 'السلام علیکم، مکتب کی اطلاع: ${student['name']} کی پیشرفت کا جائزہ لیں۔',
+                                                          );
+                                                        } else if (value == 'set_pin') {
+                                                          showSetParentPinDialog(index);
+                                                        } else if (value == 'delete') {
+                                                          deleteStudent(index);
+                                                        }
+                                                      },
+                                                      itemBuilder: (context) => [
+                                                        const PopupMenuItem(
+                                                          value: 'call',
+                                                          child: Row(
+                                                            children: [
+                                                              Icon(Icons.call, size: 20, color: Colors.blue),
+                                                              SizedBox(width: 8),
+                                                              Text('کال کریں (Call)'),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        const PopupMenuItem(
+                                                          value: 'sms',
+                                                          child: Row(
+                                                            children: [
+                                                              Icon(Icons.sms, size: 20, color: Colors.orange),
+                                                              SizedBox(width: 8),
+                                                              Text('SMS بھیجیں'),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        const PopupMenuItem(
+                                                          value: 'whatsapp',
+                                                          child: Row(
+                                                            children: [
+                                                              Icon(Icons.chat_bubble, size: 20, color: Colors.green),
+                                                              SizedBox(width: 8),
+                                                              Text('واتس اپ (WhatsApp)'),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        const PopupMenuItem(
+                                                          value: 'set_pin',
+                                                          child: Row(
+                                                            children: [
+                                                              Icon(Icons.key, size: 20, color: Color(0xFFB45309)),
+                                                              SizedBox(width: 8),
+                                                              Text('والد کا PIN دیکھیں/سیٹ کریں'),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        const PopupMenuDivider(),
+                                                        PopupMenuItem(
+                                                          value: 'delete',
+                                                          child: Row(
+                                                            children: [
+                                                              const Icon(Icons.delete, size: 20, color: Colors.red),
+                                                              const SizedBox(width: 8),
+                                                              Text(loc.translate('delete'), style: const TextStyle(color: Colors.red)),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                                subtitle: Text(
+                                                  '${loc.translate('father_name')}: ${student['fatherName'] ?? '-'}\n'
+                                                  '${loc.translate('class_grade')}: ${student['className']?.toString().isNotEmpty == true ? student['className'] : '-'}',
+                                                ),
+                                                childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                                                children: [
+                                                  ListTile(
+                                                    leading: const Icon(Icons.phone),
+                                                    title: Text(loc.translate('phone_number')),
+                                                    subtitle: Text(
+                                                      student['fatherPhone']?.toString().isNotEmpty ==
+                                                              true
+                                                          ? student['fatherPhone'].toString()
+                                                          : '-',
+                                                    ),
+                                                  ),
+                                                  if (student['group'] != null)
+                                                    ListTile(
+                                                      leading: const Icon(Icons.groups_rounded, color: Colors.teal),
+                                                      title: Text('Group: ${student['group']}'),
+                                                    ),
+                                                  if (student['shift'] != null)
+                                                    ListTile(
+                                                      leading: const Icon(Icons.schedule_rounded, color: Colors.indigo),
+                                                      title: Text('${loc.translate('shift')}: ${loc.translate(student['shift'] ?? 'morning')}'),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    if (displayedStudents.length > 10 && _searchQuery.isEmpty)
+                                      Container(
+                                        width: 24,
+                                        color: Colors.transparent,
+                                        child: SingleChildScrollView(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((letter) {
+                                              return GestureDetector(
+                                                onTap: () {
+                                                  final idx = displayedStudents.indexWhere((s) => (s['name'] ?? '').toString().toUpperCase().startsWith(letter));
+                                                  if (idx != -1) {
+                                                    _scrollController.animateTo(
+                                                      idx * 115.0,
+                                                      duration: const Duration(milliseconds: 350),
+                                                      curve: Curves.easeInOut,
+                                                    );
+                                                  }
+                                                },
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                                  child: Text(
+                                                    letter,
+                                                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.green),
+                                                  ),
+                                                ),
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ),
+                                      ),
                                   ],
                                 ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'sms',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.sms, size: 20, color: Colors.orange),
-                                    SizedBox(width: 8),
-                                    Text('SMS بھیجیں'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'whatsapp',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.chat_bubble, size: 20, color: Colors.green),
-                                    SizedBox(width: 8),
-                                    Text('واتس اپ (WhatsApp)'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'set_pin',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.key, size: 20, color: Color(0xFFB45309)),
-                                    SizedBox(width: 8),
-                                    Text('والد کا PIN دیکھیں/سیٹ کریں'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuDivider(),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.delete, size: 20, color: Colors.red),
-                                    const SizedBox(width: 8),
-                                    Text(loc.translate('delete'), style: const TextStyle(color: Colors.red)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      subtitle: Text(
-                        '${loc.translate('father_name')}: ${student['fatherName'] ?? '-'}\n'
-                        '${loc.translate('class_grade')}: ${student['className']?.toString().isNotEmpty == true ? student['className'] : '-'}',
-                      ),
-                      childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.phone),
-                          title: Text(loc.translate('phone_number')),
-                          subtitle: Text(
-                            student['fatherPhone']?.toString().isNotEmpty ==
-                                    true
-                                ? student['fatherPhone'].toString()
-                                : '-',
-                          ),
-                        ),
-                        if (student['group'] != null)
-                          ListTile(
-                            leading: const Icon(Icons.groups_rounded, color: Colors.teal),
-                            title: Text('Group: ${student['group']}'),
-                          ),
-                        if (student['shift'] != null)
-                          ListTile(
-                            leading: const Icon(Icons.schedule_rounded, color: Colors.indigo),
-                            title: Text('${loc.translate('shift')}: ${loc.translate(student['shift'] ?? 'morning')}'),
-                          ),
-                      ],
-                    ),
                   ),
-                  );
-                },
+                ),
+              ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

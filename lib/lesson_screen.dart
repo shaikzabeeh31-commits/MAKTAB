@@ -58,20 +58,25 @@ class _LessonScreenState extends State<LessonScreen> {
           'name': s['name'] ?? 'Unknown',
           'fatherName': s['fatherName'] ?? '-',
           'group': s['group'] ?? '',
+          'makharij': false,
+          'ghunna': false,
+          'sabqi': s['sabqi'] ?? 'پارہ 30',
+          'manzil': s['manzil'] ?? 'پارہ 1',
+          'rating': s['rating'] ?? 'Yaad Hai',
         };
       }).toList();
       _availableGroups = ['all', ...groups.toList()..sort()];
     } else {
       studentDarsList = [
-        {'name': 'محمد احمد', 'fatherName': 'عبد الرحمٰن', 'group': 'حفظ گروپ A'},
-        {'name': 'علی رضا', 'fatherName': 'فاروق احمد', 'group': 'حفظ گروپ A'},
-        {'name': 'حسن حیدر', 'fatherName': 'حیدر علی', 'group': 'حفظ گروپ A'},
-        {'name': 'عبداللہ', 'fatherName': 'سلیم خان', 'group': 'حفظ گروپ A'},
-        {'name': 'محمد اسامہ', 'fatherName': 'اکرم خان', 'group': 'حفظ گروپ A'},
-        {'name': 'زید خان', 'fatherName': 'یوسف خان', 'group': 'ناظرہ گروپ B'},
-        {'name': 'عمران', 'fatherName': 'ندیم احمد', 'group': 'ناظرہ گروپ B'},
-        {'name': 'سعید احمد', 'fatherName': 'رشید احمد', 'group': 'ناظرہ گروپ B'},
-        {'name': 'فیضان علی', 'fatherName': 'شکیل احمد', 'group': 'ناظرہ گروپ B'},
+        {'name': 'محمد احمد', 'fatherName': 'عبد الرحمٰن', 'group': 'حفظ گروپ A', 'makharij': false, 'ghunna': false, 'sabqi': 'پارہ 30', 'manzil': 'پارہ 1', 'rating': 'Yaad Hai'},
+        {'name': 'علی رضا', 'fatherName': 'فاروق احمد', 'group': 'حفظ گروپ A', 'makharij': false, 'ghunna': false, 'sabqi': 'پارہ 30', 'manzil': 'پارہ 1', 'rating': 'Yaad Hai'},
+        {'name': 'حسن حیدر', 'fatherName': 'حیدر علی', 'group': 'حفظ گروپ A', 'makharij': false, 'ghunna': false, 'sabqi': 'پارہ 30', 'manzil': 'پارہ 1', 'rating': 'Yaad Hai'},
+        {'name': 'عبداللہ', 'fatherName': 'سلیم خان', 'group': 'حفظ گروپ A', 'makharij': false, 'ghunna': false, 'sabqi': 'پارہ 30', 'manzil': 'پارہ 1', 'rating': 'Yaad Hai'},
+        {'name': 'محمد اسامہ', 'fatherName': 'اکرم خان', 'group': 'حفظ گروپ A', 'makharij': false, 'ghunna': false, 'sabqi': 'پارہ 30', 'manzil': 'پارہ 1', 'rating': 'Yaad Hai'},
+        {'name': 'زید خان', 'fatherName': 'یوسف خان', 'group': 'ناظرہ گروپ B', 'makharij': false, 'ghunna': false, 'sabqi': 'پارہ 30', 'manzil': 'پارہ 1', 'rating': 'Yaad Hai'},
+        {'name': 'عمران', 'fatherName': 'ندیم احمد', 'group': 'ناظرہ گروپ B', 'makharij': false, 'ghunna': false, 'sabqi': 'پارہ 30', 'manzil': 'پارہ 1', 'rating': 'Yaad Hai'},
+        {'name': 'سعید احمد', 'fatherName': 'رشید احمد', 'group': 'ناظرہ گروپ B', 'makharij': false, 'ghunna': false, 'sabqi': 'پارہ 30', 'manzil': 'پارہ 1', 'rating': 'Yaad Hai'},
+        {'name': 'فیضان علی', 'fatherName': 'شکیل احمد', 'group': 'ناظرہ گروپ B', 'makharij': false, 'ghunna': false, 'sabqi': 'پارہ 30', 'manzil': 'پارہ 1', 'rating': 'Yaad Hai'},
       ];
       _availableGroups = ['all', 'حفظ گروپ A', 'ناظرہ گروپ B'];
     }
@@ -278,17 +283,19 @@ class _LessonScreenState extends State<LessonScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4F6F9),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF0F172A),
-          foregroundColor: Colors.white,
-          title: const Column(
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+          title: Column(
             children: [
-              Text('مدرسہ خیر العلوم اشرفیہ', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 24, fontWeight: FontWeight.bold)),
-              Text('(Lessons) سبق', style: TextStyle(color: Colors.amberAccent, fontSize: 14)),
+              Text(loc.translate('madrasa_title'), style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 24, fontWeight: FontWeight.bold)),
+              Text(loc.translate('lesson_plan'), style: const TextStyle(color: Colors.amberAccent, fontSize: 14)),
             ],
           ),
           centerTitle: true,
@@ -350,7 +357,7 @@ class _LessonScreenState extends State<LessonScreen> {
                         const SizedBox(width: 4),
                         InkWell(
                           onTap: _editTeacherDialog,
-                          child: Text(teacherName, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 14, decoration: TextDecoration.underline)),
+                          child: Text(teacherName, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 14, fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
@@ -381,6 +388,14 @@ class _LessonScreenState extends State<LessonScreen> {
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   children: [
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: Text(
+                        loc.translate('lesson_entry_title'),
+                        style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF074E32)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     // TODAY'S TOPIC
                     Container(
                       width: double.infinity,
@@ -392,9 +407,9 @@ class _LessonScreenState extends State<LessonScreen> {
                       ),
                       child: Column(
                         children: [
-                          const Align(
+                          Align(
                             alignment: Alignment.topRight,
-                            child: Text('آج کا موضوع', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', color: Colors.green, fontSize: 16)),
+                            child: Text(loc.translate('overview'), style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', color: Colors.green, fontSize: 16)),
                           ),
                           const Icon(Icons.menu_book_rounded, size: 40, color: Colors.green),
                           const SizedBox(height: 8),
@@ -421,7 +436,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('سبجیکٹ سلیکشن', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', color: Colors.blue, fontSize: 16)),
+                          Text(loc.translate('select_subject'), style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', color: Colors.blue, fontSize: 16)),
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -450,18 +465,65 @@ class _LessonScreenState extends State<LessonScreen> {
                               ),
                               onPressed: _applySubjectToAll,
                               icon: const Icon(Icons.sync),
-                              label: const Text('کیا سب پر لاگو کریں', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 18)),
+                              label: Text(loc.locale.languageCode == 'en' ? 'Apply to All' : 'سب پر لاگو کریں', style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 18)),
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Center(
-                            child: Text('اوپر والے سبجیکٹ کو تمام طلبہ کے سبجیکٹ باکس میں کاپی کرنے کے لئے یہاں کلک کریں',
-                                style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 12, color: Colors.grey)),
+                          Center(
+                            child: Text(loc.locale.languageCode == 'en' ? 'Click here to copy the subject above to all students' : 'اوپر والے سبجیکٹ کو تمام طلبہ کے سبجیکٹ باکس میں کاپی کرنے کے لئے یہاں کلک کریں',
+                                style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 12, color: Colors.grey)),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 12),
+                    // Section 3 Header and Quick Actions
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        Text(
+                          loc.translate('dars_entry_title'),
+                          style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF074E32)),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  for (var s in studentDarsList) {
+                                    s['rating'] = 'Yaad Hai';
+                                  }
+                                });
+                              },
+                              icon: const Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
+                              label: Text(
+                                loc.translate('mark_all_yaad_hai'),
+                                style: const TextStyle(fontSize: 10, color: Colors.green),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  for (var s in studentDarsList) {
+                                    s['rating'] = 'Iaadah';
+                                  }
+                                });
+                              },
+                              icon: const Icon(Icons.repeat, size: 14, color: Colors.orange),
+                              label: Text(
+                                loc.translate('mark_all_iaadah'),
+                                style: const TextStyle(fontSize: 10, color: Colors.orange),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
 
                     // GROUPED TABLES
                     ..._buildGroupedTables(),
@@ -493,6 +555,56 @@ class _LessonScreenState extends State<LessonScreen> {
               ),
             ),
           ],
+        ),
+        bottomNavigationBar: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0x0D000000),
+                blurRadius: 4,
+                offset: const Offset(0, -2),
+              )
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(loc.translate('save'))),
+                    );
+                  },
+                  icon: const Icon(Icons.save),
+                  label: Text(loc.translate('save_all_entries')),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF074E32),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('PDF Generated!')),
+                    );
+                  },
+                  icon: const Icon(Icons.picture_as_pdf),
+                  label: Text(loc.translate('save_as_pdf')),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF074E32),
+                    side: const BorderSide(color: Color(0xFF074E32)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -528,15 +640,16 @@ class _LessonScreenState extends State<LessonScreen> {
   List<Widget> _buildGroupedTables() {
     final grouped = _getGroupedStudents();
     List<Widget> tables = [];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     grouped.forEach((groupName, indices) {
       tables.add(
         Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardTheme.color,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 4, spreadRadius: 1)],
+            boxShadow: [BoxShadow(color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.grey.shade200, blurRadius: 4, spreadRadius: 1)],
           ),
           child: Column(
             children: [
@@ -544,7 +657,7 @@ class _LessonScreenState extends State<LessonScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: isDark ? Colors.blue.withValues(alpha: 0.15) : Colors.blue.shade50,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                 ),
                 child: Row(
@@ -592,24 +705,84 @@ class _LessonScreenState extends State<LessonScreen> {
   Widget _buildStudentRow(int displayIndex, int globalIndex) {
     final student = studentDarsList[globalIndex];
     final bool hasPhoto = studentImagePaths[globalIndex] != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subColor = isDark ? Colors.white60 : Colors.grey;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+        border: Border(bottom: BorderSide(color: isDark ? const Color(0xFF334155) : Colors.grey.shade200)),
       ),
       child: Row(
         children: [
-          SizedBox(width: 24, child: Text(displayIndex.toString(), style: const TextStyle(fontSize: 12), textAlign: TextAlign.center)),
+          SizedBox(width: 24, child: Text(displayIndex.toString(), style: TextStyle(fontSize: 12, color: textColor), textAlign: TextAlign.center)),
           Expanded(
             flex: 2,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(student['name'], style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 15, fontWeight: FontWeight.bold, height: 1.5)),
+                TranslatedText(student['name'], style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 15, fontWeight: FontWeight.bold, height: 1.5, color: textColor)),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    TranslatedText('والد/سرپرست: ', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 10, color: subColor, height: 1.2)),
+                    Expanded(
+                      child: TranslatedText(student['fatherName'], style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 10, color: subColor, height: 1.2)),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 4),
-                Text('والد/سرپرست: ${student['fatherName']}', style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 11, color: Colors.grey, height: 1.5)),
+                // Tajweed Markers
+                Row(
+                  children: [
+                    _buildTajweedChip('مخارج', globalIndex, 'makharij'),
+                    const SizedBox(width: 4),
+                    _buildTajweedChip('غنہ', globalIndex, 'ghunna'),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                // Sabqi & Manzil Trackers
+                Row(
+                  children: [
+                    TranslatedText('سبقی: ', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isDark ? Colors.tealAccent : Colors.blueGrey)),
+                    Expanded(
+                      child: TranslatedText(student['sabqi']?.toString() ?? 'پارہ 30', style: TextStyle(fontSize: 9, color: textColor), overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: 4),
+                    TranslatedText('منزل: ', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isDark ? Colors.tealAccent : Colors.blueGrey)),
+                    Expanded(
+                      child: TranslatedText(student['manzil']?.toString() ?? 'پارہ 1', style: TextStyle(fontSize: 9, color: textColor), overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                // Rating Dropdown
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: isDark ? const Color(0xFF334155) : Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: DropdownButton<String>(
+                    value: student['rating']?.toString() ?? 'Yaad Hai',
+                    isDense: true,
+                    dropdownColor: Theme.of(context).cardTheme.color,
+                    underline: const SizedBox(),
+                    style: TextStyle(fontSize: 9, color: textColor),
+                    items: ['Yaad Hai', 'Kam Yaad', 'Yaad Nahi', 'Iaadah'].map((r) {
+                      return DropdownMenuItem(value: r, child: TranslatedText(r, style: TextStyle(fontSize: 9, color: textColor)));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() {
+                          student['rating'] = val;
+                        });
+                      }
+                    },
+                  ),
+                ),
               ],
             ),
           ),
@@ -662,6 +835,33 @@ class _LessonScreenState extends State<LessonScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTajweedChip(String label, int index, String key) {
+    final s = studentDarsList[index];
+    final bool isChecked = s[key] as bool? ?? false;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          s[key] = !isChecked;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        decoration: BoxDecoration(
+          color: isChecked ? Colors.green.shade50 : Colors.grey.shade50,
+          border: Border.all(color: isChecked ? Colors.green : Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isChecked) const Icon(Icons.check, size: 8, color: Colors.green),
+            Text(label, style: TextStyle(fontSize: 8, color: isChecked ? Colors.green.shade900 : Colors.black87)),
+          ],
+        ),
       ),
     );
   }

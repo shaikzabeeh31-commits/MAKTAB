@@ -49,8 +49,8 @@ void main() {
       )));
       await tester.pumpAndSettle();
 
-      // Urdu locale: select_role key → 'اپنا کردار منتخب کریں'
-      expect(find.text('اپنا کردار منتخب کریں'), findsOneWidget);
+      // Urdu locale: select_role key → 'اپنا کردار منتخب کریں' (appears in title + subtitle)
+      expect(find.text('اپنا کردار منتخب کریں'), findsAtLeastNWidgets(1));
       // Role cards use titleUrdu (Manager) + titleEnglish → 'مینجر (Manager)'
       expect(find.textContaining('مینجر'), findsOneWidget);
       expect(find.textContaining('ایڈمن'), findsOneWidget);

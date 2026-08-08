@@ -4,8 +4,10 @@ import 'package:maktab_management_system/theme/app_colors.dart';
 import 'package:maktab_management_system/theme/app_components.dart';
 import 'package:maktab_management_system/theme/app_theme.dart';
 
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
 
   group('Design System & UI Components Unit & Widget Tests', () {
     test('AppTheme builds valid Light and Dark themes', () {
