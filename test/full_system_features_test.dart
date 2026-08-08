@@ -6,7 +6,6 @@ import 'package:maktab_management_system/results_screen.dart';
 import 'package:maktab_management_system/role_selection_screen.dart';
 import 'package:maktab_management_system/theme_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(
