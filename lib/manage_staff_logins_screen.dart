@@ -78,11 +78,12 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
   Future<void> _saveCredentials(AppRole role) async {
     final phone = _phoneControllers[role]!.text.trim();
     final pin = _pinControllers[role]!.text.trim();
+    final isEn = widget.languageController.locale.languageCode == 'en';
 
     if (phone.isEmpty || pin.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('براہ کرم صحیح فون نمبر اور کم از کم 4 ہندسوں کا پن (PIN) درج کریں۔'),
+        SnackBar(
+          content: Text(isEn ? 'Please enter a valid phone number and a 4-digit PIN.' : 'براہ کرم صحیح فون نمبر اور کم از کم 4 ہندسوں کا پن (PIN) درج کریں۔'),
           backgroundColor: Colors.red,
         ),
       );
@@ -108,7 +109,10 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
   Future<void> _sendWhatsApp(String phone, String roleTitle, String pin) async {
     final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
     final fullPhone = cleanPhone.startsWith('91') ? cleanPhone : '91$cleanPhone';
-    final message = "السلام علیکم! آپ کا مکتب ایپ ($roleTitle) لاگ ان اور PIN تیار ہو گیا ہے۔\n\n📱 موبائل نمبر: $phone\n🔑 4-Digit PIN: $pin\n\nبرائے مہربانی ایپ میں لاگ ان کریں۔";
+    final isEn = widget.languageController.locale.languageCode == 'en';
+    final message = isEn
+        ? "Assalamu Alaikum! Your Maktab App ($roleTitle) login details are ready.\n\n📱 Mobile: $phone\n🔑 4-Digit PIN: $pin\n\nPlease log in to the app."
+        : "السلام علیکم! آپ کا مکتب ایپ ($roleTitle) لاگ ان اور PIN تیار ہو گیا ہے۔\n\n📱 موبائل نمبر: $phone\n🔑 4-Digit PIN: $pin\n\nبرائے مہربانی ایپ میں لاگ ان کریں۔";
     final url = Uri.parse("https://wa.me/$fullPhone?text=${Uri.encodeComponent(message)}");
     try {
       if (await canLaunchUrl(url)) {
@@ -118,7 +122,10 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
   }
 
   Future<void> _sendSms(String phone, String roleTitle, String pin) async {
-    final message = "مکتب ایپ ($roleTitle) لاگ ان تفاصیل:\nموبائل: $phone\nPIN: $pin";
+    final isEn = widget.languageController.locale.languageCode == 'en';
+    final message = isEn
+        ? "Maktab App ($roleTitle) Login Details:\nPhone: $phone\nPIN: $pin"
+        : "مکتب ایپ ($roleTitle) لاگ ان تفاصیل:\nموبائل: $phone\nPIN: $pin";
     final url = Uri.parse("sms:$phone?body=${Uri.encodeComponent(message)}");
     try {
       if (await canLaunchUrl(url)) {
@@ -128,6 +135,7 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
   }
 
   void _showShareCredentialsDialog(AppRole role, String phone, String pin) {
+    final isEn = widget.languageController.locale.languageCode == 'en';
     final roleTitle = role.name.toUpperCase();
     showDialog<void>(
       context: context,
@@ -137,23 +145,23 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
           children: [
             const Icon(Icons.check_circle_rounded, color: Colors.green),
             const SizedBox(width: 8),
-            Text('$roleTitle کا لاگ ان محفوظ ہو گیا', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            Text(isEn ? '$roleTitle Credentials Saved' : '$roleTitle کا لاگ ان محفوظ ہو گیا', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('موبائل: $phone'),
+            Text(isEn ? 'Phone: $phone' : 'موبائل: $phone'),
             Text('PIN: $pin'),
             const SizedBox(height: 14),
-            const Text('کیا آپ یہ تفصیلات متعلقہ فرد کو WhatsApp یا SMS کے ذریعے بھیجنا چاہتے ہیں؟', style: TextStyle(fontSize: 12.5)),
+            Text(isEn ? 'Do you want to send these details via WhatsApp or SMS?' : 'کیا آپ یہ تفصیلات متعلقہ فرد کو WhatsApp یا SMS کے ذریعے بھیجنا چاہتے ہیں؟', style: const TextStyle(fontSize: 12.5)),
           ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.send_rounded, color: Colors.blue),
-            tooltip: 'SMS کے ذریعے بھیجیں',
+            tooltip: isEn ? 'Send via SMS' : 'SMS کے ذریعے بھیجیں',
             onPressed: () {
               Navigator.pop(ctx);
               _sendSms(phone, roleTitle, pin);
@@ -162,7 +170,7 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
             icon: const Icon(Icons.chat_rounded, size: 18),
-            label: const Text('WhatsApp پر بھیجیں'),
+            label: Text(isEn ? 'WhatsApp' : 'WhatsApp پر بھیجیں'),
             onPressed: () {
               Navigator.pop(ctx);
               _sendWhatsApp(phone, roleTitle, pin);
@@ -176,6 +184,7 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
   @override
   Widget build(BuildContext context) {
     final isRtl = widget.languageController.locale.languageCode != 'en';
+    final isEn = !isRtl;
 
     return Directionality(
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
@@ -183,9 +192,13 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
         backgroundColor: const Color(0xFFF1F5F9),
         appBar: AppBar(
           title: Text(
-            widget.currentUserRole == AppRole.manager
-                ? 'اسٹاف (استاد و متولی) PINs انتظام'
-                : 'اسٹاف PINs و لاگ ان انتظام',
+            isEn
+                ? (widget.currentUserRole == AppRole.manager
+                    ? 'Manage Staff PINs'
+                    : 'Manage Staff Logins')
+                : (widget.currentUserRole == AppRole.manager
+                    ? 'اسٹاف (استاد و متولی) PINs انتظام'
+                    : 'اسٹاف PINs و لاگ ان انتظام'),
           ),
           backgroundColor: const Color(0xFF0F172A),
           foregroundColor: Colors.white,
@@ -212,15 +225,21 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  widget.currentUserRole == AppRole.manager
-                                      ? 'مینجر پورٹل: صرف استاد اور متولی کے اکاؤنٹس بنانے/سیٹ کرنے کی اجازت ہے'
-                                      : 'ایڈمن پورٹل: تمام اسٹاف ممبران کے PINs اور موبائل نمبرز کا انتظام',
+                                  isEn
+                                      ? (widget.currentUserRole == AppRole.manager
+                                          ? 'Manager Portal: Only allowed to manage Teacher & Mutawalli PINs'
+                                          : 'Admin Portal: Manage PINs and phone numbers for all staff members')
+                                      : (widget.currentUserRole == AppRole.manager
+                                          ? 'مینجر پورٹل: صرف استاد اور متولی کے اکاؤنٹس بنانے/سیٹ کرنے کی اجازت ہے'
+                                          : 'ایڈمن پورٹل: تمام اسٹاف ممبران کے PINs اور موبائل نمبرز کا انتظام'),
                                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                                 ),
                                 const SizedBox(height: 4),
-                                const Text(
-                                  'نیا PIN سیٹ یا تبدیل کرنے کے بعد WhatsApp یا SMS پر ڈائریکٹ بھیجیں۔',
-                                  style: TextStyle(fontSize: 11.5, color: Colors.grey),
+                                Text(
+                                  isEn
+                                      ? 'After setting or changing a PIN, send it directly via WhatsApp or SMS.'
+                                      : 'نیا PIN سیٹ یا تبدیل کرنے کے بعد WhatsApp یا SMS پر ڈائریکٹ بھیجیں۔',
+                                  style: const TextStyle(fontSize: 11.5, color: Colors.grey),
                                 ),
                               ],
                             ),
@@ -241,21 +260,22 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
     String titleUrdu = '';
     Color cardColor = Colors.white;
 
+    final isEn = widget.languageController.locale.languageCode == 'en';
     switch (role) {
       case AppRole.admin:
-        titleUrdu = 'ایڈمن (Master Admin)';
+        titleUrdu = isEn ? 'Master Admin' : 'ایڈمن (Master Admin)';
         cardColor = const Color(0xFF0F172A);
         break;
       case AppRole.manager:
-        titleUrdu = 'مینجر (Manager)';
+        titleUrdu = isEn ? 'Manager' : 'مینجر (Manager)';
         cardColor = Colors.purple.shade900;
         break;
       case AppRole.teacher:
-        titleUrdu = 'استاد (Teacher)';
+        titleUrdu = isEn ? 'Teacher' : 'استاد (Teacher)';
         cardColor = Colors.green.shade900;
         break;
       case AppRole.mutawalli:
-        titleUrdu = 'متولی (Mutawalli)';
+        titleUrdu = isEn ? 'Mutawalli' : 'متولی (Mutawalli)';
         cardColor = Colors.orange.shade900;
         break;
       default:
@@ -295,7 +315,7 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
               controller: _phoneControllers[role],
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
-                labelText: 'موبائل نمبر (Phone Number)',
+                labelText: isEn ? 'Phone Number' : 'موبائل نمبر',
                 prefixIcon: const Icon(Icons.phone),
                 filled: true,
                 fillColor: Colors.grey.shade100,
@@ -335,7 +355,7 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
                 OutlinedButton.icon(
                   onPressed: () => _generateRandomPin(role),
                   icon: const Icon(Icons.autorenew_rounded, size: 16),
-                  label: const Text('آٹو PIN', style: TextStyle(fontSize: 11)),
+                  label: Text(isEn ? 'Auto PIN' : 'آٹو PIN', style: const TextStyle(fontSize: 11)),
                 ),
               ],
             ),
@@ -346,14 +366,14 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(backgroundColor: cardColor),
                     icon: const Icon(Icons.save_rounded, size: 18),
-                    label: const Text('محفوظ کریں'),
+                    label: Text(isEn ? 'Save' : 'محفوظ کریں'),
                     onPressed: () => _saveCredentials(role),
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton.filledTonal(
                   color: Colors.green.shade800,
-                  tooltip: 'WhatsApp پر بھیجیں',
+                  tooltip: isEn ? 'Send via WhatsApp' : 'WhatsApp پر بھیجیں',
                   icon: const Icon(Icons.chat_rounded),
                   onPressed: () {
                     final phone = _phoneControllers[role]!.text.trim();
@@ -363,7 +383,7 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
                 ),
                 IconButton.filledTonal(
                   color: Colors.blue.shade800,
-                  tooltip: 'SMS کے ذریعے بھیجیں',
+                  tooltip: isEn ? 'Send via SMS' : 'SMS کے ذریعے بھیجیں',
                   icon: const Icon(Icons.message_rounded),
                   onPressed: () {
                     final phone = _phoneControllers[role]!.text.trim();

@@ -984,6 +984,7 @@ class _FeeScreenState extends State<FeeScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
+    final isEn = loc.locale.languageCode == 'en';
     final alertCount =
         _filtered.where((e) => _pending(_students[e.key]) > 0).length;
     final pendingCount =
@@ -1004,7 +1005,7 @@ class _FeeScreenState extends State<FeeScreen> {
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
-            tooltip: 'ٹولز (Tools)',
+            tooltip: isEn ? 'Tools' : 'ٹولز',
             onSelected: (value) {
               if (value == 'send_report') {
                 _sendFeeReportToAdmin();
@@ -1026,83 +1027,83 @@ class _FeeScreenState extends State<FeeScreen> {
             },
             itemBuilder: (context) => [
               if (widget.currentRole == AppRole.teacher)
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'send_report',
                   child: Row(
                     children: [
-                      Icon(Icons.send_rounded, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Expanded(child: Text('Send Report (رپورٹ بھیجیں)', overflow: TextOverflow.ellipsis)),
+                      const Icon(Icons.send_rounded, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(isEn ? 'Send Report' : 'رپورٹ بھیجیں', overflow: TextOverflow.ellipsis)),
                     ],
                   ),
                 ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'mark_all_paid',
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle_rounded, color: Colors.green),
-                    SizedBox(width: 8),
-                    Expanded(child: Text('Mark All Paid (سب ادا شدہ)', overflow: TextOverflow.ellipsis)),
+                    const Icon(Icons.check_circle_rounded, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(isEn ? 'Mark All Paid' : 'سب ادا شدہ', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'mark_all_due',
                 child: Row(
                   children: [
-                    Icon(Icons.money_off_rounded, color: Colors.red),
-                    SizedBox(width: 8),
-                    Expanded(child: Text('Mark All Due (سب واجب الادا)', overflow: TextOverflow.ellipsis)),
+                    const Icon(Icons.money_off_rounded, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(isEn ? 'Mark All Due' : 'سب واجب الادا', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'analytics',
                 child: Row(
                   children: [
-                    Icon(Icons.bar_chart_rounded, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Expanded(child: Text('Fee Analytics (فیس گراف)', overflow: TextOverflow.ellipsis)),
+                    const Icon(Icons.bar_chart_rounded, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(isEn ? 'Fee Analytics' : 'فیس گراف', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'ledger',
                 child: Row(
                   children: [
-                    Icon(Icons.receipt_long_rounded, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Expanded(child: Text('Teacher Ledger (فیس کھاتہ)', overflow: TextOverflow.ellipsis)),
+                    const Icon(Icons.receipt_long_rounded, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(isEn ? 'Teacher Ledger' : 'فیس کھاتہ', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'audit',
                 child: Row(
                   children: [
-                    Icon(Icons.verified_user_rounded, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Expanded(child: Text('Annual Audit (اڈٹ رپورٹ)', overflow: TextOverflow.ellipsis)),
+                    const Icon(Icons.verified_user_rounded, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(isEn ? 'Annual Audit' : 'اڈٹ رپورٹ', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'collector_role',
                 child: Row(
                   children: [
-                    Icon(Icons.admin_panel_settings_rounded, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Expanded(child: Text('Role Settings (رول اختیارات)', overflow: TextOverflow.ellipsis)),
+                    const Icon(Icons.admin_panel_settings_rounded, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(isEn ? 'Role Settings' : 'رول اختیارات', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'batch_pdf',
                 child: Row(
                   children: [
-                    Icon(Icons.picture_as_pdf_rounded, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Expanded(child: Text('Batch PDF (پی ڈی ایف رپورٹ)', overflow: TextOverflow.ellipsis)),
+                    const Icon(Icons.picture_as_pdf_rounded, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(isEn ? 'Batch PDF' : 'پی ڈی ایف رپورٹ', overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),

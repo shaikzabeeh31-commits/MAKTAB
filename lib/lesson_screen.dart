@@ -152,13 +152,47 @@ class _LessonScreenState extends State<LessonScreen> {
     }
   }
 
-  void _showComingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('یہ فیچر جلد آ رہا ہے (Coming Soon)', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 1),
-      ),
+  void _selectSubjectDialog() {
+    final loc = AppLocalizations.of(context);
+    final isEn = loc.locale.languageCode == 'en';
+    final List<String> subjects = [
+      isEn ? 'Quran' : 'قرآن مجید',
+      isEn ? 'Tajweed' : 'تجوید و مخارج',
+      isEn ? 'Diniyat' : 'دینیات و عقائد',
+      isEn ? 'Hadith' : 'حدیث شریف',
+      isEn ? 'Dua' : 'مسنون دعائیں',
+      isEn ? 'Arabic' : 'عربی زبان',
+    ];
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(isEn ? 'Select Subject' : 'مضمون منتخب کریں', style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+          content: SingleChildScrollView(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: subjects.map((sub) {
+                return ActionChip(
+                  label: Text(sub, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+                  onPressed: () {
+                    setState(() {
+                      globalSubjectController.text = sub;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(isEn ? 'Cancel' : 'منسوخ'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -440,7 +474,7 @@ class _LessonScreenState extends State<LessonScreen> {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: _showComingSoon),
+                              IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: _selectSubjectDialog),
                               Expanded(
                                 child: TextFormField(
                                   controller: globalSubjectController,

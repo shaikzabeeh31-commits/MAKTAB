@@ -36,6 +36,15 @@ class StudentResult {
     return 'Rasib (راسب / Fail)';
   }
 
+  String getGradeLabel(bool isEn) {
+    final p = percentage;
+    if (p >= 90) return isEn ? 'Mumtaz (A+)' : 'ممتاز (A+)';
+    if (p >= 75) return isEn ? 'Jayyid Jiddan (A)' : 'جید جداً (A)';
+    if (p >= 60) return isEn ? 'Jayyid (B)' : 'جید (B)';
+    if (p >= 40) return isEn ? 'Maqbool (C)' : 'مقبول (C)';
+    return isEn ? 'Rasib (Fail)' : 'راسب (Fail)';
+  }
+
   Color get gradeColor {
     final p = percentage;
     if (p >= 90) return const Color(0xFF047857);
@@ -141,14 +150,15 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   Future<void> _clearReports() async {
+    final isEn = widget.languageController.locale.languageCode == 'en';
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('رپورٹ ہسٹری صاف کریں؟ (Clear Reports)'),
-        content: const Text('کیا آپ واقعی اساتذہ کی تمام موصولہ رپورٹیں حذف کرنا چاہتے ہیں؟'),
+        title: Text(isEn ? 'Clear Reports History?' : 'رپورٹ ہسٹری صاف کریں؟'),
+        content: Text(isEn ? 'Are you sure you want to delete all received teacher reports?' : 'کیا آپ واقعی اساتذہ کی تمام موصولہ رپورٹیں حذف کرنا چاہتے ہیں؟'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Clear All')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(isEn ? 'Cancel' : 'منسوخ')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(isEn ? 'Clear All' : 'صاف کریں')),
         ],
       ),
     );
@@ -167,6 +177,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
       listenable: widget.languageController,
       builder: (context, _) {
         final loc = AppLocalizations.of(context);
+        final isEn = loc.locale.languageCode == 'en';
         final filtered = _results.where((r) {
           if (_selectedClass != 'All' && r.className != _selectedClass) return false;
           return true;
@@ -194,10 +205,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('نتائج و کارکردگی (Results & Reports)',
+                      Text(isEn ? 'Results & Reports' : 'نتائج و کارکردگی',
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                       Text('Manager & Admin Results Portal',
                           style: TextStyle(fontSize: 10.5, color: Colors.white70)),
@@ -211,15 +222,15 @@ class _ResultsScreenState extends State<ResultsScreen> {
                 if (_teacherReports.isNotEmpty)
                   IconButton(
                     icon: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent),
-                    tooltip: 'Clear All Reports (رپورٹیں صاف کریں)',
+                    tooltip: isEn ? 'Clear All Reports' : 'رپورٹیں صاف کریں',
                     onPressed: _clearReports,
                   ),
                 LanguageButton(controller: widget.languageController),
               ],
-              bottom: const TabBar(
+              bottom: TabBar(
                 tabs: [
-                  Tab(icon: Icon(Icons.school_rounded), text: 'Academic Results'),
-                  Tab(icon: Icon(Icons.description_rounded), text: 'Teacher Reports'),
+                  Tab(icon: const Icon(Icons.school_rounded), text: isEn ? 'Academic Results' : 'تعلیمی نتائج'),
+                  Tab(icon: const Icon(Icons.description_rounded), text: isEn ? 'Teacher Reports' : 'اساتذہ کی رپورٹیں'),
                 ],
                 labelColor: Colors.amberAccent,
                 unselectedLabelColor: Colors.white70,
@@ -240,6 +251,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   Widget _buildAcademicResultsTab(List<StudentResult> filtered, int passCount, double avgPercentage, AppLocalizations loc) {
+    final isEn = loc.locale.languageCode == 'en';
     return Column(
       children: [
         // Filter Bar
@@ -253,21 +265,21 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       initialValue: _selectedTerm,
-                      decoration: const InputDecoration(
-                        labelText: 'Exam Term (امتحانی سیشن)',
+                      decoration: InputDecoration(
+                        labelText: isEn ? 'Exam Term' : 'امتحانی سیشن',
                         border: OutlineInputBorder(),
                         contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       ),
-                      items: const [
+                      items: [
                         DropdownMenuItem(
                             value: 'Annual Exam (سالانہ امتحان)',
-                            child: Text('Annual Exam (سالانہ امتحان)', style: TextStyle(fontSize: 12))),
+                            child: Text(isEn ? 'Annual Exam' : 'سالانہ امتحان', style: const TextStyle(fontSize: 12))),
                         DropdownMenuItem(
                             value: 'Mid-Term Exam (ششماہی)',
-                            child: Text('Mid-Term Exam (ششماہی)', style: TextStyle(fontSize: 12))),
+                            child: Text(isEn ? 'Mid-Term Exam' : 'ششماہی', style: const TextStyle(fontSize: 12))),
                         DropdownMenuItem(
                             value: 'Quarterly Test (سہ ماہی)',
-                            child: Text('Quarterly Test (سہ ماہی)', style: TextStyle(fontSize: 12))),
+                            child: Text(isEn ? 'Quarterly Test' : 'سہ ماہی', style: const TextStyle(fontSize: 12))),
                       ],
                       onChanged: (v) {
                         if (v != null) setState(() => _selectedTerm = v);
@@ -278,8 +290,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       initialValue: _selectedClass,
-                      decoration: const InputDecoration(
-                        labelText: 'Class (کلاس)',
+                      decoration: InputDecoration(
+                        labelText: isEn ? 'Class' : 'کلاس',
                         border: OutlineInputBorder(),
                         contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       ),
@@ -322,12 +334,12 @@ class _ResultsScreenState extends State<ResultsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.emoji_events_rounded, color: Colors.amberAccent, size: 20),
-                        SizedBox(width: 8),
-                        Text('پوزیشن ہولڈر طلبہ (Top 3 Rank Position Holders 🏆)',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
+                        const Icon(Icons.emoji_events_rounded, color: Colors.amberAccent, size: 20),
+                        const SizedBox(width: 8),
+                        Text(isEn ? 'Top 3 Position Holders 🏆' : 'پوزیشن ہولڈر طلبہ 🏆',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -398,7 +410,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                     border: Border.all(color: r.gradeColor),
                                   ),
                                   child: Text(
-                                    r.grade,
+                                    r.getGradeLabel(isEn),
                                     style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
@@ -444,6 +456,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   Widget _buildTeacherReportsTab(AppLocalizations loc) {
+    final isEn = loc.locale.languageCode == 'en';
     if (_loadingReports) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -455,10 +468,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
           children: [
             Icon(Icons.assignment_late_rounded, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 12),
-            const Text(
-              'اساتذہ کی طرف سے کوئی رپورٹ موصول نہیں ہوئی\n(No reports sent by teachers yet)',
+            Text(
+              isEn ? 'No reports sent by teachers yet' : 'اساتذہ کی طرف سے کوئی رپورٹ موصول نہیں ہوئی',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.4),
+              style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.4),
             ),
           ],
         ),
@@ -473,7 +486,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
         final type = r['type'] ?? 'attendance';
         final isAttendance = type == 'attendance';
         final details = r['details'] as Map<String, dynamic>? ?? {};
-        final sender = r['senderName'] ?? 'Ustadh (Teacher)';
+        final sender = r['senderName'] ?? (isEn ? 'Teacher' : 'استاد');
         final timestampStr = r['dateTime']?.toString().split('.')[0] ?? '';
 
         return Card(
@@ -488,7 +501,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
               ),
             ),
             title: Text(
-              isAttendance ? 'حاضری رپورٹ (Attendance Report)' : 'فیس کلیکشن رپورٹ (Fee Report)',
+              isEn ? (isAttendance ? 'Attendance Report' : 'Fee Report') : (isAttendance ? 'حاضری رپورٹ' : 'فیس کلیکشن رپورٹ'),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             subtitle: Text(
@@ -508,27 +521,27 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: isAttendance
                       ? [
-                          _reportStat('تاریخ (Date)', '${details['date'] ?? '-'}'),
-                          _reportStat('کل طلبہ (Total)', '${details['total'] ?? 0}'),
-                          _reportStat('حاضر (Present)', '${details['present'] ?? 0}', Colors.green),
-                          _reportStat('غیر حاضر (Absent)', '${details['absent'] ?? 0}', Colors.red),
-                          _reportStat('رخصت (Leave)', '${details['leave'] ?? 0}', Colors.orange),
+                          _reportStat(isEn ? 'Date' : 'تاریخ', '${details['date'] ?? '-'}'),
+                          _reportStat(isEn ? 'Total' : 'کل طلبہ', '${details['total'] ?? 0}'),
+                          _reportStat(isEn ? 'Present' : 'حاضر', '${details['present'] ?? 0}', Colors.green),
+                          _reportStat(isEn ? 'Absent' : 'غیر حاضر', '${details['absent'] ?? 0}', Colors.red),
+                          _reportStat(isEn ? 'Leave' : 'رخصت', '${details['leave'] ?? 0}', Colors.orange),
                         ]
                       : [
-                          _reportStat('مہینہ (Month)', '${details['month'] ?? '-'}'),
-                          _reportStat('کل طلبہ (Total)', '${details['total'] ?? 0}'),
-                          _reportStat('ادا شدہ (Paid)', '${details['paid'] ?? 0}', Colors.green),
-                          _reportStat('واجب الادا (Due)', '${details['due'] ?? 0}', Colors.red),
+                          _reportStat(isEn ? 'Month' : 'مہینہ', '${details['month'] ?? '-'}'),
+                          _reportStat(isEn ? 'Total' : 'کل طلبہ', '${details['total'] ?? 0}'),
+                          _reportStat(isEn ? 'Paid' : 'ادا شدہ', '${details['paid'] ?? 0}', Colors.green),
+                          _reportStat(isEn ? 'Due' : 'واجب الادا', '${details['due'] ?? 0}', Colors.red),
                         ],
                 ),
               ),
               const SizedBox(height: 12),
               if (isAttendance) ...[
-                const Text('غیر حاضر طلبہ کی فہرست (Absent Students):',
+                Text(isEn ? 'Absent Students:' : 'غیر حاضر طلبہ کی فہرست:',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blueGrey)),
                 const SizedBox(height: 6),
                 if ((details['absentees'] as List? ?? []).isEmpty)
-                  const Text('کوئی غیر حاضر نہیں ہے (All present)', style: TextStyle(fontSize: 11, color: Colors.green))
+                  Text(isEn ? 'All present' : 'کوئی غیر حاضر نہیں ہے', style: TextStyle(fontSize: 11, color: Colors.green))
                 else
                   Wrap(
                     spacing: 6,
@@ -543,11 +556,11 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     }).toList(),
                   ),
               ] else ...[
-                const Text('بقایا فیس والے طلبہ (Fee Due Students):',
+                Text(isEn ? 'Fee Due Students:' : 'بقایا فیس والے طلبہ:',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blueGrey)),
                 const SizedBox(height: 6),
                 if ((details['dueStudentsList'] as List? ?? []).isEmpty)
-                  const Text('تمام طلبہ کی فیس جمع ہے (All paid)', style: TextStyle(fontSize: 11, color: Colors.green))
+                  Text(isEn ? 'All paid' : 'تمام طلبہ کی فیس جمع ہے', style: TextStyle(fontSize: 11, color: Colors.green))
                 else
                   Wrap(
                     spacing: 6,

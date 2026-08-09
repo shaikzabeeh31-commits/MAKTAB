@@ -870,27 +870,28 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
   }
 
   void _showPtmDispatchDialog() {
+    final isEn = widget.languageController.locale.languageCode == 'en';
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.people_alt_rounded, color: Colors.indigo),
-            SizedBox(width: 8),
-            Text('والدین میٹنگ بلاوا (PTM Dispatch)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const Icon(Icons.people_alt_rounded, color: Colors.indigo),
+            const SizedBox(width: 8),
+            Text(isEn ? 'PTM Dispatch' : 'والدین میٹنگ بلاوا', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: const Text('کیا آپ تمام والدین کو آنے والے ہفتے کی PTM کا دعوت نامہ بھیجنا چاہتے ہیں؟'),
+        content: Text(isEn ? 'Do you want to send the PTM invitation to all parents for the upcoming week?' : 'کیا آپ واقعی تمام والدین کو آنے والے ہفتے کی PTM کا دعوت نامہ بھیجنا چاہتے ہیں؟'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('منسوخ')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Cancel' : 'منسوخ')),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('تمام والدین کو PTM کا دعوت نامہ بھیج دیا گیا!'), backgroundColor: Colors.indigo),
+                SnackBar(content: Text(isEn ? 'PTM invitation sent to all parents!' : 'تمام والدین کو PTM کا دعوت نامہ بھیج دیا گیا!'), backgroundColor: Colors.indigo),
               );
             },
-            child: const Text('دعوت نامہ بھیجیں'),
+            child: Text(isEn ? 'Send Invite' : 'دعوت نامہ بھیجیں'),
           ),
         ],
       ),
@@ -898,28 +899,29 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
   }
 
   void _showEmergencyLockdownDialog() {
+    final isEn = widget.languageController.locale.languageCode == 'en';
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red),
-            SizedBox(width: 8),
-            Text('ہنگامی حالت الرٹ (Emergency Alert)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Text(isEn ? 'Emergency Alert' : 'ہنگامی حالت الرٹ', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: const Text('ہنگامی حالت یا بارش کی وجہ سے مکتب کی فوری چھٹی کا الرٹ تمام والدین کو ڈسپچ کریں؟'),
+        content: Text(isEn ? 'Dispatch emergency holiday alert to all parents due to emergency/rain?' : 'ہنگامی حالت یا بارش کی وجہ سے مکتب کی فوری چھٹی کا الرٹ تمام والدین کو ڈسپچ کریں؟'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('منسوخ')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Cancel' : 'منسوخ')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             onPressed: () {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('🚨 ہنگامی چھٹی کا الرٹ تمام والدین کو بھیج دیا گیا!'), backgroundColor: Colors.red),
+                SnackBar(content: Text(isEn ? '🚨 Emergency holiday alert sent to all parents!' : '🚨 ہنگامی چھٹی کا الرٹ تمام والدین کو بھیج دیا گیا!'), backgroundColor: Colors.red),
               );
             },
-            child: const Text('ہنگامی الرٹ بھیجیں'),
+            child: Text(isEn ? 'Send Alert' : 'ہنگامی الرٹ بھیجیں'),
           ),
         ],
       ),
@@ -927,95 +929,100 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
   }
 
   void _showDonationTrackerDialog() {
+    final isEn = widget.languageController.locale.languageCode == 'en';
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.volunteer_activism_rounded, color: Colors.green),
-            SizedBox(width: 8),
-            Text('عطیات و صدقات کھاتہ (Donations Tracker)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const Icon(Icons.volunteer_activism_rounded, color: Colors.green),
+            const SizedBox(width: 8),
+            Text(isEn ? 'Donations Tracker' : 'عطیات و صدقات کھاتہ', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               dense: true,
-              title: Text('عطیہ: حاجی عبدالسّتار صاحب (₹10,000)'),
-              subtitle: Text('مد: مکتب کی سولر لائٹنگ لائبریری'),
+              title: Text(isEn ? 'Donation: Haji Abdul Sattar (₹10,000)' : 'عطیہ: حاجی عبدالسّتار صاحب (₹10,000)'),
+              subtitle: Text(isEn ? 'Purpose: Solar Lighting & Library' : 'مد: مکتب کی سولر لائٹنگ لائبریری'),
             ),
           ],
         ),
-        actions: [ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('بند کریں'))],
+        actions: [ElevatedButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Close' : 'بند کریں'))],
       ),
     );
   }
 
   void _showShuraMinutesDialog() {
+    final isEn = widget.languageController.locale.languageCode == 'en';
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.gavel_rounded, color: Colors.purple),
-            SizedBox(width: 8),
-            Text('مجلسِ شوریٰ منٹس (Shura Minutes Log)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const Icon(Icons.gavel_rounded, color: Colors.purple),
+            const SizedBox(width: 8),
+            Text(isEn ? 'Shura Minutes Log' : 'مجلسِ شوریٰ منٹس', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: const Text('مجلسِ شوریٰ کے آخری اجلاس مورخہ 1 اگست 2026ء کی منٹس رپورٹ محفوظ ہے۔'),
-        actions: [ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('ٹھیک ہے'))],
+        content: Text(isEn ? 'Shura minutes for the meeting on August 1, 2026 are saved.' : 'مجلسِ شوریٰ کے آخری اجلاس مورخہ 1 اگست 2026ء کی منٹس رپورٹ محفوظ ہے۔'),
+        actions: [ElevatedButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'OK' : 'ٹھیک ہے'))],
       ),
     );
   }
 
   void _showMaintenanceTrackerDialog() {
+    final isEn = widget.languageController.locale.languageCode == 'en';
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.build_rounded, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('مرمت و تعمیرات کھاتہ (Maintenance Log)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const Icon(Icons.build_rounded, color: Colors.orange),
+            const SizedBox(width: 8),
+            Text(isEn ? 'Maintenance Log' : 'مرمت و تعمیرات کھاتہ', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: const Text('مکتب کی عمارت اور وضو خانے کی مرمت کا خرچ Rs 4,500 درج ہے۔'),
-        actions: [ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('بند کریں'))],
+        content: Text(isEn ? 'Maintenance cost of Rs 4,500 for building and wudu area is recorded.' : 'مکتب کی عمارت اور وضو خانے کی مرمت کا خرچ Rs 4,500 درج ہے۔'),
+        actions: [ElevatedButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Close' : 'بند کریں'))],
       ),
     );
   }
 
   void _showBiometricLockDialog() {
+    final isEn = widget.languageController.locale.languageCode == 'en';
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.fingerprint_rounded, color: Colors.blue),
-            SizedBox(width: 8),
-            Text('بائیو میٹرک و پِن سیکیورٹی (Security Lock)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const Icon(Icons.fingerprint_rounded, color: Colors.blue),
+            const SizedBox(width: 8),
+            Text(isEn ? 'Security Lock' : 'بائیو میٹرک و پِن سیکیورٹی', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: const Text('بائیو میٹرک فنگر پرنٹ اور پن کوڈ سیکیورٹی 100% فعال (Active) ہے۔'),
-        actions: [ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('محفوظ ہے'))],
+        content: Text(isEn ? 'Biometric fingerprint and PIN code security is 100% active.' : 'بائیو میٹرک فنگر پرنٹ اور پن کوڈ سیکیورٹی 100% فعال ہے۔'),
+        actions: [ElevatedButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Secure' : 'محفوظ ہے'))],
       ),
     );
   }
 
   void _showAppUpdateCheckDialog() {
+    final isEn = widget.languageController.locale.languageCode == 'en';
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.system_update_rounded, color: Color(0xFF074E32)),
-            SizedBox(width: 8),
-            Text('ایپ اپڈیٹ چیکر (In-App Update Checker)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const Icon(Icons.system_update_rounded, color: Color(0xFF074E32)),
+            const SizedBox(width: 8),
+            Text(isEn ? 'In-App Update Checker' : 'ایپ اپڈیٹ چیکر', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: const Text('آپ مکتب مینیجر کا تازہ ترین ورژن (v2.5.0 Stable) استعمال کر رہے ہیں۔'),
-        actions: [ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('عالی شان'))],
+        content: Text(isEn ? 'You are using the latest version of Maktab Manager (v2.5.0 Stable).' : 'آپ مکتب مینیجر کا تازہ ترین ورژن (v2.5.0 Stable) استعمال کر رہے ہیں۔'),
+        actions: [ElevatedButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Great' : 'عالی شان'))],
       ),
     );
   }
@@ -1122,6 +1129,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
 
   Widget _buildSideDrawer(BuildContext context, RoleInfo info) {
     final loc = AppLocalizations.of(context);
+    final isEn = loc.locale.languageCode == 'en';
     final bool canAddStudent = widget.currentRole == AppRole.admin ||
         widget.currentRole == AppRole.teacher ||
         widget.currentRole == AppRole.manager;
@@ -1289,7 +1297,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.people_alt_rounded, color: Colors.indigo),
-            title: const Text('والدین میٹنگ بلاوا (PTM Dispatch)'),
+            title: Text(isEn ? 'PTM Dispatch' : 'والدین میٹنگ بلاوا'),
             onTap: () {
               Navigator.pop(context);
               _showPtmDispatchDialog();
@@ -1297,7 +1305,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.warning_amber_rounded, color: Colors.red),
-            title: const Text('ہنگامی حالت الرٹ (Emergency Alert)'),
+            title: Text(isEn ? 'Emergency Alert' : 'ہنگامی حالت الرٹ'),
             onTap: () {
               Navigator.pop(context);
               _showEmergencyLockdownDialog();
@@ -1305,7 +1313,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.volunteer_activism_rounded, color: Colors.green),
-            title: const Text('عطیات و صدقات کھاتہ (Donations Tracker)'),
+            title: Text(isEn ? 'Donations Tracker' : 'عطیات و صدقات کھاتہ'),
             onTap: () {
               Navigator.pop(context);
               _showDonationTrackerDialog();
@@ -1313,7 +1321,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.gavel_rounded, color: Colors.purple),
-            title: const Text('مجلسِ شوریٰ منٹس (Shura Minutes Log)'),
+            title: Text(isEn ? 'Shura Minutes Log' : 'مجلسِ شوریٰ منٹس'),
             onTap: () {
               Navigator.pop(context);
               _showShuraMinutesDialog();
@@ -1321,7 +1329,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.build_rounded, color: Colors.orange),
-            title: const Text('مرمت و تعمیرات کھاتہ (Maintenance Log)'),
+            title: Text(isEn ? 'Maintenance Log' : 'مرمت و تعمیرات کھاتہ'),
             onTap: () {
               Navigator.pop(context);
               _showMaintenanceTrackerDialog();
@@ -1329,7 +1337,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.fingerprint_rounded, color: Colors.blue),
-            title: const Text('بائیو میٹرک لاک (Biometric Security)'),
+            title: Text(isEn ? 'Biometric Security' : 'بائیو میٹرک لاک'),
             onTap: () {
               Navigator.pop(context);
               _showBiometricLockDialog();
@@ -1337,7 +1345,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.system_update_rounded, color: Color(0xFF074E32)),
-            title: const Text('ایپ اپڈیٹ چیک کریں (Check App Update)'),
+            title: Text(isEn ? 'Check App Update' : 'ایپ اپڈیٹ چیک کریں'),
             onTap: () {
               Navigator.pop(context);
               _showAppUpdateCheckDialog();
@@ -1346,7 +1354,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.assignment_turned_in_rounded, color: Colors.teal),
-            title: const Text('نتائج و تعلیمی کارکردگی (Academic Results)'),
+            title: Text(isEn ? 'Academic Results' : 'نتائج و تعلیمی کارکردگی'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -1361,7 +1369,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.mark_email_unread_rounded, color: Colors.green),
-            title: const Text('استاد لیو پورٹل (Leave Requests)'),
+            title: Text(isEn ? 'Leave Requests' : 'استاد لیو پورٹل'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -1377,7 +1385,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.chat_rounded, color: Colors.purple),
-            title: const Text('کمیونٹی و پیغام رسانی (Community Hub)'),
+            title: Text(isEn ? 'Community Hub' : 'کمیونٹی و پیغام رسانی'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -1394,7 +1402,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout_rounded, color: Colors.red),
-            title: const Text('لاگ آؤٹ (Logout)'),
+            title: Text(isEn ? 'Logout' : 'لاگ آؤٹ'),
             onTap: () async {
               Navigator.pop(context);
               final prefs = await SharedPreferences.getInstance();
@@ -1992,6 +2000,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
 
   // ── MUTAWALLI OVERVIEW ──
   Widget _buildMutawalliOverview() {
+    final isEn = widget.languageController.locale.languageCode == 'en';
     final totalStudents = widget.students.length;
     final totalFeesCollected = widget.students
         .where((s) => s['feeStatus'] == 'paid')
@@ -2004,8 +2013,8 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _RoleBannerCard(
-            title: 'خوش آمدید متولی صاحب! (Mutawalli Portal)',
-            subtitle: 'مسجد اور مکتب کا مالیاتی، تعلیمی اور عمومی انتظامی جائزہ',
+            title: isEn ? 'Welcome to Mutawalli Portal!' : 'خوش آمدید متولی صاحب!',
+            subtitle: isEn ? 'Financial, Academic & Administrative Overview of Mosque & Maktab' : 'مسجد اور مکتب کا مالیاتی، تعلیمی اور عمومی انتظامی جائزہ',
             color: const Color(0xFF4C1D95),
           ),
           const SizedBox(height: 16),
@@ -2014,23 +2023,23 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: ExpansionTile(
               leading: const Icon(Icons.tune_rounded, color: Color(0xFF4C1D95)),
-              title: const Text('متولی اختیارات و رسائی (Access Controls)',
+              title: Text(isEn ? 'Access Controls' : 'متولی اختیارات و رسائی',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              subtitle: const Text('طلبہ، مالیات اور نتائج تک رسائی تبدیل کریں',
+              subtitle: Text(isEn ? 'Change access to students, payments, and results' : 'طلبہ، مالیات اور نتائج تک رسائی تبدیل کریں',
                   style: TextStyle(fontSize: 11, color: Colors.grey)),
               children: [
                 SwitchListTile(
-                  title: const Text('👥 طلبہ کی فہرست دکھائیں (Students Roster)'),
+                  title: Text(isEn ? '👥 Show Students Roster' : '👥 طلبہ کی فہرست دکھائیں'),
                   value: _mutawalliShowStudents,
                   onChanged: (v) => setState(() => _mutawalliShowStudents = v),
                 ),
                 SwitchListTile(
-                  title: const Text('💵 فیس و مالیاتی جائزہ (Payments Ledger)'),
+                  title: Text(isEn ? '💵 Show Payments Ledger' : '💵 فیس و مالیاتی جائزہ'),
                   value: _mutawalliShowPayments,
                   onChanged: (v) => setState(() => _mutawalliShowPayments = v),
                 ),
                 SwitchListTile(
-                  title: const Text('🏆 تعلیمی نتائج دکھائیں (Academic Results)'),
+                  title: Text(isEn ? '🏆 Show Academic Results' : '🏆 تعلیمی نتائج دکھائیں'),
                   value: _mutawalliShowResults,
                   onChanged: (v) => setState(() => _mutawalliShowResults = v),
                 ),
@@ -2042,7 +2051,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             children: [
               Expanded(
                 child: _StatCard(
-                  title: 'مجموعی فیس وصولی',
+                  title: isEn ? 'Total Fees Collected' : 'مجموعی فیس وصولی',
                   value: '₹ ${totalFeesCollected.toInt()}',
                   icon: Icons.account_balance_wallet_rounded,
                   color: Colors.green.shade800,
@@ -2051,7 +2060,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _StatCard(
-                  title: 'کل طلبہ کی تعداد',
+                  title: isEn ? 'Total Students' : 'کل طلبہ کی تعداد',
                   value: '$totalStudents',
                   icon: Icons.school_rounded,
                   color: const Color(0xFF4C1D95),
@@ -2060,7 +2069,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          const Text('فوری رسائی پورٹل (Mutawalli Actions)',
+          Text(isEn ? 'Quick Access Portal (Mutawalli)' : 'فوری رسائی پورٹل',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           GridView.count(
@@ -2073,7 +2082,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             children: [
               if (_mutawalliShowStudents)
                 _ActionTile(
-                  title: 'طلبہ کی فہرست',
+                  title: isEn ? 'Students List' : 'طلبہ کی فہرست',
                   icon: Icons.people_rounded,
                   color: const Color(0xFF4C1D95),
                   onTap: () {
@@ -2089,7 +2098,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 ),
               if (_mutawalliShowPayments)
                 _ActionTile(
-                  title: 'مالیاتی جائزہ',
+                  title: isEn ? 'Payments Ledger' : 'مالیاتی جائزہ',
                   icon: Icons.payments_rounded,
                   color: Colors.green.shade800,
                   onTap: () {
@@ -2107,7 +2116,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 ),
               if (_mutawalliShowResults)
                 _ActionTile(
-                  title: 'نتائج و کارکردگی',
+                  title: isEn ? 'Results & Performance' : 'نتائج و کارکردگی',
                   icon: Icons.assignment_turned_in_rounded,
                   color: Colors.teal.shade800,
                   onTap: () {
@@ -2122,7 +2131,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                   },
                 ),
               _ActionTile(
-                title: 'کمیونٹی چیٹ',
+                title: isEn ? 'Community Chat' : 'کمیونٹی چیٹ',
                 icon: Icons.chat_rounded,
                 color: Colors.purple.shade800,
                 onTap: () {
@@ -2150,7 +2159,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             ),
             onPressed: () => setState(() => _selectedIndex = 1),
             icon: const Icon(Icons.picture_as_pdf_rounded),
-            label: const Text('مکتب کی ماہانہ رپورٹ (Batch Fee PDF)'),
+            label: Text(isEn ? 'Batch Fee PDF Report' : 'مکتب کی ماہانہ رپورٹ'),
           ),
         ],
       ),

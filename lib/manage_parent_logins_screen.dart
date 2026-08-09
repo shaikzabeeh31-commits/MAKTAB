@@ -74,11 +74,12 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
   Future<void> _saveGlobalCredentials() async {
     final phone = _globalPhoneCtrl.text.trim();
     final pin = _globalPinCtrl.text.trim();
+    final isEn = widget.languageController.locale.languageCode == 'en';
 
     if (phone.isEmpty || pin.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('براہ کرم صحیح فون نمبر اور کم از کم 4 ہندسوں کا PIN درج کریں۔'),
+        SnackBar(
+          content: Text(isEn ? 'Please enter a valid phone number and a 4-digit PIN.' : 'براہ کرم صحیح فون نمبر اور کم از کم 4 ہندسوں کا PIN درج کریں۔'),
           backgroundColor: Colors.red,
         ),
       );
@@ -91,8 +92,8 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('والدین کا عمومی (Global) PIN اور لاگ ان محفوظ ہو گیا!'),
+        SnackBar(
+          content: Text(isEn ? 'Global Parent PIN and credentials saved!' : 'والدین کا عمومی PIN اور لاگ ان محفوظ ہو گیا!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -103,11 +104,12 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
     final student = _studentsList[index];
     final fatherPhone = student['fatherPhone']?.toString().trim() ?? '';
     final pin = _studentPinCtrls[index]!.text.trim();
+    final isEn = widget.languageController.locale.languageCode == 'en';
 
     if (pin.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('PIN میں کم از کم 4 ہندسے ہونے چاہئیں۔'),
+        SnackBar(
+          content: Text(isEn ? 'PIN must be at least 4 digits.' : 'PIN میں کم از کم 4 ہندسے ہونے چاہئیں۔'),
           backgroundColor: Colors.red,
         ),
       );
@@ -128,7 +130,7 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${student['name']} کے والد کا PIN ($pin) محفوظ ہو گیا!'),
+          content: Text(isEn ? 'Parent PIN ($pin) for ${student['name']} saved!' : '${student['name']} کے والد کا PIN ($pin) محفوظ ہو گیا!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -153,7 +155,10 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
     if (phone.isEmpty) return;
     final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
     final fullPhone = cleanPhone.startsWith('91') ? cleanPhone : '91$cleanPhone';
-    final message = "السلام علیکم! $studentName کے والد گرامی، مکتب ایپ میں آپ کا پیرنٹ پورٹل لاگ ان اور PIN محفوظ ہو گیا ہے۔\n\n📱 رجسٹرڈ موبائل: $phone\n🔑 4-Digit Parent PIN: $pin\n\nبراہ کرم مکتب ایپ میں والدین لاگ ان منتخب کر کے لاگ ان کریں۔";
+    final isEn = widget.languageController.locale.languageCode == 'en';
+    final message = isEn
+        ? "Assalamu Alaikum! Parent of $studentName, your parent portal login is ready.\n\n📱 Registered Phone: $phone\n🔑 4-Digit Parent PIN: $pin\n\nPlease select Parent Login in the Maktab App."
+        : "السلام علیکم! $studentName کے والد گرامی، مکتب ایپ میں آپ کا پیرنٹ پورٹل لاگ ان اور PIN محفوظ ہو گیا ہے۔\n\n📱 رجسٹرڈ موبائل: $phone\n🔑 4-Digit Parent PIN: $pin\n\nبراہ کرم مکتب ایپ میں والدین لاگ ان منتخب کر کے لاگ ان کریں۔";
     final url = Uri.parse("https://wa.me/$fullPhone?text=${Uri.encodeComponent(message)}");
     try {
       if (await canLaunchUrl(url)) {
@@ -164,7 +169,10 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
 
   Future<void> _sendSmsParent(String phone, String studentName, String pin) async {
     if (phone.isEmpty) return;
-    final message = "$studentName پیرنٹ لاگ ان تفاصیل:\nموبائل: $phone\nPIN: $pin";
+    final isEn = widget.languageController.locale.languageCode == 'en';
+    final message = isEn
+        ? "Parent login for $studentName:\nPhone: $phone\nPIN: $pin"
+        : "$studentName پیرنٹ لاگ ان تفاصیل:\nموبائل: $phone\nPIN: $pin";
     final url = Uri.parse("sms:$phone?body=${Uri.encodeComponent(message)}");
     try {
       if (await canLaunchUrl(url)) {
@@ -186,6 +194,7 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
   @override
   Widget build(BuildContext context) {
     final isRtl = widget.languageController.locale.languageCode != 'en';
+    final isEn = !isRtl;
 
     return Directionality(
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
@@ -196,14 +205,14 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
           appBar: AppBar(
             backgroundColor: const Color(0xFFB45309),
             foregroundColor: Colors.white,
-            title: const Text('والدین کے PIN اور لاگ ان کا انتظام'),
-            bottom: const TabBar(
+            title: Text(isEn ? 'Parent PINs & Logins' : 'والدین کے PIN اور لاگ ان کا انتظام'),
+            bottom: TabBar(
               indicatorColor: Colors.white,
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white70,
               tabs: [
-                Tab(icon: Icon(Icons.public_rounded), text: 'عمومی لاگ ان (Global)'),
-                Tab(icon: Icon(Icons.people_alt_rounded), text: 'طالب علم کے لحاظ سے PIN'),
+                Tab(icon: const Icon(Icons.public_rounded), text: isEn ? 'Global Login' : 'عمومی لاگ ان'),
+                Tab(icon: const Icon(Icons.people_alt_rounded), text: isEn ? 'By Student PIN' : 'طالب علم کے لحاظ سے PIN'),
               ],
             ),
           ),
@@ -227,27 +236,27 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Row(
+                                  Row(
                                     children: [
-                                      Icon(Icons.family_restroom_rounded, color: Color(0xFFB45309), size: 28),
-                                      SizedBox(width: 12),
+                                      const Icon(Icons.family_restroom_rounded, color: Color(0xFFB45309), size: 28),
+                                      const SizedBox(width: 12),
                                       Text(
-                                        'عمومی والد/مدر لاگ ان credential',
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                        isEn ? 'Global Parent Credentials' : 'عمومی والد/مدر لاگ ان credential',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  const Text(
-                                    'تمام والدین کے لیے ایک عمومی فون نمبر اور 4 ہندسوں کا PIN مقرر کریں۔',
-                                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                                  Text(
+                                    isEn ? 'Set a global phone number and 4-digit PIN for all parents.' : 'تمام والدین کے لیے ایک عمومی فون نمبر اور 4 ہندسوں کا PIN مقرر کریں۔',
+                                    style: const TextStyle(color: Colors.grey, fontSize: 12),
                                   ),
                                   const Divider(height: 24),
                                   TextFormField(
                                     controller: _globalPhoneCtrl,
                                     keyboardType: TextInputType.phone,
                                     decoration: InputDecoration(
-                                      labelText: 'عمومی فون نمبر (Global Phone)',
+                                      labelText: isEn ? 'Global Phone' : 'عمومی فون نمبر',
                                       prefixIcon: const Icon(Icons.phone),
                                       filled: true,
                                       fillColor: Colors.orange.shade50,
@@ -267,7 +276,7 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
                                           maxLength: 6,
                                           obscureText: _obscureGlobalPin,
                                           decoration: InputDecoration(
-                                            labelText: 'عمومی PIN (Global PIN)',
+                                            labelText: isEn ? 'Global PIN' : 'عمومی PIN',
                                             counterText: '',
                                             prefixIcon: const Icon(Icons.lock),
                                             filled: true,
@@ -291,7 +300,7 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
                                       OutlinedButton.icon(
                                         onPressed: _generateRandomGlobalPin,
                                         icon: const Icon(Icons.refresh, size: 18),
-                                        label: const Text('نیا PIN'),
+                                        label: Text(isEn ? 'New PIN' : 'نیا PIN'),
                                         style: OutlinedButton.styleFrom(
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                                           shape: RoundedRectangleBorder(
@@ -314,7 +323,7 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
                                         ),
                                       ),
                                       icon: const Icon(Icons.save_rounded),
-                                      label: const Text('عمومی PIN محفوظ کریں'),
+                                      label: Text(isEn ? 'Save Global PIN' : 'عمومی PIN محفوظ کریں'),
                                     ),
                                   ),
                                 ],
@@ -327,8 +336,8 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
 
                     // Tab 2: Per-Student Parent PIN
                     _studentsList.isEmpty
-                        ? const Center(
-                            child: Text('کوئی طالب علم موجود نہیں ہے۔'),
+                        ? Center(
+                            child: Text(isEn ? 'No students found.' : 'کوئی طالب علم موجود نہیں ہے۔'),
                           )
                         : ListView.builder(
                             padding: const EdgeInsets.all(16),
@@ -364,7 +373,7 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
                                           style: const TextStyle(fontWeight: FontWeight.bold),
                                         ),
                                         subtitle: Text(
-                                          'والد: ${student['fatherName'] ?? '-'} | فون: $fatherPhone',
+                                          isEn ? 'Father: ${student['fatherName'] ?? '-'} | Phone: $fatherPhone' : 'والد: ${student['fatherName'] ?? '-'} | فون: $fatherPhone',
                                           style: const TextStyle(fontSize: 12),
                                         ),
                                       ),
@@ -378,7 +387,7 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
                                               maxLength: 6,
                                               obscureText: _obscureStudentPinMap[index] ?? true,
                                               decoration: InputDecoration(
-                                                labelText: 'والد کا PIN',
+                                                labelText: isEn ? 'Father\'s PIN' : 'والد کا PIN',
                                                 counterText: '',
                                                 prefixIcon: const Icon(Icons.key, size: 18),
                                                 filled: true,
@@ -408,14 +417,14 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
                                           IconButton.filledTonal(
                                             onPressed: () => _generateRandomStudentPin(index),
                                             icon: const Icon(Icons.refresh, size: 18),
-                                            tooltip: 'نیا PIN بنائیں',
+                                            tooltip: isEn ? 'Generate New PIN' : 'نیا PIN بنائیں',
                                           ),
                                           const SizedBox(width: 6),
                                           IconButton.filled(
                                             style: IconButton.styleFrom(backgroundColor: const Color(0xFF074E32)),
                                             onPressed: () => _saveStudentParentPin(index),
                                             icon: const Icon(Icons.save, size: 18),
-                                            tooltip: 'محفوظ کریں',
+                                            tooltip: isEn ? 'Save' : 'محفوظ کریں',
                                           ),
                                           const SizedBox(width: 6),
                                           IconButton.filledTonal(
@@ -427,7 +436,7 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
                                               _sendWhatsAppParent(fPhone, sName, pin);
                                             },
                                             icon: const Icon(Icons.chat_rounded, size: 18),
-                                            tooltip: 'WhatsApp پر بھیجیں',
+                                            tooltip: isEn ? 'Send via WhatsApp' : 'WhatsApp پر بھیجیں',
                                           ),
                                           IconButton.filledTonal(
                                             color: Colors.blue.shade800,
@@ -438,7 +447,7 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
                                               _sendSmsParent(fPhone, sName, pin);
                                             },
                                             icon: const Icon(Icons.message_rounded, size: 18),
-                                            tooltip: 'SMS کے ذریعے بھیجیں',
+                                            tooltip: isEn ? 'Send via SMS' : 'SMS کے ذریعے भीजें',
                                           ),
                                         ],
                                       ),

@@ -91,9 +91,9 @@ void main() {
       await tester.pumpWidget(_wrap(ResultsScreen(languageController: ctrl)));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Academic Results'), findsOneWidget);
+      expect(find.textContaining('تعلیمی نتائج'), findsOneWidget);
       expect(find.textContaining('Muhammad Abdullah'), findsAtLeastNWidgets(1));
-      expect(find.textContaining('Mumtaz'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('ممتاز'), findsAtLeastNWidgets(1));
     });
 
     testWidgets('Renders Teacher Role Dashboard with Fees & Attendance access', (tester) async {
