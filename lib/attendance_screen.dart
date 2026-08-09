@@ -494,7 +494,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                    child: const Text('5', style: TextStyle(fontSize: 10, color: Colors.white)),
+                    child: const Text('5', style: TextStyle(fontSize: 12, color: Colors.white)),
                   ),
                 )
               ],
@@ -607,7 +607,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     ElevatedButton.icon(
                       onPressed: () {},
                       icon: const Icon(Icons.beach_access_rounded, size: 14, color: Colors.orange),
-                      label: const Text('Bulk Holiday', style: TextStyle(fontSize: 10)),
+                      label: const Text('Bulk Holiday', style: TextStyle(fontSize: 12)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black87,
@@ -621,7 +621,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     ElevatedButton.icon(
                       onPressed: () {},
                       icon: const Icon(Icons.bar_chart_rounded, size: 14, color: Colors.blue),
-                      label: const Text('Ratio / Analytics', style: TextStyle(fontSize: 10)),
+                      label: const Text('Ratio / Analytics', style: TextStyle(fontSize: 12)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black87,
@@ -635,7 +635,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     ElevatedButton.icon(
                       onPressed: () {},
                       icon: const Icon(Icons.mark_email_unread_rounded, size: 14, color: Colors.purple),
-                      label: const Text('Parent Leave', style: TextStyle(fontSize: 10)),
+                      label: const Text('Parent Leave', style: TextStyle(fontSize: 12)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black87,
@@ -649,7 +649,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     ElevatedButton.icon(
                       onPressed: () {},
                       icon: const Icon(Icons.picture_as_pdf_rounded, size: 14, color: Colors.red),
-                      label: const Text('Matrix PDF', style: TextStyle(fontSize: 10)),
+                      label: const Text('Matrix PDF', style: TextStyle(fontSize: 12)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black87,
@@ -717,7 +717,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                       visualDensity: VisualDensity.compact,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                     ),
-                                  const Text('منتخب', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                  const Text('منتخب', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                 ],
                               ),
                             ),
@@ -726,7 +726,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               child: TranslatedText(
                                 'ٹوپی / یونیفارم / کتابیں', 
                                 textAlign: TextAlign.center, 
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                               ),
                             ),
                             const Expanded(
@@ -734,7 +734,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               child: TranslatedText(
                                 'دیر سے آیا', 
                                 textAlign: TextAlign.center, 
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                               ),
                             ),
                             const Expanded(
@@ -742,7 +742,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               child: TranslatedText(
                                 'حاضری\n(کلک کریں)', 
                                 textAlign: TextAlign.center, 
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                               ),
                             ),
                             const Expanded(
@@ -750,7 +750,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               child: TranslatedText(
                                 'طالب علم کا نام\nوالد کا نام', 
                                 textAlign: TextAlign.start, 
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                               ),
                             ),
                             const SizedBox(width: 40),
@@ -841,7 +841,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                         child: Column(
                                           children: [
                                             Icon(Icons.access_time, size: 13.5, color: status == 'late' ? Colors.orange : Colors.grey),
-                                            TranslatedText('دیر سے آیا', style: TextStyle(fontSize: 7.5, color: status == 'late' ? Colors.orange : Colors.grey)),
+                                            TranslatedText('دیر سے آیا', style: TextStyle(fontSize: 12, color: status == 'late' ? Colors.orange : Colors.grey)),
                                           ],
                                         ),
                                       ),
@@ -863,7 +863,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
                                             TranslatedText(status == 'absent' ? 'غیر حاضر' : 'حاضر', 
-                                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: status == 'absent' ? Colors.red : Colors.green)),
+                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: status == 'absent' ? Colors.red : Colors.green)),
                                             if (status == 'absent') const SizedBox(width: 1),
                                             if (status == 'absent') const Icon(Icons.close, size: 9.5, color: Colors.red),
                                             if (status == 'present') const SizedBox(width: 1),
@@ -890,9 +890,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                           ),
                                           Row(
                                             children: [
-                                              TranslatedText('والد: ', style: TextStyle(fontSize: 10, color: isDark ? Colors.white60 : Colors.grey)),
+                                              TranslatedText('والد: ', style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey)),
                                               Expanded(
-                                                child: TranslatedText(student['fatherName'] ?? '', style: TextStyle(fontSize: 10, color: isDark ? Colors.white60 : Colors.grey)),
+                                                child: TranslatedText(student['fatherName'] ?? '', style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey)),
                                               ),
                                             ],
                                           ),
@@ -954,7 +954,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             Text('منتخب طلبہ کو پیغام بھیجیں', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                           ],
                         ),
-                        Text('(ان کے والدین کو خودکار پیغام جائے گا)', style: TextStyle(color: Colors.white70, fontSize: 10)),
+                        Text('(ان کے والدین کو خودکار پیغام جائے گا)', style: TextStyle(color: Colors.white70, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -987,7 +987,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ],
             ),
             const SizedBox(height: 4),
-            Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, color: Colors.black87)),
+            Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.black87)),
             if (hasEdit) ...[
               const SizedBox(height: 4),
               Container(
@@ -1024,7 +1024,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(title, style: TextStyle(fontSize: 10, color: color.shade700, fontWeight: FontWeight.bold)),
+                Text(title, style: TextStyle(fontSize: 12, color: color.shade700, fontWeight: FontWeight.bold)),
                 const SizedBox(width: 4),
                 Icon(icon, size: 14, color: color.shade700),
               ],

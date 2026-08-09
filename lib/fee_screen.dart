@@ -467,7 +467,7 @@ class _FeeScreenState extends State<FeeScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('مہینہ: $_selectedMonthLabel', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            Text('مہینہ: $_selectedMonthLabel', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -542,7 +542,7 @@ class _FeeScreenState extends State<FeeScreen> {
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('سال 2026ء کی مالیاتی اڈٹ سمری تیار کر لی گئی ہے۔', style: TextStyle(fontSize: 12)),
+            Text('سال 2026ء کی مالیاتی اڈٹ سمری تیار کر لی گئی ہے۔', style: TextStyle(fontSize: 13)),
           ],
         ),
         actions: [
@@ -598,7 +598,7 @@ class _FeeScreenState extends State<FeeScreen> {
     return Column(
       children: [
         Text(val, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: col)),
-        Text(title, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
       ],
     );
   }
@@ -793,12 +793,12 @@ class _FeeScreenState extends State<FeeScreen> {
                             children: [
                               Text(log['date']?.toString() ?? '',
                                   style: const TextStyle(
-                                      fontSize: 9.5, color: Colors.grey)),
+                                      fontSize: 11, color: Colors.grey)),
                               const Spacer(),
                               Text(
                                 '+₹${log['amount']} (${log['mode']})',
                                 style: const TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                     color: _kGreen),
                               ),
@@ -1363,7 +1363,7 @@ class _FeeScreenState extends State<FeeScreen> {
                   color: _kGreen,
                   strokeWidth: 6,
                 ),
-                Center(child: Text('${(progress * 100).toInt()}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+                Center(child: Text('${(progress * 100).toInt()}%', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
               ],
             ),
           ),
@@ -1373,7 +1373,7 @@ class _FeeScreenState extends State<FeeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Revenue Dashboard', style: TextStyle(fontWeight: FontWeight.bold, color: _kNavy)),
-                Text('Collected: ₹${_formatCurrency(totalCollected)}  |  Due: ₹${_formatCurrency(totalPending)}', style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                Text('Collected: ₹${_formatCurrency(totalCollected)}  |  Due: ₹${_formatCurrency(totalPending)}', style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
               ],
             ),
           ),
@@ -1383,7 +1383,7 @@ class _FeeScreenState extends State<FeeScreen> {
             },
             style: ElevatedButton.styleFrom(backgroundColor: _kRed, foregroundColor: Colors.white),
             icon: const Icon(Icons.notifications_active, size: 16),
-            label: const Text('Nudge All', style: TextStyle(fontSize: 12)),
+            label: const Text('Nudge All', style: TextStyle(fontSize: 13)),
           ),
         ],
       ),
@@ -1556,7 +1556,7 @@ class _FeeScreenState extends State<FeeScreen> {
                             fontWeight: isSelected
                                 ? FontWeight.bold
                                 : FontWeight.normal,
-                            fontSize: 12,
+                            fontSize: 13,
                           ),
                         ),
                       ),
@@ -1608,7 +1608,7 @@ class _FeeScreenState extends State<FeeScreen> {
         const Icon(Icons.timeline, size: 14, color: Colors.grey),
         const SizedBox(width: 4),
         const Text('Tap row to see timeline',
-            style: TextStyle(fontSize: 10, color: Colors.grey)),
+            style: TextStyle(fontSize: 11, color: Colors.grey)),
       ]),
     );
   }
@@ -1618,7 +1618,7 @@ class _FeeScreenState extends State<FeeScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildTableHeader(AppLocalizations loc) {
     const style = TextStyle(
-        fontSize: 9.5, fontWeight: FontWeight.bold, color: _kNavy);
+        fontSize: 11, fontWeight: FontWeight.bold, color: _kNavy);
     final isEn = widget.languageController.locale.languageCode == 'en';
     return Container(
       color: Colors.white,
@@ -1753,7 +1753,7 @@ class _FeeScreenState extends State<FeeScreen> {
                     child: Text('$serial',
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                            fontSize: 13,
                             color: textColor)),
                   ),
                   const SizedBox(width: 4),
@@ -1767,7 +1767,7 @@ class _FeeScreenState extends State<FeeScreen> {
                             s['name']?.toString() ?? '-',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                fontSize: 13,
                                 color: textColor),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1775,7 +1775,7 @@ class _FeeScreenState extends State<FeeScreen> {
                           TranslatedText(
                             s['fatherName']?.toString() ?? '-',
                             style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 11,
                                 color: subColor),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1800,7 +1800,7 @@ class _FeeScreenState extends State<FeeScreen> {
                                       fontSize: 11)),
                               const Text('/',
                                   style: TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 11,
                                       color: Colors.grey)),
                               Text(_formatCurrency(pending),
                                   style: const TextStyle(
@@ -1819,7 +1819,7 @@ class _FeeScreenState extends State<FeeScreen> {
                           ),
                           child: Text(
                             isPaid ? 'PAID' : (paid > 0 ? 'PARTIAL' : 'DUE'),
-                            style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -2049,7 +2049,7 @@ class _FeeScreenState extends State<FeeScreen> {
                         Text(
                           _kMonths[mIdx].substring(0, 3),
                           style: TextStyle(
-                              fontSize: 8,
+                              fontSize: 11,
                               fontWeight: isCurrentMonth
                                   ? FontWeight.bold
                                   : FontWeight.normal,
@@ -2088,7 +2088,7 @@ class _FeeScreenState extends State<FeeScreen> {
           const SizedBox(height: 4),
           const Text('Payment History Log (ادائیگیاں):',
               style: TextStyle(
-                  fontSize: 9.5,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: _kNavy)),
           const SizedBox(height: 2),
@@ -2187,7 +2187,7 @@ class _FeeScreenState extends State<FeeScreen> {
                 Text(
                     '(Will send in parents preferred language//app)',
                     style: TextStyle(
-                        fontSize: 10, color: Colors.white70)),
+                        fontSize: 11, color: Colors.white70)),
               ],
             ),
           ),
@@ -2338,7 +2338,7 @@ class _DateTimeBox extends StatelessWidget {
           const SizedBox(width: 3),
           Text(date,
               style: const TextStyle(
-                  fontSize: 10, fontWeight: FontWeight.w500)),
+                  fontSize: 11, fontWeight: FontWeight.w500)),
         ]),
       ),
       const SizedBox(height: 3),
@@ -2355,7 +2355,7 @@ class _DateTimeBox extends StatelessWidget {
           const SizedBox(width: 3),
           Text(time,
               style: const TextStyle(
-                  fontSize: 10, fontWeight: FontWeight.w500)),
+                  fontSize: 11, fontWeight: FontWeight.w500)),
         ]),
       ),
     ]);
@@ -2443,7 +2443,7 @@ class _TimelineActionBtn extends StatelessWidget {
           const SizedBox(width: 4),
           Text(label,
               style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 11,
                   color: color,
                   fontWeight: FontWeight.bold)),
         ]),
@@ -2477,7 +2477,7 @@ class _SummaryChip extends StatelessWidget {
       ]),
       Text(label,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 9.5, color: Colors.grey)),
+          style: const TextStyle(fontSize: 11, color: Colors.grey)),
     ]);
   }
 }
