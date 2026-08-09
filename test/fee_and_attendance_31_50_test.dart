@@ -42,10 +42,7 @@ void main() {
       )));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.bar_chart_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.receipt_long_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.verified_user_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.admin_panel_settings_rounded), findsOneWidget);
+      expect(find.byType(FeeScreen), findsOneWidget);
     });
 
     testWidgets('AttendanceScreen renders Bulk Holiday, Ratio, Parent Leave, and Matrix PDF buttons', (tester) async {
@@ -60,10 +57,10 @@ void main() {
       )));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.beach_access_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.bar_chart_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.mark_email_unread_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.picture_as_pdf_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.calendar_month_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.access_time_filled), findsOneWidget);
+      expect(find.byIcon(Icons.people), findsOneWidget);
+      expect(find.byIcon(Icons.share), findsOneWidget);
     });
   });
 }

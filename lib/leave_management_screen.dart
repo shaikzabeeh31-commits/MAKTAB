@@ -383,8 +383,7 @@ class _TeacherLeavePortalState extends State<_TeacherLeavePortal>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('استاد لیو پورٹل (Teacher Leave Portal)',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const SizedBox.shrink(),
         backgroundColor: const Color(0xFF047857),
         foregroundColor: Colors.white,
         bottom: TabBar(

@@ -94,13 +94,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
         appBar: AppBar(
           backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
           foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(loc.translate('advanced_dashboard'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              Text('Branch: $activeBranch', style: const TextStyle(fontSize: 11, color: Colors.white70)),
-            ],
-          ),
+          title: const SizedBox.shrink(),
           actions: [
             IconButton(
               icon: const Icon(Icons.account_tree_rounded),

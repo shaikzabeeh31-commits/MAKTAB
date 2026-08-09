@@ -34,7 +34,7 @@ void main() {
       await tester.pumpWidget(_wrap(LessonScreen(languageController: ctrl)));
       await tester.pumpAndSettle();
 
-      expect(find.text('Madrasa AIB'), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
       expect(find.text('Select Subject'), findsOneWidget);
       expect(find.text('Lesson Entry (Speak or Type)'), findsOneWidget);
       expect(find.text('Dars Entry (In Class)'), findsOneWidget);

@@ -193,29 +193,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
           child: Scaffold(
             backgroundColor: const Color(0xFFF8FAFC),
             appBar: AppBar(
-              title: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      'assets/images/app_logo.jpg',
-                      width: 32,
-                      height: 32,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(isEn ? 'Results & Reports' : 'نتائج و کارکردگی',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                      Text('Manager & Admin Results Portal',
-                          style: TextStyle(fontSize: 10.5, color: Colors.white70)),
-                    ],
-                  ),
-                ],
-              ),
+              title: const SizedBox.shrink(),
               backgroundColor: const Color(0xFF0F172A),
               foregroundColor: Colors.white,
               actions: [
@@ -624,7 +602,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
           children: [
             Text(val,
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
-            Text(label, style: const TextStyle(fontSize: 9.5, color: Colors.black87)),
+            Text(label, style: TextStyle(fontSize: 9.5, color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87)),
           ],
         ),
       ),
@@ -637,7 +615,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
         Text(title, style: const TextStyle(fontSize: 10, color: Colors.grey)),
         const SizedBox(height: 2),
         Text('$score',
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A))),
       ],
     );
   }

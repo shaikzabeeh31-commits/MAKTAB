@@ -205,7 +205,7 @@ class _ManageParentLoginsScreenState extends State<ManageParentLoginsScreen> {
           appBar: AppBar(
             backgroundColor: const Color(0xFFB45309),
             foregroundColor: Colors.white,
-            title: Text(isEn ? 'Parent PINs & Logins' : 'والدین کے PIN اور لاگ ان کا انتظام'),
+            title: const SizedBox.shrink(),
             bottom: TabBar(
               indicatorColor: Colors.white,
               labelColor: Colors.white,

@@ -38,7 +38,9 @@ class _LoginScreenState extends State<LoginScreen> {
   String _pinDigits = '';
   String _confirmPinDigits = '';
   bool _isConfirmPinMode = false;
+  // ignore: unused_field
   final GlobalKey<_PinDotsRowState> _pinDotsKey = GlobalKey<_PinDotsRowState>();
+  // ignore: unused_field
   final GlobalKey<_PinDotsRowState> _confirmPinDotsKey = GlobalKey<_PinDotsRowState>();
 
   // Failed Attempt Lockout State
@@ -395,7 +397,7 @@ class _LoginScreenState extends State<LoginScreen> {
         appBar: AppBar(
           backgroundColor: _roleColor,
           foregroundColor: Colors.white,
-          title: Text(_roleTitleUrdu, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          title: const SizedBox.shrink(),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_rounded),
             onPressed: widget.onBack,
@@ -636,8 +638,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                       ],
 
-                      // Advanced PIN Pad
-                      const SizedBox(height: 8),
+                      // PIN Input Section
+                      SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -649,54 +651,55 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         child: Column(
                           children: [
-                            // PIN Label
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.lock_rounded, size: 18, color: fieldLabelColor),
-                                const SizedBox(width: 6),
-                                Text(
-                                  _isNewUserMode && _isConfirmPinMode
-                                      ? loc.translate('confirm_pin')
-                                      : loc.translate('pin'),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: fieldLabelColor,
+                            TextFormField(
+                              controller: _pinCtrl,
+                              obscureText: _obscurePin,
+                              keyboardType: TextInputType.number,
+                              style: TextStyle(color: textColor),
+                              decoration: InputDecoration(
+                                labelText: loc.translate('pin'),
+                                labelStyle: TextStyle(color: fieldLabelColor),
+                                prefixIcon: Icon(Icons.lock_rounded, color: fieldLabelColor),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePin ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                    size: 16,
+                                    color: isDark ? Colors.white54 : Colors.grey,
                                   ),
+                                  onPressed: () => setState(() => _obscurePin = !_obscurePin),
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            // Animated PIN Dots
-                             _PinDotsRow(
-                              key: _isConfirmPinMode ? _confirmPinDotsKey : _pinDotsKey,
-                              pinText: _isConfirmPinMode ? _confirmPinDigits : _pinDigits,
-                              maxLength: 4,
-                              obscure: _obscurePin,
-                              activeColor: isDark ? Colors.tealAccent : _roleColor,
-                              inactiveColor: isDark ? Colors.white30 : Colors.grey.shade300,
-                            ),
-                            const SizedBox(height: 6),
-                            // Show/hide toggle
-                            TextButton.icon(
-                              onPressed: () => setState(() => _obscurePin = !_obscurePin),
-                              icon: Icon(
-                                _obscurePin ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                                size: 16,
-                                color: isDark ? Colors.white54 : Colors.grey,
+                                filled: true,
+                                fillColor: inputBgColor,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               ),
-                              label: Text(
-                                _obscurePin ? 'Show' : 'Hide',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: isDark ? Colors.white54 : Colors.grey,
+                              textInputAction: TextInputAction.done,
+                            ),
+                            if (_isNewUserMode) ...[
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                controller: _confirmPinCtrl,
+                                obscureText: _obscurePin,
+                                keyboardType: TextInputType.number,
+                                style: TextStyle(color: textColor),
+                                decoration: InputDecoration(
+                                  labelText: loc.translate('confirm_pin'),
+                                  labelStyle: TextStyle(color: fieldLabelColor),
+                                  prefixIcon: Icon(Icons.lock_rounded, color: fieldLabelColor),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePin ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                      size: 16,
+                                      color: isDark ? Colors.white54 : Colors.grey,
+                                    ),
+                                    onPressed: () => setState(() => _obscurePin = !_obscurePin),
+                                  ),
+                                  filled: true,
+                                  fillColor: inputBgColor,
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
+                                textInputAction: TextInputAction.done,
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            // 3x4 Numeric Grid
-                            _buildPinGrid(isDark, textColor),
+                            ],
                           ],
                         ),
                       ),
@@ -787,6 +790,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // ─── PIN Pad Grid ───────────────────────────────────────────
+  // ignore: unused_element
   Widget _buildPinGrid(bool isDark, Color textColor) {
     final buttonColor = isDark ? const Color(0xFF1E293B) : Colors.white;
     final borderColor = isDark ? const Color(0xFF334155) : Colors.grey.shade200;
@@ -915,6 +919,7 @@ class _PinDotsRow extends StatefulWidget {
   final Color inactiveColor;
 
   const _PinDotsRow({
+    // ignore: unused_element_parameter
     super.key,
     required this.pinText,
     required this.maxLength,

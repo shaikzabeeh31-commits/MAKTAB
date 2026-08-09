@@ -63,7 +63,7 @@ class _CreateClassGroupScreenState extends State<CreateClassGroupScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
         appBar: AppBar(
-          title: const Text('کلاس و گروپ تشکیل دیں (Create Group)'),
+          title: const SizedBox.shrink(),
           backgroundColor: const Color(0xFF074E32),
           foregroundColor: Colors.white,
         ),
@@ -75,7 +75,7 @@ class _CreateClassGroupScreenState extends State<CreateClassGroupScreen> {
               // Banner Step 1
               Card(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                color: Colors.white,
+                color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E293B) : Colors.white,
                 elevation: 2,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -138,7 +138,7 @@ class _CreateClassGroupScreenState extends State<CreateClassGroupScreen> {
               // Banner Step 2: Select Students
               Card(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                color: Colors.white,
+                color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E293B) : Colors.white,
                 elevation: 2,
                 child: Padding(
                   padding: const EdgeInsets.all(16),

@@ -31,7 +31,150 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   DateTime _selectedDate = DateTime.now();
   DateTimeRange? _selectedDateRange;
   String _selectedClassFilter = 'All';
+  final List<String> _batchesList = ['All', 'Class 7 (A)', 'Class 6 (B)', 'Morning Hifz Batch', 'Nazira Batch A'];
+  String _selectedShiftSlot = 'morning';
   final Set<int> _selectedIndices = {};
+
+  void _showAddBatchDialog() {
+    final ctrl = TextEditingController();
+    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        title: Row(
+          children: [
+            const Icon(Icons.group_add_rounded, color: Colors.indigo),
+            const SizedBox(width: 8),
+            Text(
+              isEn ? 'Add New Batch / Class' : 'نیا بیچ یا کلاس شامل کریں',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+            ),
+          ],
+        ),
+        content: TextField(
+          controller: ctrl,
+          decoration: InputDecoration(
+            labelText: isEn ? 'Batch Name (e.g. Hifz Batch A)' : 'بیچ کا نام (مثلاً حفظ بیچ A)',
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Cancel' : 'منسوخ')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.indigo),
+            onPressed: () {
+              final name = ctrl.text.trim();
+              if (name.isNotEmpty) {
+                setState(() {
+                  if (!_batchesList.contains(name)) {
+                    _batchesList.add(name);
+                  }
+                  _selectedClassFilter = name;
+                });
+                Navigator.pop(ctx);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(isEn ? 'New batch "$name" added successfully!' : 'نیا بیچ "$name" کامیابی سے شامل کر دیا گیا!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              }
+            },
+            child: Text(isEn ? 'Add Batch' : 'بیچ شامل کریں'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editShiftSlotDialog() {
+    final loc = AppLocalizations.of(context);
+    final isEn = loc.locale.languageCode == 'en';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+            title: Row(
+              children: [
+                const Icon(Icons.access_time_filled_rounded, color: Colors.indigo),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isEn ? 'Edit Attendance Shift & Slot' : 'حاضری کی شفٹ و سلاٹ منتخب کریں',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedShiftSlot,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: isEn ? 'Select Shift / Slot' : 'شفٹ / مارننگ سلاٹ',
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: [
+                    DropdownMenuItem(value: 'morning', child: Text(isEn ? 'Morning Shift (صبح کی شفٹ)' : 'صبح کی شفٹ (Morning)')),
+                    DropdownMenuItem(value: 'morning_slot_1', child: Text(isEn ? 'Morning Slot 1 (7:00 AM - 9:00 AM)' : 'مارننگ سلاٹ 1 (7:00 تا 9:00 AM)')),
+                    DropdownMenuItem(value: 'morning_slot_2', child: Text(isEn ? 'Morning Slot 2 (9:00 AM - 11:00 AM)' : 'مارننگ سلاٹ 2 (9:00 تا 11:00 AM)')),
+                    DropdownMenuItem(value: 'evening', child: Text(isEn ? 'Evening Shift (شام کی شفٹ)' : 'شام کی شفٹ (Evening)')),
+                    DropdownMenuItem(value: 'night', child: Text(isEn ? 'Night Shift (رات کی شفٹ)' : 'رات کی شفٹ (Night)')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setDialogState(() {
+                        _selectedShiftSlot = val;
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Cancel' : 'منسوخ')),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: Colors.indigo),
+                onPressed: () {
+                  setState(() {
+                    for (var s in _students) {
+                      s['shift'] = _selectedShiftSlot;
+                    }
+                  });
+                  _saveData();
+                  Navigator.pop(ctx);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(isEn ? 'Attendance shift slot updated successfully!' : 'حاضری کی شفٹ سلاٹ کامیابی سے تبدیل ہو گئی!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                },
+                child: Text(isEn ? 'Apply Slot' : 'لاگو کریں'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -45,6 +188,24 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       copy['language'] ??= 'ur'; 
       return copy;
     }).toList();
+    _loadSavedBatches();
+  }
+
+  Future<void> _loadSavedBatches() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList('maktab_group_names') ?? [];
+    for (final b in saved) {
+      if (!_batchesList.contains(b)) {
+        _batchesList.add(b);
+      }
+    }
+    for (final s in _students) {
+      final g = s['group'] ?? s['className'];
+      if (g != null && g.toString().isNotEmpty && !_batchesList.contains(g.toString())) {
+        _batchesList.add(g.toString());
+      }
+    }
+    if (mounted) setState(() {});
   }
 
   void _saveData() {
@@ -118,11 +279,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
   }
 
+  // ignore: unused_element
   void _makePhoneCall(String phone) {
     if (phone.isEmpty) return;
     _launchUrl('tel:$phone');
   }
 
+  // ignore: unused_element
   void _showBulkMessageDialog({Set<int>? indices}) {
     final targetIndices = indices ?? _selectedIndices;
     if (targetIndices.isEmpty) return;
@@ -419,6 +582,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   void _showNotificationsDialog() {
+    final loc = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       builder: (ctx) => Container(
@@ -426,9 +590,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('نوٹیفکیشنز (Notifications)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(loc.translate('notifications_center'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const Divider(),
-            ListTile(leading: const Icon(Icons.check_circle, color: Colors.green), title: const Text('پچھلی حاضری کامیابی سے محفوظ ہو گئی۔', style: TextStyle())),
+            ListTile(
+              leading: const Icon(Icons.check_circle, color: Colors.green),
+              title: Text(loc.translate('prev_attendance_saved'), style: const TextStyle()),
+            ),
+            ListTile(
+              leading: const Icon(Icons.message, color: Colors.blue),
+              title: Text(loc.translate('new_admin_msg'), style: const TextStyle()),
+            ),
           ],
         ),
       ),
@@ -456,6 +627,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       }
     }
 
+    // ignore: unused_local_variable
     final String selectedCountText = _selectedIndices.isEmpty ? '' : 'منتخب طلبہ\n${_selectedIndices.length}';
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -465,51 +637,46 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          title: Column(
-            children: [
-              Text(loc.translate('madrasa_title'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              Text(loc.translate('mark_attendance'), style: const TextStyle(color: Colors.amberAccent, fontSize: 14)),
+            title: const SizedBox.shrink(),
+            centerTitle: true,
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+            foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, size: 20),
+              onPressed: () => Navigator.pop(context),
+            ),
+            actions: [
+              if (_isTeacher)
+                IconButton(
+                  icon: const Icon(Icons.share, color: Colors.greenAccent, size: 20),
+                  tooltip: 'Send Report to Admin',
+                  onPressed: () => _sendReportToAdmin(presentCount, absentCount, lateCount, absentNames, lateNames),
+                ),
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(icon: const Icon(Icons.notifications_none, size: 20), onPressed: _showNotificationsDialog),
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                      child: const Text('5', style: TextStyle(fontSize: 10, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              )
             ],
           ),
-          centerTitle: true,
-          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-          foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context),
-          ),
-          actions: [
-            if (_isTeacher)
-              IconButton(
-                icon: const Icon(Icons.share, color: Colors.greenAccent),
-                tooltip: 'Send Report to Admin',
-                onPressed: () => _sendReportToAdmin(presentCount, absentCount, lateCount, absentNames, lateNames),
-              ),
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                IconButton(icon: const Icon(Icons.notifications_none), onPressed: _showNotificationsDialog),
-                Positioned(
-                  right: 8, top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                    child: const Text('5', style: TextStyle(fontSize: 12, color: Colors.white)),
-                  ),
-                )
-              ],
-            )
-          ],
-        ),
         body: Column(
           children: [
-            // Compact top controls
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+            Container(
+              color: Theme.of(context).appBarTheme.backgroundColor ?? (isDark ? const Color(0xFF0F172A) : const Color(0xFF074E32)),
+              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Period Selector Chip
                   ActionChip(
                     avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: Colors.indigo),
                     label: Text(
@@ -522,141 +689,114 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
                   ),
-                  // Batch Dropdown Selector
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
+                      color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: DropdownButton<String>(
-                      value: _selectedClassFilter,
+                      value: _batchesList.contains(_selectedClassFilter) ? _selectedClassFilter : 'All',
                       underline: const SizedBox(),
                       icon: const Icon(Icons.arrow_drop_down, size: 16),
                       style: TextStyle(fontSize: 11, color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
                       onChanged: (val) {
-                        if (val != null) {
+                        if (val == '__add_new__') {
+                          _showAddBatchDialog();
+                        } else if (val != null) {
                           setState(() {
                             _selectedClassFilter = val;
                           });
                         }
                       },
-                      items: ['All', 'Class 7 (A)', 'Class 6 (B)']
-                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                          .toList(),
+                      items: [
+                        ..._batchesList.map((c) => DropdownMenuItem(value: c, child: Text(c))),
+                        DropdownMenuItem(
+                          value: '__add_new__',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.add, size: 14, color: Colors.indigo),
+                              const SizedBox(width: 4),
+                              Text(loc.locale.languageCode == 'en' ? '+ Add Batch' : '+ نیا بیچ بنائیں', style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  // Shift Toggle ActionChip
                   ActionChip(
                     avatar: const Icon(Icons.access_time_filled, size: 14, color: Colors.indigo),
-                    label: Text(loc.locale.languageCode == 'en' ? 'Morning' : 'صبح', style: const TextStyle(fontSize: 11)),
-                    onPressed: () {},
+                    label: Text(
+                      _selectedShiftSlot == 'morning_slot_1'
+                          ? (loc.locale.languageCode == 'en' ? 'Morning Slot 1' : 'مارننگ سلاٹ 1')
+                          : (_selectedShiftSlot == 'morning_slot_2'
+                              ? (loc.locale.languageCode == 'en' ? 'Morning Slot 2' : 'مارننگ سلاٹ 2')
+                              : (_selectedShiftSlot == 'evening'
+                                  ? (loc.locale.languageCode == 'en' ? 'Evening' : 'شام')
+                                  : (_selectedShiftSlot == 'night'
+                                      ? (loc.locale.languageCode == 'en' ? 'Night' : 'رات')
+                                      : (loc.locale.languageCode == 'en' ? 'Morning' : 'صبح')))),
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: _editShiftSlotDialog,
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
                   ),
                 ],
               ),
             ),
-            // Compact counters row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(loc.locale.languageCode == 'en' ? "Total" : "کل", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                      Text(': ${_filteredStudents.length}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(loc.locale.languageCode == 'en' ? "Present" : "حاضر", style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
-                      Text(': $presentCount', style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(loc.locale.languageCode == 'en' ? "Absent" : "غیر حاضر", style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold)),
-                      Text(': $absentCount', style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(loc.locale.languageCode == 'en' ? "Late" : "دیر سے آئے", style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.bold)),
-                      Text(': $lateCount', style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // Quick Actions Row
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.beach_access_rounded, size: 14, color: Colors.orange),
-                      label: const Text('Bulk Holiday', style: TextStyle(fontSize: 12)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black87,
-                        elevation: 1,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        side: BorderSide(color: Colors.grey.shade200),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade700,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${loc.translate('present')}: $presentCount',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 11),
                       ),
                     ),
                     const SizedBox(width: 6),
-                    ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.bar_chart_rounded, size: 14, color: Colors.blue),
-                      label: const Text('Ratio / Analytics', style: TextStyle(fontSize: 12)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black87,
-                        elevation: 1,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        side: BorderSide(color: Colors.grey.shade200),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade700,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${loc.translate('absent')}: $absentCount',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 11),
                       ),
                     ),
                     const SizedBox(width: 6),
-                    ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.mark_email_unread_rounded, size: 14, color: Colors.purple),
-                      label: const Text('Parent Leave', style: TextStyle(fontSize: 12)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black87,
-                        elevation: 1,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        side: BorderSide(color: Colors.grey.shade200),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade800,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${loc.translate('late')}: $lateCount',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 11),
                       ),
                     ),
                     const SizedBox(width: 6),
-                    ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 14, color: Colors.red),
-                      label: const Text('Matrix PDF', style: TextStyle(fontSize: 12)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black87,
-                        elevation: 1,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        side: BorderSide(color: Colors.grey.shade200),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${loc.translate('total_students')}: ${_filteredStudents.length}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 11),
                       ),
                     ),
                   ],
@@ -664,24 +804,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            // Header
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 8),
               padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0F172A),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFF074E32),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('طلبہ کی حاضری لسٹ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  SizedBox(width: 8),
-                  Icon(Icons.people, color: Colors.white, size: 18),
+                  Text(loc.translate('student_attendance_list'), style: TextStyle(color: isDark ? Colors.white70 : Colors.white, fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.people, color: Colors.white, size: 18),
                 ],
               ),
             ),
-            // Table Header
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -692,7 +830,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       Container(
                         margin: const EdgeInsets.symmetric(horizontal: 8),
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        color: Colors.grey.shade100,
+                        color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade100,
                         child: Row(
                           children: [
                             SizedBox(
@@ -717,46 +855,45 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                       visualDensity: VisualDensity.compact,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                     ),
-                                  const Text('منتخب', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  Text(loc.translate('select'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                 ],
                               ),
                             ),
-                            const Expanded(
+                            Expanded(
                               flex: 3, 
-                              child: TranslatedText(
-                                'ٹوپی / یونیفارم / کتابیں', 
+                              child: Text(
+                                loc.translate('cap_uniform_books'), 
                                 textAlign: TextAlign.center, 
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                               ),
                             ),
-                            const Expanded(
+                            Expanded(
                               flex: 2, 
-                              child: TranslatedText(
-                                'دیر سے آیا', 
+                              child: Text(
+                                loc.translate('late_arrival'), 
                                 textAlign: TextAlign.center, 
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                               ),
                             ),
-                            const Expanded(
+                            Expanded(
                               flex: 2, 
-                              child: TranslatedText(
-                                'حاضری\n(کلک کریں)', 
+                              child: Text(
+                                loc.translate('attendance_tap'), 
                                 textAlign: TextAlign.center, 
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                               ),
                             ),
-                            const Expanded(
+                            Expanded(
                               flex: 3, 
-                              child: TranslatedText(
-                                'طالب علم کا نام\nوالد کا نام', 
+                              child: Text(
+                                loc.translate('student_father_header'), 
                                 textAlign: TextAlign.start, 
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ],
                         ),
                       ),
-                      // Table List
                       Expanded(
                         child: ListView.builder(
                           itemCount: _filteredStudents.length,
@@ -772,14 +909,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             final hasBooks = student['hasBooks'] as bool? ?? true;
 
                             return Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
                               decoration: BoxDecoration(
                                 color: isDark
                                     ? (index.isEven ? Theme.of(context).cardTheme.color : Theme.of(context).cardTheme.color?.withValues(alpha: 0.8))
                                     : (index.isEven ? Colors.white : Colors.grey.shade50),
                                 border: Border(bottom: BorderSide(color: isDark ? const Color(0xFF334155) : Colors.grey.shade300)),
                               ),
-                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              padding: const EdgeInsets.symmetric(vertical: 0),
                               child: Row(
                                 children: [
                                   SizedBox(
@@ -825,48 +962,91 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                       ],
                                     ),
                                   ),
+                                  // Present Button
                                   Expanded(
                                     flex: 2,
                                     child: InkWell(
-                                      onTap: _isTeacher ? () => _markAttendance(originalIndex, status == 'late' ? 'present' : 'late') : null,
+                                      onTap: _isTeacher ? () => _markAttendance(originalIndex, 'present') : null,
                                       child: Container(
-                                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                                        padding: const EdgeInsets.symmetric(vertical: 4),
+                                        height: 32,
+                                        margin: const EdgeInsets.symmetric(horizontal: 2),
                                         decoration: BoxDecoration(
-                                          color: status == 'late' ? Colors.orange.shade50.withValues(alpha: isDark ? 0.15 : 1) : Colors.transparent,
-                                          border: Border.all(color: status == 'late' ? Colors.orange : (isDark ? const Color(0xFF334155) : Colors.grey.shade300)),
-                                          borderRadius: BorderRadius.circular(4),
+                                          color: status == 'present' ? Colors.green.shade600 : (isDark ? const Color(0xFF1E293B) : Colors.grey.shade100),
+                                          border: Border.all(color: status == 'present' ? Colors.green.shade700 : (isDark ? const Color(0xFF334155) : Colors.grey.shade300)),
+                                          borderRadius: BorderRadius.circular(6),
                                         ),
-                                        child: Column(
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
-                                            Icon(Icons.access_time, size: 13.5, color: status == 'late' ? Colors.orange : Colors.grey),
-                                            TranslatedText('دیر سے آیا', style: TextStyle(fontSize: 12, color: status == 'late' ? Colors.orange : Colors.grey)),
+                                            Icon(Icons.check_circle_rounded, size: 13, color: status == 'present' ? Colors.white : Colors.green),
+                                            const SizedBox(width: 2),
+                                            Flexible(
+                                              child: Text(
+                                                loc.translate('present'),
+                                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: status == 'present' ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
                                     ),
                                   ),
+                                  // Late Button
                                   Expanded(
                                     flex: 2,
                                     child: InkWell(
-                                      onTap: _isTeacher ? () => _markAttendance(originalIndex, status == 'absent' ? 'present' : 'absent') : null,
+                                      onTap: _isTeacher ? () => _markAttendance(originalIndex, 'late') : null,
                                       child: Container(
-                                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                                        padding: const EdgeInsets.symmetric(vertical: 4),
+                                        height: 32,
+                                        margin: const EdgeInsets.symmetric(horizontal: 2),
                                         decoration: BoxDecoration(
-                                          color: status == 'present' ? Colors.green.shade50.withValues(alpha: isDark ? 0.15 : 1) : (status == 'absent' ? Colors.red.shade50.withValues(alpha: isDark ? 0.15 : 1) : (isDark ? const Color(0xFF1E293B) : Colors.grey.shade100)),
-                                          border: Border.all(color: status == 'present' ? Colors.green : (status == 'absent' ? Colors.red : (isDark ? const Color(0xFF334155) : Colors.grey.shade300))),
-                                          borderRadius: BorderRadius.circular(4),
+                                          color: status == 'late' ? Colors.amber.shade700 : (isDark ? const Color(0xFF1E293B) : Colors.grey.shade100),
+                                          border: Border.all(color: status == 'late' ? Colors.amber.shade800 : (isDark ? const Color(0xFF334155) : Colors.grey.shade300)),
+                                          borderRadius: BorderRadius.circular(6),
                                         ),
                                         child: Row(
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
-                                            TranslatedText(status == 'absent' ? 'غیر حاضر' : 'حاضر', 
-                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: status == 'absent' ? Colors.red : Colors.green)),
-                                            if (status == 'absent') const SizedBox(width: 1),
-                                            if (status == 'absent') const Icon(Icons.close, size: 9.5, color: Colors.red),
-                                            if (status == 'present') const SizedBox(width: 1),
-                                            if (status == 'present') const Icon(Icons.check, size: 9.5, color: Colors.green),
+                                            Icon(Icons.access_time_filled_rounded, size: 13, color: status == 'late' ? Colors.white : Colors.amber.shade800),
+                                            const SizedBox(width: 2),
+                                            Flexible(
+                                              child: Text(
+                                                loc.translate('late'),
+                                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: status == 'late' ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // Absent Button
+                                  Expanded(
+                                    flex: 2,
+                                    child: InkWell(
+                                      onTap: _isTeacher ? () => _markAttendance(originalIndex, 'absent') : null,
+                                      child: Container(
+                                        height: 32,
+                                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                                        decoration: BoxDecoration(
+                                          color: status == 'absent' ? Colors.red.shade600 : (isDark ? const Color(0xFF1E293B) : Colors.grey.shade100),
+                                          border: Border.all(color: status == 'absent' ? Colors.red.shade700 : (isDark ? const Color(0xFF334155) : Colors.grey.shade300)),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.cancel_rounded, size: 13, color: status == 'absent' ? Colors.white : Colors.red),
+                                            const SizedBox(width: 2),
+                                            Flexible(
+                                              child: Text(
+                                                loc.translate('absent'),
+                                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: status == 'absent' ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -907,12 +1087,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                         decoration: BoxDecoration(color: Colors.green.shade700, borderRadius: BorderRadius.circular(4)),
                                         child: const Icon(Icons.call, color: Colors.white, size: 16),
                                       ),
-                                      onPressed: () async {
-                                        final p = student['fatherPhone']?.toString() ?? '';
-                                        if (p.isNotEmpty) {
-                                          await _launchUrl('tel:$p');
-                                        }
-                                      },
+                                      onPressed: () {},
                                     ),
                                   ),
                                 ],
@@ -928,51 +1103,46 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             ),
           ],
         ),
-        bottomNavigationBar: _selectedIndices.isNotEmpty ? InkWell(
-          onTap: () => _showBulkMessageDialog(),
-          child: Container(
-            color: const Color(0xFF0F766E),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(color: const Color(0xFF042F2E), borderRadius: BorderRadius.circular(8)),
-                    child: Text(selectedCountText, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-                  const Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.send, color: Colors.white, size: 18),
-                            SizedBox(width: 8),
-                            Text('منتخب طلبہ کو پیغام بھیجیں', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                          ],
+        bottomNavigationBar: _selectedIndices.isNotEmpty
+            ? Container(
+                color: const Color(0xFF0F766E),
+                child: SafeArea(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.send, color: Colors.white, size: 18),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'منتخب طلبہ کو پیغام بھیجیں',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
-                        Text('(ان کے والدین کو خودکار پیغام جائے گا)', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        '(ان کے والدین کو خودکار پیغام جائے گا)',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ),
-        ) : const SizedBox(),
+                ),
+              )
+            : const SizedBox(),
       ),
     );
   }
 
+  // ignore: unused_element
   Widget _buildTopBlock(String title, String subtitle, IconData icon, bool hasEdit) {
+    final isDk = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.grey.shade300),
+          color: isDk ? const Color(0xFF1E293B) : Colors.white,
+          border: Border.all(color: isDk ? const Color(0xFF334155) : Colors.grey.shade300),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -986,12 +1156,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ],
             ),
             const SizedBox(height: 4),
-            Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+            Text(subtitle, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: isDk ? Colors.white70 : Colors.black87)),
             if (hasEdit) ...[
               const SizedBox(height: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(border: Border.all(color: isDk ? const Color(0xFF334155) : Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: const [
@@ -1008,6 +1178,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildCounterBlock(String title, String count, MaterialColor color, IconData icon) {
     return Expanded(
       child: Container(

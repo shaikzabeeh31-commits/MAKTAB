@@ -78,7 +78,7 @@ void main() {
       )));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('استاد لیو پورٹل'), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
       expect(find.textContaining('لیو ہسٹری'), findsOneWidget);
       expect(find.textContaining('نئی درخواست'), findsOneWidget);
     });

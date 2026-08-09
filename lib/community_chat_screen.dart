@@ -666,8 +666,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
-        title: const Text('Communication — مکتب کمیونٹی و پیغام رسانی',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        title: const SizedBox.shrink(),
         actions: [
           // Send Announcement Action (Allowed for Manager, Teacher/Ustadh, Admin)
           IconButton(
@@ -715,7 +714,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
   // ── Hierarchy Top Bar ──
   Widget _buildRoleHierarchyBanner() {
     return Container(
-      color: Colors.white,
+      color: const Color(0xFF0F172A),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -776,9 +775,10 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
   // ── Contacts Directory ──
   Widget _buildContactsView() {
     final contacts = _getFilteredContacts();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF0F172A) : Colors.white,
       child: ListView.builder(
         itemCount: contacts.length,
         itemBuilder: (ctx, i) {
@@ -826,8 +826,9 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
   // ── Left Sidebar Conversations ──
   Widget _buildConversationsSidebar() {
     final list = _getSampleConversations();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
       child: Column(
         children: [
           // Quick Action Tiles consolidated into a single premium button
@@ -897,6 +898,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
 
   // ── Main Chat Thread Window ──
   Widget _buildChatWindow() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     bool changed = false;
     for (var m in _messages) {
       if (!m.isMe && !m.isRead && (m.senderName.toLowerCase().contains(_activeChatName.toLowerCase()) || _activeChatName.toLowerCase().contains(m.senderName.toLowerCase()))) {
@@ -912,7 +914,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
       children: [
         // Active Chat Header
         Container(
-          color: Colors.white,
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
@@ -1004,8 +1006,9 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
 
   // ── Chat Bubble ──
   Widget _buildMessageBubble(ChatMessage m) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final align = m.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final bubbleColor = m.isMe ? const Color(0xFFDCF8C6) : Colors.white;
+    final bubbleColor = m.isMe ? (isDark ? const Color(0xFF056162) : const Color(0xFFDCF8C6)) : (isDark ? const Color(0xFF1E293B) : Colors.white);
 
     return Column(
       crossAxisAlignment: align,
@@ -1073,11 +1076,12 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
   }
 
   Widget _buildPdfAttachment(ChatMessage m) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(top: 6),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF0F172A) : Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.red.shade200),
       ),
@@ -1319,8 +1323,9 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
 
   // ── Input Bar ──
   Widget _buildChatInputBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
         children: [

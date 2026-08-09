@@ -46,10 +46,11 @@ void main() {
     expect(find.textContaining('احمد علی'), findsOneWidget);
     expect(find.textContaining('101'), findsOneWidget);
 
-    // Tap Absent chip
-    final absentChip = find.text('غیر حاضر');
-    expect(absentChip, findsOneWidget);
-    await tester.tap(absentChip);
+    // Tap attendance button (currently present/حاضر)
+    final attendanceBtn = find.text('حاضر');
+    expect(attendanceBtn, findsOneWidget);
+    await tester.tap(attendanceBtn);
     await tester.pumpAndSettle();
+    expect(find.text('غیر حاضر'), findsOneWidget);
   });
 }

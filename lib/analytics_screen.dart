@@ -69,7 +69,7 @@ class AnalyticsScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
         appBar: AppBar(
-          title: Text(loc.translate('advanced_dashboard')),
+          title: const SizedBox.shrink(),
           backgroundColor: const Color(0xFF074E32),
           foregroundColor: Colors.white,
           actions: [

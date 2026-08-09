@@ -679,40 +679,49 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                     const SizedBox(height: 14),
                     TextField(
                       controller: studentNameCtrl,
-                      style: TextStyle(color: fieldTextColor),
+                      style: TextStyle(color: fieldTextColor, fontSize: 14, height: 1.2),
                       decoration: InputDecoration(
                         labelText: loc.translate('student_name'),
-                        labelStyle: TextStyle(color: fieldLabelColor),
+                        labelStyle: TextStyle(color: fieldLabelColor, fontSize: 13),
+                        floatingLabelBehavior: FloatingLabelBehavior.always,
                         prefixIcon: Icon(Icons.person, color: fieldLabelColor),
                         filled: true,
                         fillColor: inputBgColor,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        isDense: false,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: fatherNameCtrl,
-                      style: TextStyle(color: fieldTextColor),
+                      style: TextStyle(color: fieldTextColor, fontSize: 14, height: 1.2),
                       decoration: InputDecoration(
                         labelText: loc.translate('father_name'),
-                        labelStyle: TextStyle(color: fieldLabelColor),
+                        labelStyle: TextStyle(color: fieldLabelColor, fontSize: 13),
+                        floatingLabelBehavior: FloatingLabelBehavior.always,
                         prefixIcon: Icon(Icons.person_outline, color: fieldLabelColor),
                         filled: true,
                         fillColor: inputBgColor,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        isDense: false,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: fatherPhoneCtrl,
-                      style: TextStyle(color: fieldTextColor),
+                      style: TextStyle(color: fieldTextColor, fontSize: 14, height: 1.2),
                       keyboardType: TextInputType.phone,
                       decoration: InputDecoration(
                         labelText: loc.translate('father_phone'),
-                        labelStyle: TextStyle(color: fieldLabelColor),
+                        labelStyle: TextStyle(color: fieldLabelColor, fontSize: 13),
+                        floatingLabelBehavior: FloatingLabelBehavior.always,
                         prefixIcon: Icon(Icons.phone, color: fieldLabelColor),
                         filled: true,
                         fillColor: inputBgColor,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        isDense: false,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
@@ -732,7 +741,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                         decoration: BoxDecoration(
                           color: inputBgColor,
                           border: Border.all(color: isDark ? const Color(0xFF334155) : Colors.grey.shade400),
@@ -756,13 +765,16 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       initialValue: selectedGroup,
+                      isExpanded: true,
                       dropdownColor: dialogBgColor,
                       decoration: InputDecoration(
                         labelText: loc.translate('batch_group'),
-                        labelStyle: TextStyle(color: fieldLabelColor),
+                        labelStyle: TextStyle(color: fieldLabelColor, fontSize: 13),
                         prefixIcon: Icon(Icons.groups_rounded, color: fieldLabelColor),
                         filled: true,
                         fillColor: inputBgColor,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        isDense: false,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       items: [
@@ -1039,24 +1051,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
         appBar: AppBar(
           backgroundColor: Theme.of(context).brightness == Brightness.dark ? null : info.primaryColor,
           foregroundColor: Theme.of(context).brightness == Brightness.dark ? null : Colors.white,
-          title: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.asset(
-                  'assets/images/app_logo.jpg',
-                  width: 32,
-                  height: 32,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                isEn ? 'Maktab App — ${info.titleEnglish}' : 'مکتب ایپ — ${info.titleUrdu}',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
+          title: const SizedBox.shrink(),
           actions: [
             if (widget.currentRole == AppRole.manager ||
                 widget.currentRole == AppRole.admin ||
@@ -1111,7 +1106,8 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
 
   Widget _buildSideDrawer(BuildContext context, RoleInfo info) {
     final loc = AppLocalizations.of(context);
-    final isEn = loc.locale.languageCode == 'en';
+    // ignore: unused_local_variable
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final bool canAddStudent = widget.currentRole == AppRole.admin ||
         widget.currentRole == AppRole.teacher ||
         widget.currentRole == AppRole.manager;
@@ -1123,7 +1119,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           UserAccountsDrawerHeader(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [info.primaryColor, info.primaryColor.withValues(alpha: 0.7)],
+                colors: [info.primaryColor, info.primaryColor.withValues(alpha: 0.75)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -1132,15 +1128,29 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               _loggedInUserName.isNotEmpty
                   ? _loggedInUserName
                   : info.title(context),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
             ),
-            accountEmail: Text(
-              'Role: ${info.title(context)}',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            accountEmail: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    info.title(context),
+                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             ),
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
-              child: const MaktabLogo(size: 64),
+              child: Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: MaktabLogo(size: 50),
+              ),
             ),
           ),
           if (canAddStudent)
@@ -1278,65 +1288,8 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.people_alt_rounded, color: Colors.indigo),
-            title: Text(isEn ? 'PTM Dispatch' : 'والدین میٹنگ بلاوا'),
-            onTap: () {
-              Navigator.pop(context);
-              _showPtmDispatchDialog();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.warning_amber_rounded, color: Colors.red),
-            title: Text(isEn ? 'Emergency Alert' : 'ہنگامی حالت الرٹ'),
-            onTap: () {
-              Navigator.pop(context);
-              _showEmergencyLockdownDialog();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.volunteer_activism_rounded, color: Colors.green),
-            title: Text(isEn ? 'Donations Tracker' : 'عطیات و صدقات کھاتہ'),
-            onTap: () {
-              Navigator.pop(context);
-              _showDonationTrackerDialog();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.gavel_rounded, color: Colors.purple),
-            title: Text(isEn ? 'Shura Minutes Log' : 'مجلسِ شوریٰ منٹس'),
-            onTap: () {
-              Navigator.pop(context);
-              _showShuraMinutesDialog();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.build_rounded, color: Colors.orange),
-            title: Text(isEn ? 'Maintenance Log' : 'مرمت و تعمیرات کھاتہ'),
-            onTap: () {
-              Navigator.pop(context);
-              _showMaintenanceTrackerDialog();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.fingerprint_rounded, color: Colors.blue),
-            title: Text(isEn ? 'Biometric Security' : 'بائیو میٹرک لاک'),
-            onTap: () {
-              Navigator.pop(context);
-              _showBiometricLockDialog();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.system_update_rounded, color: Color(0xFF074E32)),
-            title: Text(isEn ? 'Check App Update' : 'ایپ اپڈیٹ چیک کریں'),
-            onTap: () {
-              Navigator.pop(context);
-              _showAppUpdateCheckDialog();
-            },
-          ),
-          const Divider(),
-          ListTile(
             leading: const Icon(Icons.assignment_turned_in_rounded, color: Colors.teal),
-            title: Text(isEn ? 'Academic Results' : 'نتائج و تعلیمی کارکردگی'),
+            title: Text(loc.translate('results_performance')),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -1351,7 +1304,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.mark_email_unread_rounded, color: Colors.green),
-            title: Text(isEn ? 'Leave Requests' : 'استاد لیو پورٹل'),
+            title: Text(loc.translate('leave_portal')),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -1367,7 +1320,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.chat_rounded, color: Colors.purple),
-            title: Text(isEn ? 'Community Hub' : 'کمیونٹی و پیغام رسانی'),
+            title: Text(loc.translate('community_chat')),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -1381,20 +1334,77 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               );
             },
           ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.people_alt_rounded, color: Colors.indigo),
+            title: Text(loc.translate('notice_channel')),
+            onTap: () {
+              Navigator.pop(context);
+              _showPtmDispatchDialog();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            title: Text(loc.translate('security_lock')),
+            onTap: () {
+              Navigator.pop(context);
+              _showEmergencyLockdownDialog();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.volunteer_activism_rounded, color: Colors.green),
+            title: Text(loc.translate('fee_collection')),
+            onTap: () {
+              Navigator.pop(context);
+              _showDonationTrackerDialog();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.gavel_rounded, color: Colors.purple),
+            title: Text(loc.translate('admin_control')),
+            onTap: () {
+              Navigator.pop(context);
+              _showShuraMinutesDialog();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.build_rounded, color: Colors.orange),
+            title: Text(loc.translate('quick_actions')),
+            onTap: () {
+              Navigator.pop(context);
+              _showMaintenanceTrackerDialog();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.fingerprint_rounded, color: Colors.blue),
+            title: Text(loc.translate('security_logins')),
+            onTap: () {
+              Navigator.pop(context);
+              _showBiometricLockDialog();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.system_update_rounded, color: Color(0xFF074E32)),
+            title: Text(loc.translate('overview')),
+            onTap: () {
+              Navigator.pop(context);
+              _showAppUpdateCheckDialog();
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.palette_rounded, color: Colors.indigo),
-            title: Text(isEn ? 'Theme Settings' : 'ترتیبات تھیم'),
+            title: Text(loc.translate('theme_mode')),
             trailing: ThemeButton(controller: widget.themeController),
           ),
           ListTile(
             leading: const Icon(Icons.language_rounded, color: Colors.teal),
-            title: Text(isEn ? 'Select Language' : 'زبان منتخب کریں'),
+            title: Text(loc.translate('select_language')),
             trailing: LanguageButton(controller: widget.languageController),
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout_rounded, color: Colors.red),
-            title: Text(isEn ? 'Logout' : 'لاگ آؤٹ'),
+            title: Text(loc.translate('logout')),
             onTap: () async {
               Navigator.pop(context);
               final prefs = await SharedPreferences.getInstance();

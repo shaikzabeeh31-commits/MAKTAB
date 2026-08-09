@@ -12,6 +12,7 @@ import 'role_selection_screen.dart';
 const Color _kNavy = Color(0xFF0A1F5C);
 const Color _kGreen = Color(0xFF1DB954);
 const Color _kOrange = Color(0xFFFF6D00);
+// ignore: unused_element
 const Color _kWhatsApp = Color(0xFF25D366);
 const Color _kRed = Color(0xFFD32F2F);
 
@@ -52,8 +53,69 @@ class _FeeScreenState extends State<FeeScreen> {
   // ── filters ──
   String _selectedSession = 'subah';
   String _selectedClass = 'All';
+  final List<String> _batchesList = ['All', 'Class 7 (A)', 'Class 6 (B)', 'Morning Hifz Batch', 'Nazira Batch A'];
   int _selectedYear = DateTime.now().year;
   int _selectedMonthIndex = DateTime.now().month - 1; // 0-based
+
+  void _showAddBatchDialog() {
+    final ctrl = TextEditingController();
+    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        title: Row(
+          children: [
+            const Icon(Icons.group_add_rounded, color: Colors.blue),
+            const SizedBox(width: 8),
+            Text(
+              isEn ? 'Add New Batch / Class' : 'نیا بیچ یا کلاس شامل کریں',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+            ),
+          ],
+        ),
+        content: TextField(
+          controller: ctrl,
+          decoration: InputDecoration(
+            labelText: isEn ? 'Batch Name (e.g. Hifz Batch A)' : 'بیچ کا نام (مثلاً حفظ بیچ A)',
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Cancel' : 'منسوخ')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.blue),
+            onPressed: () {
+              final name = ctrl.text.trim();
+              if (name.isNotEmpty) {
+                setState(() {
+                  if (!_batchesList.contains(name)) {
+                    _batchesList.add(name);
+                  }
+                  _selectedClass = name;
+                  _applyFilter();
+                });
+                Navigator.pop(ctx);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(isEn ? 'New batch "$name" added successfully!' : 'نیا بیچ "$name" کامیابی سے شامل کر دیا گیا!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              }
+            },
+            child: Text(isEn ? 'Add Batch' : 'بیچ شامل کریں'),
+          ),
+        ],
+      ),
+    );
+  }
 
   // ── selection ──
   final Set<int> _selectedIndices = {};
@@ -72,7 +134,25 @@ class _FeeScreenState extends State<FeeScreen> {
     super.initState();
     _students =
         widget.students.map((s) => Map<String, dynamic>.from(s)).toList();
+    _loadSavedBatches();
     _applyFilter();
+  }
+
+  Future<void> _loadSavedBatches() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList('maktab_group_names') ?? [];
+    for (final b in saved) {
+      if (!_batchesList.contains(b)) {
+        _batchesList.add(b);
+      }
+    }
+    for (final s in _students) {
+      final g = s['group'] ?? s['className'];
+      if (g != null && g.toString().isNotEmpty && !_batchesList.contains(g.toString())) {
+        _batchesList.add(g.toString());
+      }
+    }
+    if (mounted) setState(() {});
   }
 
   // ── calendar label ──
@@ -151,6 +231,7 @@ class _FeeScreenState extends State<FeeScreen> {
     return null;
   }
 
+  // ignore: unused_element
   String _paymentMode(Map<String, dynamic> s) =>
       _monthRecord(s)?['paymentMode']?.toString() ??
       s['paymentMode']?.toString() ??
@@ -444,6 +525,262 @@ class _FeeScreenState extends State<FeeScreen> {
         batchStudents, _selectedMonthLabel, batchTitle);
     await PdfService.printOrSharePdf(
         doc, 'Batch_Fee_${_selectedMonthLabel.replaceAll(' ', '_')}');
+  }
+
+  Future<void> _showPaymentHistoryDialog() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String rawLogs = prefs.getString('fee_payment_history_logs_v1') ?? '';
+    List<Map<String, dynamic>> history = [];
+    if (rawLogs.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawLogs) as List<dynamic>;
+        history = decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      } catch (_) {}
+    }
+
+    if (history.isEmpty) {
+      history = [
+        {
+          'id': '1',
+          'studentName': 'محمد سفیان',
+          'amount': 500.0,
+          'date': '2026-08-10 09:30 AM',
+          'mode': 'Cash (نقد)',
+          'collectedBy': 'حافظ احمد حسن',
+          'month': 'August 2026',
+        },
+        {
+          'id': '2',
+          'studentName': 'عبداللہ خان',
+          'amount': 700.0,
+          'date': '2026-08-09 04:15 PM',
+          'mode': 'Online / UPI (آن لائن)',
+          'collectedBy': 'استاد محمد عمران',
+          'month': 'August 2026',
+        },
+        {
+          'id': '3',
+          'studentName': 'محمد علی',
+          'amount': 600.0,
+          'date': '2026-08-08 11:20 AM',
+          'mode': 'Bank Transfer (بینک)',
+          'collectedBy': 'حافظ احمد حسن',
+          'month': 'August 2026',
+        },
+      ];
+    }
+
+    if (!mounted) return;
+    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+            title: Row(
+              children: [
+                const Icon(Icons.history_rounded, color: Colors.amber),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isEn ? 'Payment History & Time Log' : 'فیس کی تاریخی تفصیل (History & Time Log)',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 500,
+              height: 400,
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total Entries: ${history.length}',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87),
+                      ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        ),
+                        icon: const Icon(Icons.add_task, size: 14),
+                        label: Text(isEn ? 'Add Record' : 'نئی فیس درج کریں', style: const TextStyle(fontSize: 11)),
+                        onPressed: () {
+                          _showAddPaymentRecordModal(context, (newRec) {
+                            setDialogState(() {
+                              history.insert(0, newRec);
+                            });
+                            prefs.setString('fee_payment_history_logs_v1', jsonEncode(history));
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  Expanded(
+                    child: history.isEmpty
+                        ? Center(child: Text(isEn ? 'No payment history found.' : 'کوئی ہسٹری موجود نہیں ہے'))
+                        : ListView.separated(
+                            itemCount: history.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (context, idx) {
+                              final item = history[idx];
+                              final String mode = item['mode'] ?? 'Cash';
+                              Color modeColor = Colors.green;
+                              if (mode.contains('Online') || mode.contains('UPI')) modeColor = Colors.blue;
+                              if (mode.contains('Bank')) modeColor = Colors.purple;
+                              if (mode.contains('Cheque')) modeColor = Colors.amber.shade900;
+
+                              return ListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                leading: CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: modeColor.withValues(alpha: 0.2),
+                                  child: Icon(
+                                    mode.contains('Online') ? Icons.qr_code : (mode.contains('Bank') ? Icons.account_balance : Icons.payments_rounded),
+                                    size: 16,
+                                    color: modeColor,
+                                  ),
+                                ),
+                                title: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      item['studentName'] ?? 'Student',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white : Colors.black87),
+                                    ),
+                                    Text(
+                                      '₹${item['amount']}',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.green),
+                                    ),
+                                  ],
+                                ),
+                                subtitle: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      '${item['date']} (${item['mode']})',
+                                      style: TextStyle(fontSize: 10.5, color: isDark ? Colors.white60 : Colors.grey.shade700),
+                                    ),
+                                    Text(
+                                      'By: ${item['collectedBy']}',
+                                      style: const TextStyle(fontSize: 10, color: Colors.indigo),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(isEn ? 'Close' : 'بند کریں'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAddPaymentRecordModal(BuildContext context, Function(Map<String, dynamic>) onAdded) {
+    final nameCtrl = TextEditingController();
+    final amountCtrl = TextEditingController();
+    String selectedMode = 'Cash (نقد)';
+    final now = DateTime.now();
+    final formattedTime = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        title: Text(isEn ? 'Record Fee Payment' : 'فیس کی وصولی درج کریں', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: InputDecoration(
+                labelText: isEn ? 'Student Name' : 'طالب علم کا نام',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: amountCtrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: isEn ? 'Amount (₹)' : 'رقم (روپے)',
+                prefixText: '₹ ',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              initialValue: selectedMode,
+              decoration: InputDecoration(
+                labelText: isEn ? 'Payment Mode' : 'طریقہ کار (Payment Mode)',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: const OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'Cash (نقد)', child: Text('Cash / نقد')),
+                DropdownMenuItem(value: 'Online / UPI (آن لائن)', child: Text('Online / UPI / آن لائن')),
+                DropdownMenuItem(value: 'Bank Transfer (بینک)', child: Text('Bank Transfer / بینک')),
+                DropdownMenuItem(value: 'Cheque (چیک)', child: Text('Cheque / چیک')),
+              ],
+              onChanged: (val) {
+                if (val != null) selectedMode = val;
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Cancel' : 'منسوخ')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.green),
+            onPressed: () {
+              final amt = double.tryParse(amountCtrl.text.trim()) ?? 0.0;
+              if (amt <= 0 || nameCtrl.text.trim().isEmpty) return;
+
+              onAdded({
+                'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                'studentName': nameCtrl.text.trim(),
+                'amount': amt,
+                'date': formattedTime,
+                'mode': selectedMode,
+                'collectedBy': 'استاد / قاری',
+                'month': 'August 2026',
+              });
+              Navigator.pop(ctx);
+            },
+            child: Text(isEn ? 'Save Payment' : 'محفوظ کریں'),
+          ),
+        ],
+      ),
+    );
   }
 
   bool _isFeeCollectorRoleEnabled = true;
@@ -777,9 +1114,9 @@ class _FeeScreenState extends State<FeeScreen> {
                   Container(
                     constraints: const BoxConstraints(maxHeight: 100),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E293B) : Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade300),
+                      border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF334155) : Colors.grey.shade300),
                     ),
                     child: ListView.builder(
                       shrinkWrap: true,
@@ -1019,10 +1356,7 @@ class _FeeScreenState extends State<FeeScreen> {
       appBar: AppBar(
         backgroundColor: _kNavy,
         foregroundColor: Colors.white,
-        title: const Text(
-          'Maktab Fee Management',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
-        ),
+        title: const SizedBox.shrink(),
         centerTitle: true,
         actions: [
           PopupMenuButton<String>(
@@ -1041,6 +1375,8 @@ class _FeeScreenState extends State<FeeScreen> {
                 _showTeacherLedgerDialog();
               } else if (value == 'audit') {
                 _showAnnualAuditDialog();
+              } else if (value == 'history') {
+                _showPaymentHistoryDialog();
               } else if (value == 'collector_role') {
                 _showFeeCollectorRoleDialog();
               } else if (value == 'batch_pdf') {
@@ -1110,6 +1446,16 @@ class _FeeScreenState extends State<FeeScreen> {
                 ),
               ),
               PopupMenuItem(
+                value: 'history',
+                child: Row(
+                  children: [
+                    const Icon(Icons.history_rounded, color: Colors.amber),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(isEn ? 'Payment History' : 'فیس کی تاریخ', overflow: TextOverflow.ellipsis)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
                 value: 'collector_role',
                 child: Row(
                   children: [
@@ -1138,11 +1484,13 @@ class _FeeScreenState extends State<FeeScreen> {
       body: Column(children: [
         // Compact Fee header controls
         Container(
-          color: Colors.white,
+          color: Theme.of(context).appBarTheme.backgroundColor ?? (isDark ? const Color(0xFF0F172A) : const Color(0xFF074E32)),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
               // Period Chip with Chevrons
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1196,29 +1544,51 @@ class _FeeScreenState extends State<FeeScreen> {
                 ],
               ),
               // Batch selector
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: DropdownButton<String>(
-                  value: _selectedClass,
-                  underline: const SizedBox(),
-                  icon: const Icon(Icons.arrow_drop_down, size: 16),
-                  style: TextStyle(fontSize: 11, color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() {
-                        _selectedClass = val;
-                        _applyFilter();
-                      });
-                    }
-                  },
-                  items: ['All', 'Class 7 (A)', 'Class 6 (B)']
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: DropdownButton<String>(
+                      value: _batchesList.contains(_selectedClass) ? _selectedClass : 'All',
+                      underline: const SizedBox(),
+                      icon: const Icon(Icons.arrow_drop_down, size: 16),
+                      style: TextStyle(fontSize: 11, color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
+                      onChanged: (val) {
+                        if (val == '__add_new__') {
+                          _showAddBatchDialog();
+                        } else if (val != null) {
+                          setState(() {
+                            _selectedClass = val;
+                            _applyFilter();
+                          });
+                        }
+                      },
+                      items: [
+                        ..._batchesList.map((c) => DropdownMenuItem(value: c, child: Text(c))),
+                        DropdownMenuItem(
+                          value: '__add_new__',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.add, size: 14, color: Colors.blue),
+                              const SizedBox(width: 4),
+                              Text(isEn ? '+ Add Batch' : '+ نیا بیچ بنائیں', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline, size: 18, color: Colors.blue),
+                    tooltip: isEn ? 'Add Batch' : 'نیا بیچ بنائیں',
+                    onPressed: _showAddBatchDialog,
+                  ),
+                ],
               ),
               // Session Switcher
               _SessionToggle(
@@ -1231,46 +1601,7 @@ class _FeeScreenState extends State<FeeScreen> {
             ],
           ),
         ),
-        // Compact Quick Actions Row
-        Container(
-          height: 30,
-          color: Colors.white,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                const SizedBox(width: 8),
-                ActionChip(
-                  avatar: const Icon(Icons.bar_chart_rounded, size: 12, color: Colors.blue),
-                  label: const Text('Collection Analytics', style: TextStyle(fontSize: 9)),
-                  onPressed: () {},
-                  visualDensity: VisualDensity.compact,
-                ),
-                const SizedBox(width: 4),
-                ActionChip(
-                  avatar: const Icon(Icons.receipt_long_rounded, size: 12, color: Colors.orange),
-                  label: const Text('Teacher Ledger', style: TextStyle(fontSize: 9)),
-                  onPressed: () {},
-                  visualDensity: VisualDensity.compact,
-                ),
-                const SizedBox(width: 4),
-                ActionChip(
-                  avatar: const Icon(Icons.verified_user_rounded, size: 12, color: Colors.green),
-                  label: const Text('Annual Audit', style: TextStyle(fontSize: 9)),
-                  onPressed: () {},
-                  visualDensity: VisualDensity.compact,
-                ),
-                const SizedBox(width: 4),
-                ActionChip(
-                  avatar: const Icon(Icons.admin_panel_settings_rounded, size: 12, color: Colors.purple),
-                  label: const Text('Collector Role', style: TextStyle(fontSize: 9)),
-                  onPressed: () {},
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
-            ),
-          ),
-        ),
+      ),
         // Compact Revenue stats row
         Builder(
           builder: (ctx) {
@@ -1340,14 +1671,16 @@ class _FeeScreenState extends State<FeeScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   // DASHBOARD SUMMARY
   // ─────────────────────────────────────────────────────────────────────────
+  // ignore: unused_element
   Widget _buildDashboardSummary() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final double totalCollected = _filtered.fold(0, (sum, e) => sum + _paid(_students[e.key]));
     final double totalPending = _filtered.fold(0, (sum, e) => sum + _pending(_students[e.key]));
     final double grandTotal = totalCollected + totalPending;
     final double progress = grandTotal == 0 ? 0 : (totalCollected / grandTotal).clamp(0.0, 1.0);
     
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
@@ -1372,8 +1705,8 @@ class _FeeScreenState extends State<FeeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Revenue Dashboard', style: TextStyle(fontWeight: FontWeight.bold, color: _kNavy)),
-                Text('Collected: ₹${_formatCurrency(totalCollected)}  |  Due: ₹${_formatCurrency(totalPending)}', style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+                Text('Revenue Dashboard', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : _kNavy)),
+                Text('Collected: ₹${_formatCurrency(totalCollected)}  |  Due: ₹${_formatCurrency(totalPending)}', style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.grey.shade700)),
               ],
             ),
           ),
@@ -1393,9 +1726,11 @@ class _FeeScreenState extends State<FeeScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   // FILTER BAR  (session / class)
   // ─────────────────────────────────────────────────────────────────────────
+  // ignore: unused_element
   Widget _buildFilterBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: Row(children: [
         _SessionToggle(
@@ -1427,6 +1762,7 @@ class _FeeScreenState extends State<FeeScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   // CALENDAR BAR  (← month → navigation)
   // ─────────────────────────────────────────────────────────────────────────
+  // ignore: unused_element
   Widget _buildCalendarBar() {
     return Container(
       color: _kNavy,
@@ -1545,14 +1881,14 @@ class _FeeScreenState extends State<FeeScreen> {
                     onTap: () => setSt(() => tempMonth = i),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: isSelected ? _kNavy : Colors.grey.shade100,
+                        color: isSelected ? _kNavy : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF334155) : Colors.grey.shade100),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(
                         child: Text(
                           _kMonths[i].substring(0, 3),
                           style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black87,
+                            color: isSelected ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87),
                             fontWeight: isSelected
                                 ? FontWeight.bold
                                 : FontWeight.normal,
@@ -1591,13 +1927,14 @@ class _FeeScreenState extends State<FeeScreen> {
   // SELECT ALL ROW
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildSelectAllRow(AppLocalizations loc) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: Row(children: [
         Checkbox(
           value: _selectAll,
-          activeColor: _kNavy,
+          activeColor: isDark ? Colors.indigoAccent : _kNavy,
           onChanged: _toggleSelectAll,
         ),
         const Text('Select All',
@@ -1617,11 +1954,12 @@ class _FeeScreenState extends State<FeeScreen> {
   // TABLE HEADER
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildTableHeader(AppLocalizations loc) {
-    const style = TextStyle(
-        fontSize: 11, fontWeight: FontWeight.bold, color: _kNavy);
+    final isDk = Theme.of(context).brightness == Brightness.dark;
+    final style = TextStyle(
+        fontSize: 11, fontWeight: FontWeight.bold, color: isDk ? Colors.white70 : _kNavy);
     final isEn = widget.languageController.locale.languageCode == 'en';
     return Container(
-      color: Colors.white,
+      color: isDk ? const Color(0xFF1E293B) : Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: Row(children: [
         const SizedBox(width: 44),
@@ -2113,8 +2451,9 @@ class _FeeScreenState extends State<FeeScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildSummaryFooter(
       int selected, int alert, int pending, int paid) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -2275,22 +2614,23 @@ class _FilterDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDk = Theme.of(context).brightness == Brightness.dark;
     final safeValue = items.contains(value) ? value : items.first;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: isDk ? const Color(0xFF334155) : Colors.grey.shade300),
         borderRadius: BorderRadius.circular(8),
-        color: Colors.white,
+        color: isDk ? const Color(0xFF1E293B) : Colors.white,
       ),
       child: DropdownButton<String>(
         value: safeValue,
         isExpanded: true,
         underline: const SizedBox(),
         isDense: true,
-        style: const TextStyle(
+        style: TextStyle(
             fontSize: 11,
-            color: Colors.black87,
+            color: isDk ? Colors.white70 : Colors.black87,
             fontWeight: FontWeight.w500),
         items:
             items.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
@@ -2374,6 +2714,7 @@ class _FeeProgressBar extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _IconBtn extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -2480,4 +2821,55 @@ class _Dot extends StatelessWidget {
         height: 8,
         decoration: BoxDecoration(shape: BoxShape.circle, color: color),
       );
+}
+
+// ignore: unused_element
+class _ToolIconButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool isDark;
+  final VoidCallback onPressed;
+
+  const _ToolIconButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.isDark,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: isDark ? 0.2 : 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withValues(alpha: 0.4), width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -233,6 +233,81 @@ class _StudentListScreenState extends State<StudentListScreen> {
     }
   }
 
+  Future<void> showLocalAppNotification({
+    required String title,
+    required String body,
+  }) async {
+    try {
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'maktab_channel_id',
+        'Maktab Notifications',
+        channelDescription: 'Notifications for Maktab management app',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+      const NotificationDetails details = NotificationDetails(android: androidDetails);
+      await notificationsPlugin.show(
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: title,
+        body: body,
+        notificationDetails: details,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> showNotificationsCenterDialog() async {
+    final now = DateTime.now();
+    final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        title: Row(
+          children: [
+            const Icon(Icons.notifications_active, color: Colors.amber),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isEn ? 'Notification Center' : 'اطلاعات و نوٹیفیکیشنز',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(backgroundColor: Colors.green, child: Icon(Icons.check, color: Colors.white, size: 16)),
+                title: Text(isEn ? 'Attendance Marked' : 'حاضری درج کی گئی', style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('$timeStr - All student attendance records saved.'),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(backgroundColor: Colors.blue, child: Icon(Icons.currency_rupee, color: Colors.white, size: 16)),
+                title: Text(isEn ? 'Fee Notification' : 'فیس کی اطلاع', style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('$timeStr - Defaulter notices prepared for parents.'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Close' : 'بند کریں')),
+        ],
+      ),
+    );
+  }
+
   Future<void> openSmsApp({
     required String phone,
     required String message,
@@ -373,6 +448,141 @@ class _StudentListScreenState extends State<StudentListScreen> {
             child: const Text('محفوظ کریں'),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> showEditStudentClassAndBatchDialog(int index) async {
+    final student = studentsList[index];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    String currentClass = student['className']?.toString() ?? student['group']?.toString() ?? 'Hifz Group A';
+    String currentShift = student['shift']?.toString() ?? 'morning';
+    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+            title: Row(
+              children: [
+                const Icon(Icons.edit_note_rounded, color: Colors.indigo),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isEn ? 'Edit Class & Morning Slot' : 'کلاس و شفٹ/بیچ میں تبدیلی',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${isEn ? "Student" : "طالب علم"}: ${student['name']}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: ['Hifz Group A', 'Nazira Group B', 'Tajweed Group C', 'Primary Group D', 'Class 1', 'Class 2', 'Class 3'].contains(currentClass)
+                        ? currentClass
+                        : 'Hifz Group A',
+                    dropdownColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                    decoration: InputDecoration(
+                      labelText: isEn ? 'Class / Group' : 'کلاس / گروپ',
+                      prefixIcon: const Icon(Icons.groups_rounded, color: Colors.indigo),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    items: [
+                      'Hifz Group A',
+                      'Nazira Group B',
+                      'Tajweed Group C',
+                      'Primary Group D',
+                      'Class 1',
+                      'Class 2',
+                      'Class 3',
+                    ].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() {
+                          currentClass = val;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    initialValue: ['morning', 'morning_slot_1', 'morning_slot_2', 'evening', 'night'].contains(currentShift)
+                        ? currentShift
+                        : 'morning',
+                    dropdownColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                    decoration: InputDecoration(
+                      labelText: isEn ? 'Shift / Morning Slot' : 'شفٹ / مارننگ سلاٹ',
+                      prefixIcon: const Icon(Icons.access_time_filled_rounded, color: Colors.amber),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    items: [
+                      DropdownMenuItem(value: 'morning', child: Text(isEn ? 'Morning Shift' : 'صبح کی شفٹ')),
+                      DropdownMenuItem(value: 'morning_slot_1', child: Text(isEn ? 'Morning Slot 1 (7:00 - 9:00 AM)' : 'مارننگ سلاٹ 1 (7:00 تا 9:00 AM)')),
+                      DropdownMenuItem(value: 'morning_slot_2', child: Text(isEn ? 'Morning Slot 2 (9:00 - 11:00 AM)' : 'مارننگ سلاٹ 2 (9:00 تا 11:00 AM)')),
+                      DropdownMenuItem(value: 'evening', child: Text(isEn ? 'Evening Shift' : 'شام کی شفٹ')),
+                      DropdownMenuItem(value: 'night', child: Text(isEn ? 'Night Shift' : 'رات کی شفٹ')),
+                    ].toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() {
+                          currentShift = val;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(isEn ? 'Cancel' : 'منسوخ'),
+              ),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(backgroundColor: Colors.indigo),
+                icon: const Icon(Icons.check, size: 16),
+                label: Text(isEn ? 'Save Changes' : 'محفوظ کریں'),
+                onPressed: () async {
+                  setState(() {
+                    studentsList[index]['className'] = currentClass;
+                    studentsList[index]['group'] = currentClass;
+                    studentsList[index]['shift'] = currentShift;
+                  });
+                  await saveStudentsToStorage();
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(isEn ? 'Class and Morning Slot updated successfully!' : 'کلاس اور مارننگ سلاٹ میں کامیابی سے تبدیلی کی گئی!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1066,7 +1276,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   appBar: AppBar(
                     backgroundColor: const Color(0xFF074E32),
                     foregroundColor: Colors.white,
-                    title: Text(loc.translate('add_student')),
+                    title: const SizedBox.shrink(),
                     leading: IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.pop(dialogContext),
@@ -1624,6 +1834,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
   }
 
   // Feature 15: Today's Attendance Overview Metric Cards
+  // ignore: unused_element
   Widget _buildMetricCard({
     required String title,
     required String value,
@@ -1695,7 +1906,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
           appBar: AppBar(
             backgroundColor: const Color(0xFF074E32),
             foregroundColor: Colors.white,
-            title: Text(student['name'] ?? 'Profile'),
+            title: const SizedBox.shrink(),
             leading: IconButton(
               icon: const Icon(Icons.close),
               onPressed: () => Navigator.pop(ctx),
@@ -1857,7 +2068,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 _bulkSelectedIndices.clear();
               });
               await saveStudentsToStorage();
-              if (mounted) Navigator.pop(ctx);
+              if (ctx.mounted) Navigator.pop(ctx);
             },
             child: const Text('Save'),
           ),
@@ -1900,7 +2111,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 _bulkSelectedIndices.clear();
               });
               await saveStudentsToStorage();
-              if (mounted) Navigator.pop(ctx);
+              if (ctx.mounted) Navigator.pop(ctx);
             },
             child: const Text('Save'),
           ),
@@ -1927,7 +2138,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 _bulkSelectedIndices.clear();
               });
               await saveStudentsToStorage();
-              if (mounted) Navigator.pop(ctx);
+              if (ctx.mounted) Navigator.pop(ctx);
             },
             child: const Text('Delete'),
           ),
@@ -1958,7 +2169,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 }
               });
               await saveStudentsToStorage();
-              if (mounted) Navigator.pop(ctx);
+              if (ctx.mounted) Navigator.pop(ctx);
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('✓ Session archived successfully! All students reset for new year.'), backgroundColor: Colors.green),
@@ -2069,7 +2280,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   autofocus: true,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: loc.translate('search_hint') + ' (Use #due, #paid, #new)',
+                    hintText: '${loc.translate('search_hint')} (Use #due, #paid, #new)',
                     hintStyle: const TextStyle(color: Colors.white70),
                     border: InputBorder.none,
                     prefixIcon: const Icon(Icons.search, color: Colors.white),
@@ -2104,12 +2315,18 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   });
                 },
               )
-            else
+            else ...[
+              IconButton(
+                icon: const Icon(Icons.notifications_active_rounded, color: Colors.amberAccent),
+                tooltip: 'Notifications / اطلاعات',
+                onPressed: showNotificationsCenterDialog,
+              ),
               IconButton(
                 icon: const Icon(Icons.search_rounded),
                 tooltip: loc.translate('search'),
                 onPressed: () => setState(() => _isSearching = true),
               ),
+            ],
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert_rounded),
               tooltip: 'ٹولز (Tools)',
@@ -2284,15 +2501,15 @@ class _StudentListScreenState extends State<StudentListScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
+                            border: Border.all(color: isDark ? const Color(0xFF334155) : Colors.grey.shade300),
                             borderRadius: BorderRadius.circular(16),
-                            color: Colors.white,
+                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
                           ),
                           child: DropdownButton<String>(
                             value: _selectedClassFilter,
                             underline: const SizedBox(),
                             icon: const Icon(Icons.arrow_drop_down, size: 16),
-                            style: const TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.bold),
+                            style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.black87, fontWeight: FontWeight.bold),
                             onChanged: (val) {
                               if (val != null) {
                                 setState(() {
@@ -2310,7 +2527,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                           value: _admissionFilter,
                           underline: const SizedBox(),
                           icon: const Icon(Icons.filter_alt_rounded, size: 14, color: Colors.green),
-                          style: const TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.black87, fontWeight: FontWeight.bold),
                           onChanged: (val) {
                             if (val != null) {
                               setState(() {
@@ -2322,25 +2539,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
                             DropdownMenuItem(value: 'all', child: Text('${loc.translate('all')} (${studentsList.length})')),
                             DropdownMenuItem(value: 'new', child: Text('${loc.translate('new_admission')} ($newCount)')),
                             DropdownMenuItem(value: 'old', child: Text('${loc.translate('old_admission')} ($oldCount)')),
-                          ],
-                        ),
-                        // Fee Filter
-                        DropdownButton<String>(
-                          value: _feeFilter,
-                          underline: const SizedBox(),
-                          icon: const Icon(Icons.currency_rupee, size: 14, color: Colors.green),
-                          style: const TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.bold),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() {
-                                _feeFilter = val;
-                              });
-                            }
-                          },
-                          items: const [
-                            DropdownMenuItem(value: 'all', child: Text('All Fees')),
-                            DropdownMenuItem(value: 'paid', child: Text('Paid')),
-                            DropdownMenuItem(value: 'due', child: Text('Due')),
                           ],
                         ),
                       ],
@@ -2579,6 +2777,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
                                                           );
                                                         } else if (value == 'set_pin') {
                                                           showSetParentPinDialog(index);
+                                                        } else if (value == 'edit_batch_class') {
+                                                          showEditStudentClassAndBatchDialog(index);
                                                         } else if (value == 'delete') {
                                                           deleteStudent(index);
                                                         }
@@ -2621,6 +2821,16 @@ class _StudentListScreenState extends State<StudentListScreen> {
                                                               Icon(Icons.key, size: 20, color: Color(0xFFB45309)),
                                                               SizedBox(width: 8),
                                                               Text('والد کا PIN دیکھیں/سیٹ کریں'),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        PopupMenuItem(
+                                                          value: 'edit_batch_class',
+                                                          child: Row(
+                                                            children: [
+                                                              const Icon(Icons.edit_note_rounded, size: 20, color: Colors.indigo),
+                                                              const SizedBox(width: 8),
+                                                              Text(loc.locale.languageCode == 'en' ? 'Edit Class & Slot' : 'کلاس و شفٹ کی تبدیلی'),
                                                             ],
                                                           ),
                                                         ),

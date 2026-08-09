@@ -191,15 +191,7 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF1F5F9),
         appBar: AppBar(
-          title: Text(
-            isEn
-                ? (widget.currentUserRole == AppRole.manager
-                    ? 'Manage Staff PINs'
-                    : 'Manage Staff Logins')
-                : (widget.currentUserRole == AppRole.manager
-                    ? 'اسٹاف (استاد و متولی) PINs انتظام'
-                    : 'اسٹاف PINs و لاگ ان انتظام'),
-          ),
+          title: const SizedBox.shrink(),
           backgroundColor: const Color(0xFF0F172A),
           foregroundColor: Colors.white,
         ),

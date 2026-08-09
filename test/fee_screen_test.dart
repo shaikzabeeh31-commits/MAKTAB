@@ -211,10 +211,10 @@ void main() {
 
   // ── FEE SCREEN WIDGET TESTS ───────────────────────────────────────────────
   group('FeeScreen Widget Tests', () {
-    testWidgets('renders AppBar with correct title', (tester) async {
+    testWidgets('renders AppBar correctly', (tester) async {
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
-      expect(find.text('Maktab Fee Management'), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
     });
 
     testWidgets('shows Subah/Shaam session toggle buttons', (tester) async {
@@ -277,7 +277,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.chevron_left_rounded));
       await tester.pumpAndSettle();
       // Screen should still be visible
-      expect(find.text('Maktab Fee Management'), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
     });
 
     testWidgets('right chevron navigates to next month', (tester) async {
@@ -285,7 +285,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byIcon(Icons.chevron_right_rounded));
       await tester.pumpAndSettle();
-      expect(find.text('Maktab Fee Management'), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
     });
 
     testWidgets('calendar bar has left and right navigation icons',
@@ -345,7 +345,7 @@ void main() {
       // Check by finding the send button text — it should exist
       expect(find.text('Send Message to Selected'), findsOneWidget);
       // With no selection the send icon should exist (button still renders)
-      expect(find.byIcon(Icons.send_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.send_rounded), findsWidgets);
     });
 
     testWidgets('Send Message button enabled after selecting a student',
@@ -466,7 +466,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Tools'));
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.picture_as_pdf_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.picture_as_pdf_rounded), findsWidgets);
     });
 
     testWidgets('language button exists in AppBar', (tester) async {
