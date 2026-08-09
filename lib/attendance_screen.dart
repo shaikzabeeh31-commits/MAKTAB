@@ -28,7 +28,9 @@ class AttendanceScreen extends StatefulWidget {
 
 class _AttendanceScreenState extends State<AttendanceScreen> {
   late List<Map<String, dynamic>> _students;
-  final DateTime _selectedDate = DateTime.now();
+  DateTime _selectedDate = DateTime.now();
+  DateTimeRange? _selectedDateRange;
+  String _selectedClassFilter = 'All';
   final Set<int> _selectedIndices = {};
 
   @override
@@ -56,6 +58,31 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       widget.currentRole == AppRole.teacher ||
       widget.currentRole == AppRole.admin ||
       widget.currentRole == AppRole.manager;
+
+  List<Map<String, dynamic>> get _filteredStudents {
+    if (_selectedClassFilter == 'All') {
+      return _students;
+    }
+    return _students.where((s) => s['className'] == _selectedClassFilter).toList();
+  }
+
+  Future<void> _selectPeriod() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2025),
+      lastDate: DateTime(2030),
+      initialDateRange: _selectedDateRange ?? DateTimeRange(
+        start: _selectedDate.subtract(const Duration(days: 3)),
+        end: _selectedDate,
+      ),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDateRange = picked;
+        _selectedDate = picked.start;
+      });
+    }
+  }
 
   void _toggleSelection(int index, bool? selected) {
     if (!_isTeacher) return;
@@ -476,33 +503,97 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ),
         body: Column(
           children: [
-            // Top 4 blocks
+            // Compact top controls
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildTopBlock('تاریخ', '${_selectedDate.day}-${_selectedDate.month}-${_selectedDate.year}', Icons.calendar_month, true),
-                  const SizedBox(width: 4),
-                  _buildTopBlock('وقت', '09:15 AM\nصبح', Icons.access_time, false),
-                  const SizedBox(width: 4),
-                  _buildTopBlock('دن', 'ہفتہ\n${_selectedDate.day}-${_selectedDate.month}-${_selectedDate.year}', Icons.calendar_today, false),
-                  const SizedBox(width: 4),
-                  _buildTopBlock('شفٹ\nصبح', 'تبدیل کریں', Icons.people_alt, true),
+                  // Period Selector Chip
+                  ActionChip(
+                    avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: Colors.indigo),
+                    label: Text(
+                      _selectedDateRange == null
+                          ? '${_selectedDate.day}-${_selectedDate.month}-${_selectedDate.year}'
+                          : '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: _selectPeriod,
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  // Batch Dropdown Selector
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: DropdownButton<String>(
+                      value: _selectedClassFilter,
+                      underline: const SizedBox(),
+                      icon: const Icon(Icons.arrow_drop_down, size: 16),
+                      style: TextStyle(fontSize: 11, color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedClassFilter = val;
+                          });
+                        }
+                      },
+                      items: ['All', 'Class 7 (A)', 'Class 6 (B)']
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                          .toList(),
+                    ),
+                  ),
+                  // Shift Toggle ActionChip
+                  ActionChip(
+                    avatar: const Icon(Icons.access_time_filled, size: 14, color: Colors.indigo),
+                    label: Text(loc.locale.languageCode == 'en' ? 'Morning' : 'صبح', style: const TextStyle(fontSize: 11)),
+                    onPressed: () {},
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ],
               ),
             ),
-            // Counters
+            // Compact counters row
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildCounterBlock('کل طلبہ', _students.length.toString(), Colors.blue, Icons.people),
-                  const SizedBox(width: 4),
-                  _buildCounterBlock('حاضر', presentCount.toString(), Colors.green, Icons.check_circle),
-                  const SizedBox(width: 4),
-                  _buildCounterBlock('غیر حاضر', absentCount.toString(), Colors.red, Icons.cancel),
-                  const SizedBox(width: 4),
-                  _buildCounterBlock('دیر سے آئے', lateCount.toString(), Colors.orange, Icons.access_time_filled),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(loc.locale.languageCode == 'en' ? "Total" : "کل", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      Text(': ${_filteredStudents.length}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(loc.locale.languageCode == 'en' ? "Present" : "حاضر", style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
+                      Text(': $presentCount', style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(loc.locale.languageCode == 'en' ? "Absent" : "غیر حاضر", style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold)),
+                      Text(': $absentCount', style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(loc.locale.languageCode == 'en' ? "Late" : "دیر سے آئے", style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.bold)),
+                      Text(': $lateCount', style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -669,9 +760,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       // Table List
                       Expanded(
                         child: ListView.builder(
-                          itemCount: _students.length,
+                          itemCount: _filteredStudents.length,
                           itemBuilder: (ctx, index) {
-                            final student = _students[index];
+                            final student = _filteredStudents[index];
+                            final originalIndex = _students.indexOf(student);
                             final status = student['attendance'] as String? ?? 'present';
                             final isSelected = _selectedIndices.contains(index);
                             final isEn = widget.languageController.locale.languageCode == 'en';
@@ -695,7 +787,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                     width: 40,
                                     child: _isTeacher ? Checkbox(
                                       value: isSelected,
-                                      onChanged: (v) => _toggleSelection(index, v),
+                                      onChanged: (v) => _toggleSelection(originalIndex, v),
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                     ) : const SizedBox(),
                                   ),
@@ -707,7 +799,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                         GestureDetector(
                                           onTap: _isTeacher ? () {
                                             setState(() {
-                                              student['hasBooks'] = !hasBooks;
+                                              _students[originalIndex]['hasBooks'] = !hasBooks;
                                             });
                                             _saveData();
                                           } : null,
@@ -716,7 +808,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                         GestureDetector(
                                           onTap: _isTeacher ? () {
                                             setState(() {
-                                              student['hasUniform'] = !hasUniform;
+                                              _students[originalIndex]['hasUniform'] = !hasUniform;
                                             });
                                             _saveData();
                                           } : null,
@@ -725,7 +817,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                         GestureDetector(
                                           onTap: _isTeacher ? () {
                                             setState(() {
-                                              student['hasCap'] = !hasCap;
+                                              _students[originalIndex]['hasCap'] = !hasCap;
                                             });
                                             _saveData();
                                           } : null,
@@ -737,7 +829,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                   Expanded(
                                     flex: 2,
                                     child: InkWell(
-                                      onTap: _isTeacher ? () => _markAttendance(index, status == 'late' ? 'present' : 'late') : null,
+                                      onTap: _isTeacher ? () => _markAttendance(originalIndex, status == 'late' ? 'present' : 'late') : null,
                                       child: Container(
                                         margin: const EdgeInsets.symmetric(horizontal: 4),
                                         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -758,7 +850,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                   Expanded(
                                     flex: 2,
                                     child: InkWell(
-                                      onTap: _isTeacher ? () => _markAttendance(index, status == 'absent' ? 'present' : 'absent') : null,
+                                      onTap: _isTeacher ? () => _markAttendance(originalIndex, status == 'absent' ? 'present' : 'absent') : null,
                                       child: Container(
                                         margin: const EdgeInsets.symmetric(horizontal: 4),
                                         padding: const EdgeInsets.symmetric(vertical: 4),

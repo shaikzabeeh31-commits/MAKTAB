@@ -1525,6 +1525,9 @@ class _StudentListScreenState extends State<StudentListScreen> {
 
   bool _isTableView = false;
   String _admissionFilter = 'all'; // 'all', 'new', 'old'
+  String _selectedClassFilter = 'All';
+  DateTimeRange? _selectedDateRange;
+  DateTime _selectedDate = DateTime.now();
   String _searchQuery = '';
   bool _isSearching = false;
   String _feeFilter = 'all'; // 'all', 'paid', 'due'
@@ -1968,8 +1971,32 @@ class _StudentListScreenState extends State<StudentListScreen> {
     );
   }
 
+  Future<void> _selectPeriod() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2025),
+      lastDate: DateTime(2030),
+      initialDateRange: _selectedDateRange ?? DateTimeRange(
+        start: _selectedDate.subtract(const Duration(days: 3)),
+        end: _selectedDate,
+      ),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDateRange = picked;
+        _selectedDate = picked.start;
+      });
+    }
+  }
+
   List<Map<String, dynamic>> _getDisplayedStudentsList() {
     return studentsList.where((student) {
+      if (_selectedClassFilter != 'All') {
+        if (student['className'] != _selectedClassFilter) return false;
+      }
+      if (_selectedClassFilter != 'All') {
+        if (student['className'] != _selectedClassFilter) return false;
+      }
       final isNew = student['isNewAdmission'] == true;
       if (_admissionFilter == 'new' && !isNew) return false;
       if (_admissionFilter == 'old' && isNew) return false;
@@ -2049,9 +2076,19 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   ),
                   onChanged: (val) => setState(() => _searchQuery = val),
                 )
-              : Text(
-                  loc.translate('students_list'),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      loc.translate('students_list'),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    Text(
+                      'استاد: $_loggedInTeacherName',
+                      style: const TextStyle(fontSize: 10, color: Colors.white70),
+                    ),
+                  ],
                 ),
           centerTitle: !_isSearching,
           backgroundColor: Colors.green,
@@ -2223,116 +2260,104 @@ class _StudentListScreenState extends State<StudentListScreen> {
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
+                  // Compact Top Controls Bar
                   Container(
-                    width: double.infinity,
-                    color: const Color(0xFF074E32),
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    color: isDark ? const Color(0xFF0F172A) : Colors.green.shade50,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(Icons.person, color: Colors.amberAccent),
-                        const SizedBox(width: 8),
-                        Text(
-                          'استاد: $_loggedInTeacherName',
-                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Jameel Noori Nastaleeq', height: 1.6),
+                        // Period Selector
+                        ActionChip(
+                          avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: Colors.green),
+                          label: Text(
+                            _selectedDateRange == null
+                                ? '${_selectedDate.day}-${_selectedDate.month}-${_selectedDate.year}'
+                                : '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                          onPressed: _selectPeriod,
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        // Batch Dropdown Selector
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(16),
+                            color: Colors.white,
+                          ),
+                          child: DropdownButton<String>(
+                            value: _selectedClassFilter,
+                            underline: const SizedBox(),
+                            icon: const Icon(Icons.arrow_drop_down, size: 16),
+                            style: const TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.bold),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() {
+                                  _selectedClassFilter = val;
+                                });
+                              }
+                            },
+                            items: ['All', 'Class 7 (A)', 'Class 6 (B)']
+                                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                                .toList(),
+                          ),
+                        ),
+                        // Admission Filter
+                        DropdownButton<String>(
+                          value: _admissionFilter,
+                          underline: const SizedBox(),
+                          icon: const Icon(Icons.filter_alt_rounded, size: 14, color: Colors.green),
+                          style: const TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.bold),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _admissionFilter = val;
+                              });
+                            }
+                          },
+                          items: [
+                            DropdownMenuItem(value: 'all', child: Text('${loc.translate('all')} (${studentsList.length})')),
+                            DropdownMenuItem(value: 'new', child: Text('${loc.translate('new_admission')} ($newCount)')),
+                            DropdownMenuItem(value: 'old', child: Text('${loc.translate('old_admission')} ($oldCount)')),
+                          ],
+                        ),
+                        // Fee Filter
+                        DropdownButton<String>(
+                          value: _feeFilter,
+                          underline: const SizedBox(),
+                          icon: const Icon(Icons.currency_rupee, size: 14, color: Colors.green),
+                          style: const TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.bold),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _feeFilter = val;
+                              });
+                            }
+                          },
+                          items: const [
+                            DropdownMenuItem(value: 'all', child: Text('All Fees')),
+                            DropdownMenuItem(value: 'paid', child: Text('Paid')),
+                            DropdownMenuItem(value: 'due', child: Text('Due')),
+                          ],
                         ),
                       ],
                     ),
                   ),
-
-                  // Feature 15: Today's Attendance Overview Metric Cards
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    color: isDark ? const Color(0xFF0F172A) : Colors.green.shade50.withValues(alpha: 0.5),
+                  // Compact metrics summary
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildMetricCard(
-                          title: isRtl ? 'کل طلبہ' : 'Total Students',
-                          value: '${studentsList.length}',
-                          icon: Icons.people_rounded,
-                          color: Colors.blue,
-                          filterValue: 'all',
-                        ),
-                        const SizedBox(width: 8),
-                        _buildMetricCard(
-                          title: isRtl ? 'حاضر طلبہ' : 'Present Today',
-                          value: '${studentsList.where((s) => s['isPresent'] != false).length}',
-                          icon: Icons.check_circle_rounded,
-                          color: Colors.green,
-                          filterValue: 'present',
-                        ),
-                        const SizedBox(width: 8),
-                        _buildMetricCard(
-                          title: isRtl ? 'غیر حاضر' : 'Absent Today',
-                          value: '${studentsList.where((s) => s['isPresent'] == false).length}',
-                          icon: Icons.cancel_rounded,
-                          color: Colors.red,
-                          filterValue: 'absent',
-                        ),
+                        Text('${isRtl ? "کل طلبہ" : "Total"}: ${displayedStudents.length}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 12),
+                        Text('${isRtl ? "حاضر" : "Present"}: ${displayedStudents.where((s) => s['isPresent'] != false).length}', style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 12),
+                        Text('${isRtl ? "غیر حاضر" : "Absent"}: ${displayedStudents.where((s) => s['isPresent'] == false).length}', style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold)),
                       ],
-                    ),
-                  ),
-
-                  // Filter Chips
-                  Container(
-                    color: isDark ? const Color(0xFF1C2541) : Colors.grey.shade100,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          ChoiceChip(
-                            label: Text('${loc.translate('all')} (${studentsList.length})'),
-                            selected: _admissionFilter == 'all',
-                            onSelected: (val) {
-                              if (val) setState(() => _admissionFilter = 'all');
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          ChoiceChip(
-                            label: Text('${loc.translate('new_admission')} ($newCount)'),
-                            selectedColor: Colors.green.shade200,
-                            selected: _admissionFilter == 'new',
-                            onSelected: (val) {
-                              if (val) setState(() => _admissionFilter = 'new');
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          ChoiceChip(
-                            label: Text('${loc.translate('old_admission')} ($oldCount)'),
-                            selectedColor: Colors.blue.shade200,
-                            selected: _admissionFilter == 'old',
-                            onSelected: (val) {
-                              if (val) setState(() => _admissionFilter = 'old');
-                            },
-                          ),
-                          const SizedBox(width: 16),
-                          ChoiceChip(
-                            label: const Text('All Fees'),
-                            selected: _feeFilter == 'all',
-                            onSelected: (val) {
-                              if (val) setState(() => _feeFilter = 'all');
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          ChoiceChip(
-                            label: const Text('Paid'),
-                            selectedColor: Colors.green.shade200,
-                            selected: _feeFilter == 'paid',
-                            onSelected: (val) {
-                              if (val) setState(() => _feeFilter = 'paid');
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          ChoiceChip(
-                            label: const Text('Due'),
-                            selectedColor: Colors.red.shade200,
-                            selected: _feeFilter == 'due',
-                            onSelected: (val) {
-                              if (val) setState(() => _feeFilter = 'due');
-                            },
-                          ),
-                        ],
-                      ),
                     ),
                   ),
 

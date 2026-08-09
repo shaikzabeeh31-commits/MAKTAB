@@ -57,6 +57,7 @@ class _FeeScreenState extends State<FeeScreen> {
 
   // ── selection ──
   final Set<int> _selectedIndices = {};
+  DateTimeRange? _selectedDateRange;
   bool _selectAll = false;
 
   // ── expand timeline rows ──
@@ -79,6 +80,26 @@ class _FeeScreenState extends State<FeeScreen> {
       '${_kMonths[_selectedMonthIndex]} $_selectedYear';
 
   // ── filter ──
+  Future<void> _selectPeriod() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2025),
+      lastDate: DateTime(2030),
+      initialDateRange: _selectedDateRange ?? DateTimeRange(
+        start: DateTime(_selectedYear, _selectedMonthIndex + 1, 1),
+        end: DateTime(_selectedYear, _selectedMonthIndex + 1, 30),
+      ),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDateRange = picked;
+        _selectedMonthIndex = picked.start.month - 1;
+        _selectedYear = picked.start.year;
+      });
+      _applyFilter();
+    }
+  }
+
   void _applyFilter() {
     setState(() {
       _filtered = _students.asMap().entries.where((e) {
@@ -985,6 +1006,7 @@ class _FeeScreenState extends State<FeeScreen> {
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final isEn = loc.locale.languageCode == 'en';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final alertCount =
         _filtered.where((e) => _pending(_students[e.key]) > 0).length;
     final pendingCount =
@@ -1114,75 +1136,173 @@ class _FeeScreenState extends State<FeeScreen> {
         ],
       ),
       body: Column(children: [
-        _buildDashboardSummary(),
-        // Quick Actions Row
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+        // Compact Fee header controls
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Period Chip with Chevrons
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left_rounded, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        if (_selectedMonthIndex == 0) {
+                          _selectedMonthIndex = 11;
+                          _selectedYear--;
+                        } else {
+                          _selectedMonthIndex--;
+                        }
+                        _applyFilter();
+                      });
+                    },
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 4),
+                  ActionChip(
+                    avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: _kNavy),
+                    label: Text(
+                      _selectedDateRange == null
+                          ? '${kFeeMonths[_selectedMonthIndex]} $_selectedYear'
+                          : '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: _selectPeriod,
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right_rounded, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        if (_selectedMonthIndex == 11) {
+                          _selectedMonthIndex = 0;
+                          _selectedYear++;
+                        } else {
+                          _selectedMonthIndex++;
+                        }
+                        _applyFilter();
+                      });
+                    },
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              // Batch selector
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: DropdownButton<String>(
+                  value: _selectedClass,
+                  underline: const SizedBox(),
+                  icon: const Icon(Icons.arrow_drop_down, size: 16),
+                  style: TextStyle(fontSize: 11, color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _selectedClass = val;
+                        _applyFilter();
+                      });
+                    }
+                  },
+                  items: ['All', 'Class 7 (A)', 'Class 6 (B)']
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+                ),
+              ),
+              // Session Switcher
+              _SessionToggle(
+                value: _selectedSession,
+                onChanged: (v) {
+                  _selectedSession = v;
+                  _applyFilter();
+                },
+              ),
+            ],
+          ),
+        ),
+        // Compact Quick Actions Row
+        Container(
+          height: 30,
+          color: Colors.white,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                ElevatedButton.icon(
+                const SizedBox(width: 8),
+                ActionChip(
+                  avatar: const Icon(Icons.bar_chart_rounded, size: 12, color: Colors.blue),
+                  label: const Text('Collection Analytics', style: TextStyle(fontSize: 9)),
                   onPressed: () {},
-                  icon: const Icon(Icons.bar_chart_rounded, size: 14, color: Colors.blue),
-                  label: const Text('Collection Analytics', style: TextStyle(fontSize: 10)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    elevation: 1,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    side: BorderSide(color: Colors.grey.shade200),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
+                  visualDensity: VisualDensity.compact,
                 ),
-                const SizedBox(width: 6),
-                ElevatedButton.icon(
+                const SizedBox(width: 4),
+                ActionChip(
+                  avatar: const Icon(Icons.receipt_long_rounded, size: 12, color: Colors.orange),
+                  label: const Text('Teacher Ledger', style: TextStyle(fontSize: 9)),
                   onPressed: () {},
-                  icon: const Icon(Icons.receipt_long_rounded, size: 14, color: Colors.orange),
-                  label: const Text('Teacher Ledger', style: TextStyle(fontSize: 10)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    elevation: 1,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    side: BorderSide(color: Colors.grey.shade200),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
+                  visualDensity: VisualDensity.compact,
                 ),
-                const SizedBox(width: 6),
-                ElevatedButton.icon(
+                const SizedBox(width: 4),
+                ActionChip(
+                  avatar: const Icon(Icons.verified_user_rounded, size: 12, color: Colors.green),
+                  label: const Text('Annual Audit', style: TextStyle(fontSize: 9)),
                   onPressed: () {},
-                  icon: const Icon(Icons.verified_user_rounded, size: 14, color: Colors.green),
-                  label: const Text('Annual Audit', style: TextStyle(fontSize: 10)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    elevation: 1,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    side: BorderSide(color: Colors.grey.shade200),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
+                  visualDensity: VisualDensity.compact,
                 ),
-                const SizedBox(width: 6),
-                ElevatedButton.icon(
+                const SizedBox(width: 4),
+                ActionChip(
+                  avatar: const Icon(Icons.admin_panel_settings_rounded, size: 12, color: Colors.purple),
+                  label: const Text('Collector Role', style: TextStyle(fontSize: 9)),
                   onPressed: () {},
-                  icon: const Icon(Icons.admin_panel_settings_rounded, size: 14, color: Colors.purple),
-                  label: const Text('Collector Role', style: TextStyle(fontSize: 10)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    elevation: 1,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    side: BorderSide(color: Colors.grey.shade200),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
+                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
           ),
         ),
-        _buildFilterBar(),
-        _buildCalendarBar(),
+        // Compact Revenue stats row
+        Builder(
+          builder: (ctx) {
+            final isDark = Theme.of(ctx).brightness == Brightness.dark;
+            final double totalCollected = _filtered.fold(0, (sum, e) => sum + _paid(_students[e.key]));
+            final double totalPending = _filtered.fold(0, (sum, e) => sum + _pending(_students[e.key]));
+            final double grandTotal = totalCollected + totalPending;
+            final double progress = grandTotal == 0 ? 0 : (totalCollected / grandTotal).clamp(0.0, 1.0);
+            return Container(
+              color: isDark ? const Color(0xFF1E293B) : Colors.green.shade50,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Row(
+                children: [
+                  Text(
+                    'Collected: ₹${_formatCurrency(totalCollected)} | Due: ₹${_formatCurrency(totalPending)} (${(progress * 100).toInt()}%)',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.notifications_active, size: 16, color: _kRed),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Nudge All Defaulters',
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reminders sent to all defaulters!'), backgroundColor: _kGreen));
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
