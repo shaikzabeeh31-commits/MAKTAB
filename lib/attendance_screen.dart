@@ -748,8 +748,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                         ),
                                         child: Column(
                                           children: [
-                                            Icon(Icons.access_time, size: 16, color: status == 'late' ? Colors.orange : Colors.grey),
-                                            TranslatedText('دیر سے آیا', style: TextStyle(fontSize: 8, color: status == 'late' ? Colors.orange : Colors.grey)),
+                                            Icon(Icons.access_time, size: 13.5, color: status == 'late' ? Colors.orange : Colors.grey),
+                                            TranslatedText('دیر سے آیا', style: TextStyle(fontSize: 7.5, color: status == 'late' ? Colors.orange : Colors.grey)),
                                           ],
                                         ),
                                       ),
@@ -761,7 +761,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                       onTap: _isTeacher ? () => _markAttendance(index, status == 'absent' ? 'present' : 'absent') : null,
                                       child: Container(
                                         margin: const EdgeInsets.symmetric(horizontal: 4),
-                                        padding: const EdgeInsets.symmetric(vertical: 6),
+                                        padding: const EdgeInsets.symmetric(vertical: 4),
                                         decoration: BoxDecoration(
                                           color: status == 'present' ? Colors.green.shade50.withValues(alpha: isDark ? 0.15 : 1) : (status == 'absent' ? Colors.red.shade50.withValues(alpha: isDark ? 0.15 : 1) : (isDark ? const Color(0xFF1E293B) : Colors.grey.shade100)),
                                           border: Border.all(color: status == 'present' ? Colors.green : (status == 'absent' ? Colors.red : (isDark ? const Color(0xFF334155) : Colors.grey.shade300))),
@@ -771,11 +771,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
                                             TranslatedText(status == 'absent' ? 'غیر حاضر' : 'حاضر', 
-                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: status == 'absent' ? Colors.red : Colors.green)),
-                                            if (status == 'absent') const SizedBox(width: 2),
-                                            if (status == 'absent') const Icon(Icons.close, size: 12, color: Colors.red),
-                                            if (status == 'present') const SizedBox(width: 2),
-                                            if (status == 'present') const Icon(Icons.check, size: 12, color: Colors.green),
+                                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: status == 'absent' ? Colors.red : Colors.green)),
+                                            if (status == 'absent') const SizedBox(width: 1),
+                                            if (status == 'absent') const Icon(Icons.close, size: 9.5, color: Colors.red),
+                                            if (status == 'present') const SizedBox(width: 1),
+                                            if (status == 'present') const Icon(Icons.check, size: 9.5, color: Colors.green),
                                           ],
                                         ),
                                       ),
@@ -950,7 +950,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return Tooltip(
       message: label,
       child: Container(
-        padding: const EdgeInsets.all(5),
+        padding: const EdgeInsets.all(3.5),
         decoration: BoxDecoration(
           color: isOk
               ? Colors.green.withValues(alpha: isDark ? 0.18 : 0.08)
@@ -965,7 +965,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ),
         child: Icon(
           icon,
-          size: 16,
+          size: 13.5,
           color: isOk ? Colors.green : Colors.red,
         ),
       ),

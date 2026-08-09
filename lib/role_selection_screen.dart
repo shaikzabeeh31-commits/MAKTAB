@@ -1032,8 +1032,10 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
     final info = _roleInfo;
     return ListenableBuilder(
       listenable: widget.languageController,
-      builder: (context, _) => Scaffold(
-        drawer: _buildSideDrawer(context, info),
+      builder: (context, _) {
+        final isEn = widget.languageController.locale.languageCode == 'en';
+        return Scaffold(
+          drawer: _buildSideDrawer(context, info),
         appBar: AppBar(
           backgroundColor: Theme.of(context).brightness == Brightness.dark ? null : info.primaryColor,
           foregroundColor: Theme.of(context).brightness == Brightness.dark ? null : Colors.white,
@@ -1049,18 +1051,9 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'مکتب ایپ — ${info.titleUrdu} ڈیش بورڈ',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    info.titleEnglish,
-                    style: const TextStyle(fontSize: 11, color: Colors.white70),
-                  ),
-                ],
+              Text(
+                isEn ? 'Maktab App — ${info.titleEnglish}' : 'مکتب ایپ — ${info.titleUrdu}',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -1070,7 +1063,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 widget.currentRole == AppRole.teacher)
               IconButton(
                 icon: const Icon(Icons.campaign_rounded, color: Colors.amberAccent),
-                tooltip: 'اہم اعلان بھیجیں (Send Announcement)',
+                tooltip: isEn ? 'Send Announcement' : 'اعلان بھیجیں',
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -1084,18 +1077,6 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                   );
                 },
               ),
-            IconButton(
-              icon: const Icon(Icons.logout_rounded),
-              tooltip: 'لاگ آؤٹ (Logout)',
-              onPressed: () async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.remove('user_selected_role');
-                widget.onChangeRole();
-              },
-            ),
-            ThemeButton(controller: widget.themeController),
-            const SizedBox(height: 8),
-            LanguageButton(controller: widget.languageController),
           ],
         ),
         body: _isLoading
@@ -1123,9 +1104,10 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             child: _buildBottomNav(),
           ),
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
+}
 
   Widget _buildSideDrawer(BuildContext context, RoleInfo info) {
     final loc = AppLocalizations.of(context);
@@ -1398,6 +1380,16 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 ),
               );
             },
+          ),
+          ListTile(
+            leading: const Icon(Icons.palette_rounded, color: Colors.indigo),
+            title: Text(isEn ? 'Theme Settings' : 'ترتیبات تھیم'),
+            trailing: ThemeButton(controller: widget.themeController),
+          ),
+          ListTile(
+            leading: const Icon(Icons.language_rounded, color: Colors.teal),
+            title: Text(isEn ? 'Select Language' : 'زبان منتخب کریں'),
+            trailing: LanguageButton(controller: widget.languageController),
           ),
           const Divider(),
           ListTile(

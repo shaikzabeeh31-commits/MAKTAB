@@ -411,7 +411,9 @@ void main() {
       _useSize(tester, 1080, 2400);
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.edit_note_rounded).first);
+      await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit Fee').first);
       await tester.pumpAndSettle();
       expect(find.text('Save'), findsAtLeastNWidgets(1));
       expect(find.byType(TextField), findsAtLeastNWidgets(1));
@@ -422,7 +424,9 @@ void main() {
       _useSize(tester, 1080, 2400);
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.edit_note_rounded).first);
+      await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit Fee').first);
       await tester.pumpAndSettle();
       expect(find.text('Receipt PDF'), findsOneWidget);
       expect(find.text('Timeline PDF'), findsOneWidget);
@@ -460,7 +464,7 @@ void main() {
     testWidgets('batch PDF button exists in AppBar', (tester) async {
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(PopupMenuButton<String>).first);
+      await tester.tap(find.byTooltip('Tools'));
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.picture_as_pdf_rounded), findsOneWidget);
     });
@@ -476,6 +480,8 @@ void main() {
       _useSize(tester, 1080, 1920);
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
+      await tester.pumpAndSettle();
       expect(find.byIcon(Icons.chat_rounded), findsWidgets);
     });
 
@@ -485,12 +491,16 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Shaam'));
       await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
+      await tester.pumpAndSettle();
       expect(find.byIcon(Icons.sms_rounded), findsWidgets);
     });
 
     testWidgets('call button shown for each student', (tester) async {
       _useSize(tester, 1080, 1920);
       await tester.pumpWidget(_feeScreen());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.phone_rounded), findsWidgets);
     });
@@ -518,8 +528,9 @@ void main() {
       _useSize(tester, 1080, 1920);
       await tester.pumpWidget(_feeScreen());
       await tester.pumpAndSettle();
-      // Find the native script text for urdu in a small container
-      await tester.tap(find.text('اردو').first);
+      await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Language:').first);
       await tester.pumpAndSettle();
       expect(find.text('Select Message Language'), findsOneWidget);
     });

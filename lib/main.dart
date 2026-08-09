@@ -2535,22 +2535,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                                                         ),
                                                       ),
                                                     ),
-                                                    Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        IconButton(
-                                                          icon: const Icon(Icons.call, color: Colors.blue, size: 18),
-                                                          onPressed: () => makePhoneCall(student['fatherPhone']?.toString() ?? ''),
-                                                        ),
-                                                        IconButton(
-                                                          icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.green, size: 18),
-                                                          onPressed: () => openWhatsApp(
-                                                            phone: student['fatherPhone']?.toString() ?? '',
-                                                            message: 'السلام علیکم، مکتب کی اطلاع: ${student['name']} کے حوالے سے رابطہ کریں۔',
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
+
                                                     PopupMenuButton<String>(
                                                       icon: const Icon(Icons.more_vert),
                                                       onSelected: (value) {

@@ -1705,45 +1705,20 @@ class _FeeScreenState extends State<FeeScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  // edit
-                  SizedBox(
-                    width: 32,
-                    child: _IconBtn(
-                      icon: Icons.edit_note_rounded,
-                      color: _kNavy,
-                      size: 20,
-                      onTap: () => _showEditFeeDialog(globalIdx),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  // alert bell
-                  SizedBox(
-                    width: 32,
-                    child: _IconBtn(
-                      icon: hasPending
-                          ? Icons.notifications_active_rounded
-                          : Icons.notifications_none_rounded,
-                      color: hasPending
-                          ? const Color(0xFFFFB300)
-                          : Colors.grey.shade400,
-                      size: 19,
-                      onTap: () {
+                  const Spacer(),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert_rounded, size: 20),
+                    padding: EdgeInsets.zero,
+                    onSelected: (value) async {
+                      if (value == 'edit') {
+                        _showEditFeeDialog(globalIdx);
+                      } else if (value == 'alert') {
                         final msg = _feeMessage(s);
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text(msg),
-                            backgroundColor:
-                                hasPending ? _kNavy : _kGreen,
+                            backgroundColor: hasPending ? _kNavy : _kGreen,
                             duration: const Duration(seconds: 4)));
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  // paid check (interactive 1-tap toggle to paid)
-                  SizedBox(
-                    width: 32,
-                    child: GestureDetector(
-                      onTap: () {
+                      } else if (value == 'toggle_paid') {
                         final tot = s['feeAmount']?.toString() ?? '300';
                         final newStatus = isPaid ? 'due' : 'paid';
                         final newPaid = isPaid ? '0' : tot;
@@ -1755,128 +1730,92 @@ class _FeeScreenState extends State<FeeScreen> {
                           duration: const Duration(seconds: 2),
                           backgroundColor: isPaid ? _kOrange : _kGreen,
                         ));
-                      },
-                      child: Container(
-                        width: 32,
-                        height: 26,
-                        decoration: BoxDecoration(
-                          color: isPaid
-                              ? _kGreen.withValues(alpha: 0.15)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Icon(
-                          isPaid
-                              ? Icons.check_circle_rounded
-                              : Icons.check_circle_outline_rounded,
-                          color: isPaid ? _kGreen : Colors.grey.shade400,
-                          size: 18,
+                      } else if (value == 'language') {
+                        _showLanguagePicker(globalIdx);
+                      } else if (value == 'method') {
+                        final newMethod = isWhatsApp ? 'SMS' : 'WhatsApp';
+                        setState(() {
+                          _students[globalIdx]['messageMethod'] = newMethod;
+                        });
+                        _saveChanges();
+                      } else if (value == 'call') {
+                        _openCall(s['fatherPhone']?.toString() ?? '');
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.edit_note_rounded, color: Colors.blue),
+                            const SizedBox(width: 8),
+                            Text(loc.locale.languageCode == 'en' ? 'Edit Fee' : 'فیس کی ترمیم'),
+                          ],
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  // language + app method toggle
-                  SizedBox(
-                    width: 80,
-                    child: Row(children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => _showLanguagePicker(globalIdx),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 3, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(
-                                  color: _kNavy.withValues(alpha: 0.2)),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(children: [
-                              Expanded(
-                                child: Text(
-                                  langOption.nativeScript,
-                                  style: const TextStyle(
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.w600),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
+                      PopupMenuItem(
+                        value: 'alert',
+                        child: Row(
+                          children: [
+                            Icon(hasPending ? Icons.notifications_active_rounded : Icons.notifications_none_rounded, color: Colors.orange),
+                            const SizedBox(width: 8),
+                            Text(loc.locale.languageCode == 'en' ? 'Send Reminder' : 'یاددہانی بھیجیں'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'toggle_paid',
+                        child: Row(
+                          children: [
+                            Icon(isPaid ? Icons.check_circle_outline_rounded : Icons.check_circle_rounded, color: Colors.green),
+                            const SizedBox(width: 8),
+                            Text(isPaid 
+                                ? (loc.locale.languageCode == 'en' ? 'Mark Pending' : 'واجب الادا کریں') 
+                                : (loc.locale.languageCode == 'en' ? 'Mark Paid' : 'ادا شدہ کریں')),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'language',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.language_rounded, color: Colors.teal),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${loc.locale.languageCode == 'en' ? "Language" : "زبان"}: ${langOption.nativeScript}',
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              const Icon(Icons.arrow_drop_down, size: 12),
-                            ]),
-                          ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 3),
-                      // Toggle SMS / WhatsApp method on tap
-                      GestureDetector(
-                        onTap: () {
-                          final newMethod =
-                              isWhatsApp ? 'SMS' : 'WhatsApp';
-                          setState(() {
-                            _students[globalIdx]['messageMethod'] = newMethod;
-                          });
-                          _saveChanges();
-                        },
-                        onLongPress: () async {
-                          final msg = _feeMessage(s);
-                          final phone = s['fatherPhone']?.toString() ?? '';
-                          if (isWhatsApp) {
-                            await _openWhatsApp(phone, msg);
-                          } else {
-                            await _openSms(phone, msg);
-                          }
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 26,
-                          height: 26,
-                          decoration: BoxDecoration(
-                            color: isWhatsApp
-                                ? _kWhatsApp
-                                : Colors.blue.shade600,
-                            borderRadius: BorderRadius.circular(6),
-                            boxShadow: [
-                              BoxShadow(
-                                color: (isWhatsApp
-                                        ? _kWhatsApp
-                                        : Colors.blue.shade600)
-                                    .withValues(alpha: 0.3),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              )
-                            ],
-                          ),
-                          child: Icon(
-                            isWhatsApp
-                                ? Icons.chat_rounded
-                                : Icons.sms_rounded,
-                            color: Colors.white,
-                            size: 14,
-                          ),
+                      PopupMenuItem(
+                        value: 'method',
+                        child: Row(
+                          children: [
+                            Icon(isWhatsApp ? Icons.chat_rounded : Icons.sms_rounded, color: Colors.indigo),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${loc.locale.languageCode == 'en' ? "Method" : "طریقہ"}: $method',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ]),
-                  ),
-                  const SizedBox(width: 4),
-                  // call
-                  SizedBox(
-                    width: 32,
-                    child: GestureDetector(
-                      onTap: () => _openCall(
-                          s['fatherPhone']?.toString() ?? ''),
-                      child: Container(
-                        width: 32,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: _kGreen,
-                          borderRadius: BorderRadius.circular(8),
+                      PopupMenuItem(
+                        value: 'call',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.phone_rounded, color: Colors.green),
+                            const SizedBox(width: 8),
+                            Text(loc.locale.languageCode == 'en' ? 'Call Father' : 'والد کو کال کریں'),
+                          ],
                         ),
-                        child: const Icon(Icons.phone_rounded,
-                            color: Colors.white, size: 16),
                       ),
-                    ),
+                    ],
                   ),
                 ]),
           ),
