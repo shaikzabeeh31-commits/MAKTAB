@@ -104,6 +104,7 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 
   void _applySubjectToAll() {
+    final loc = AppLocalizations.of(context);
     final text = globalSubjectController.text;
     if (text.isEmpty) return;
     setState(() {
@@ -114,8 +115,8 @@ class _LessonScreenState extends State<LessonScreen> {
       }
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('سبجیکٹ تمام طلبہ پر لاگو کر دیا گیا!', style: TextStyle()),
+      SnackBar(
+        content: Text(loc.locale.languageCode == 'en' ? 'Subject applied to all students!' : 'سبجیکٹ تمام طلبہ پر لاگو کر دیا گیا!', style: const TextStyle()),
         backgroundColor: Colors.green,
       ),
     );
@@ -167,7 +168,7 @@ class _LessonScreenState extends State<LessonScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: Text(isEn ? 'Select Subject' : 'مضمون منتخب کریں', style: const TextStyle()),
+          title: Text(loc.translate('select_subject'), style: const TextStyle()),
           content: SingleChildScrollView(
             child: Wrap(
               spacing: 8,
@@ -188,7 +189,7 @@ class _LessonScreenState extends State<LessonScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(isEn ? 'Cancel' : 'منسوخ'),
+              child: Text(loc.translate('cancel')),
             ),
           ],
         );
@@ -197,6 +198,7 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 
   void _showNotificationsDialog() {
+    final loc = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       builder: (ctx) => Container(
@@ -204,7 +206,7 @@ class _LessonScreenState extends State<LessonScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('نوٹیفکیشنز (Notifications)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(loc.locale.languageCode == 'en' ? 'Notifications' : 'نوٹیفکیشنز', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const Divider(),
             ListTile(leading: const Icon(Icons.check_circle, color: Colors.green), title: const Text('پچھلی حاضری کامیابی سے محفوظ ہو گئی۔', style: TextStyle())),
             ListTile(leading: const Icon(Icons.message, color: Colors.blue), title: const Text('ایڈمن کی جانب سے نیا پیغام موصول ہوا۔', style: TextStyle())),
@@ -215,6 +217,7 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 
   void _editShiftDialog() {
+    final loc = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) {
@@ -222,7 +225,7 @@ class _LessonScreenState extends State<LessonScreen> {
         return StatefulBuilder(
           builder: (context, setStateSB) {
             return AlertDialog(
-              title: const Text('شفٹ تبدیل کریں', style: TextStyle()),
+              title: Text(loc.locale.languageCode == 'en' ? 'Change Shift' : 'شفٹ تبدیل کریں', style: const TextStyle()),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: ['صبح', 'دوپہر', 'شام', 'رات'].map((shift) => RadioListTile(
@@ -235,11 +238,11 @@ class _LessonScreenState extends State<LessonScreen> {
                 )).toList(),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('کینسل')),
+                TextButton(onPressed: () => Navigator.pop(ctx), child: Text(loc.translate('cancel'))),
                 ElevatedButton(onPressed: () {
                   setState(() => currentShift = tempShift);
                   Navigator.pop(ctx);
-                }, child: const Text('محفوظ کریں')),
+                }, child: Text(loc.translate('save'))),
               ],
             );
           }
@@ -249,49 +252,51 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 
   void _editTeacherDialog() {
+    final loc = AppLocalizations.of(context);
     final ctrl = TextEditingController(text: teacherName);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('استاد کا نام تبدیل کریں', style: TextStyle()),
+        title: Text(loc.translate('change_teacher'), style: const TextStyle()),
         content: TextField(controller: ctrl, style: const TextStyle()),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('کینسل')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(loc.translate('cancel'))),
           ElevatedButton(onPressed: () async {
             setState(() => teacherName = ctrl.text);
             final prefs = await SharedPreferences.getInstance();
             prefs.setString('cred_teacher_name', ctrl.text);
             if (ctx.mounted) Navigator.pop(ctx);
-          }, child: const Text('محفوظ کریں')),
+          }, child: Text(loc.translate('save'))),
         ],
       ),
     );
   }
 
   void _editTopicDialog() {
+    final loc = AppLocalizations.of(context);
     final bookCtrl = TextEditingController(text: currentBook);
     final chapterCtrl = TextEditingController(text: currentChapter);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('آج کا موضوع تبدیل کریں', style: TextStyle()),
+        title: Text(loc.translate('change_topic'), style: const TextStyle()),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: bookCtrl, decoration: const InputDecoration(labelText: 'کتاب کا نام'), style: const TextStyle()),
+            TextField(controller: bookCtrl, decoration: InputDecoration(labelText: loc.translate('book_name')), style: const TextStyle()),
             const SizedBox(height: 8),
-            TextField(controller: chapterCtrl, decoration: const InputDecoration(labelText: 'سبق/سورت'), style: const TextStyle()),
+            TextField(controller: chapterCtrl, decoration: InputDecoration(labelText: loc.translate('lesson_surah')), style: const TextStyle()),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('کینسل')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(loc.translate('cancel'))),
           ElevatedButton(onPressed: () {
             setState(() {
               currentBook = bookCtrl.text;
               currentChapter = chapterCtrl.text;
             });
             Navigator.pop(ctx);
-          }, child: const Text('محفوظ کریں')),
+          }, child: Text(loc.translate('save'))),
         ],
       ),
     );
@@ -375,7 +380,7 @@ class _LessonScreenState extends State<LessonScreen> {
                     icon: Icons.calendar_today,
                     child: Column(
                       children: [
-                        const Text('ہفتہ Saturday', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                        Text(loc.locale.languageCode == 'en' ? 'Saturday' : 'ہفتہ', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                         Text(DateFormat('dd-MM-yyyy').format(selectedDate), style: const TextStyle(fontSize: 10)),
                         Text(_getIslamicDate(), style: const TextStyle(fontSize: 12)),
                       ],
@@ -406,7 +411,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       underline: const SizedBox(),
                       style: const TextStyle(color: Colors.black, fontSize: 14),
                       items: _availableGroups.map((g) {
-                        return DropdownMenuItem(value: g, child: Text(g == 'all' ? 'تمام گروپس' : g));
+                        return DropdownMenuItem(value: g, child: Text(g == 'all' ? (loc.locale.languageCode == 'en' ? 'All Groups' : 'تمام گروپس') : g));
                       }).toList(),
                       onChanged: (val) {
                         if (val != null) setState(() => selectedGroup = val);
@@ -499,7 +504,7 @@ class _LessonScreenState extends State<LessonScreen> {
                               ),
                               onPressed: _applySubjectToAll,
                               icon: const Icon(Icons.sync),
-                              label: Text(loc.locale.languageCode == 'en' ? 'Apply to All' : 'سب پر لاگو کریں', style: const TextStyle(fontSize: 18)),
+                              label: Text(loc.translate('apply_to_all'), style: const TextStyle(fontSize: 18)),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -672,6 +677,7 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 
   List<Widget> _buildGroupedTables() {
+    final loc = AppLocalizations.of(context);
     final grouped = _getGroupedStudents();
     List<Widget> tables = [];
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -704,19 +710,19 @@ class _LessonScreenState extends State<LessonScreen> {
                         Text(groupName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
                       ],
                     ),
-                    Text('طلبہ: ${indices.length}', style: const TextStyle(fontSize: 16, color: Colors.blue)),
+                    Text('${loc.locale.languageCode == 'en' ? "Students" : "طلبہ"}: ${indices.length}', style: const TextStyle(fontSize: 16, color: Colors.blue)),
                   ],
                 ),
               ),
               // Table Header
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                 child: Row(
                   children: [
                     SizedBox(width: 24, child: Text('#', style: TextStyle(fontSize: 10, color: Colors.grey), textAlign: TextAlign.center)),
-                    Expanded(flex: 2, child: Text('طالب علم کا نام', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
-                    Expanded(flex: 3, child: Text('سبجیکٹ (ایڈٹ کیا جا سکتا ہے)', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
-                    SizedBox(width: 60, child: Text('ریکارڈنگ / تصویر', style: TextStyle(fontSize: 10, color: Colors.grey), textAlign: TextAlign.center)),
+                    Expanded(flex: 2, child: Text(loc.translate('student_name'), style: const TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+                    Expanded(flex: 3, child: Text(loc.locale.languageCode == 'en' ? 'Subject (Editable)' : 'سبجیکٹ (ایڈٹ کیا جا سکتا ہے)', style: const TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+                    SizedBox(width: 60, child: Text(loc.locale.languageCode == 'en' ? 'Recording / Photo' : 'ریکارڈنگ / تصویر', style: const TextStyle(fontSize: 10, color: Colors.grey), textAlign: TextAlign.center)),
                   ],
                 ),
               ),

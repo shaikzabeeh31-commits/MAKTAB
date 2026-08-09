@@ -278,7 +278,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleBiometricLogin() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedPin = prefs.getString('cred_${widget.role.name}_pin') ?? '1234';
+    final savedPhone = prefs.getString('cred_${widget.role.name}_phone') ?? '';
+    final savedPin = prefs.getString('cred_${widget.role.name}_pin') ?? '';
+    
+    if (savedPhone.isEmpty || savedPin.isEmpty) {
+      if (mounted) {
+        final loc = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(loc.locale.languageCode == 'en' 
+                ? 'Please log in manually once to set up biometric access.' 
+                : 'بائیو میٹرک کے لیے پہلے ایک بار مینوئل لاگ ان کریں۔'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+    
+    _phoneCtrl.text = savedPhone;
     _pinCtrl.text = savedPin;
     await _handleLogin();
   }
