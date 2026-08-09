@@ -715,7 +715,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
   Widget _buildRoleHierarchyBanner() {
     return Container(
       color: const Color(0xFF0F172A),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(

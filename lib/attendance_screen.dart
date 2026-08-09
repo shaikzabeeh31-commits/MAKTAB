@@ -701,27 +701,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       icon: const Icon(Icons.arrow_drop_down, size: 16),
                       style: TextStyle(fontSize: 11, color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
                       onChanged: (val) {
-                        if (val == '__add_new__') {
-                          _showAddBatchDialog();
-                        } else if (val != null) {
+                        if (val != null) {
                           setState(() {
                             _selectedClassFilter = val;
                           });
                         }
                       },
-                      items: [
-                        ..._batchesList.map((c) => DropdownMenuItem(value: c, child: Text(c))),
-                        DropdownMenuItem(
-                          value: '__add_new__',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.add, size: 14, color: Colors.indigo),
-                              const SizedBox(width: 4),
-                              Text(loc.locale.languageCode == 'en' ? '+ Add Batch' : '+ نیا بیچ بنائیں', style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ),
-                      ],
+                      items: _batchesList.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                     ),
                   ),
                   ActionChip(
@@ -746,80 +732,72 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.green.shade700,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         '${loc.translate('present')}: $presentCount',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 11),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 10),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.red.shade700,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         '${loc.translate('absent')}: $absentCount',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 11),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 10),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.amber.shade800,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         '${loc.translate('late')}: $lateCount',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 11),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 10),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.indigo,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         '${loc.translate('total_students')}: ${_filteredStudents.length}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 11),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 10),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : const Color(0xFF074E32),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(loc.translate('student_attendance_list'), style: TextStyle(color: isDark ? Colors.white70 : Colors.white, fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.people, color: Colors.white, size: 18),
+                  ),
                 ],
               ),
             ),
+            const SizedBox(height: 4),
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -868,15 +846,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               ),
                             ),
                             Expanded(
-                              flex: 2, 
-                              child: Text(
-                                loc.translate('late_arrival'), 
-                                textAlign: TextAlign.center, 
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2, 
+                              flex: 6, 
                               child: Text(
                                 loc.translate('attendance_tap'), 
                                 textAlign: TextAlign.center, 

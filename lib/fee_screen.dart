@@ -1484,7 +1484,7 @@ class _FeeScreenState extends State<FeeScreen> {
       body: Column(children: [
         // Compact Fee header controls
         Container(
-          color: Theme.of(context).appBarTheme.backgroundColor ?? (isDark ? const Color(0xFF0F172A) : const Color(0xFF074E32)),
+          color: _kNavy,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -1559,9 +1559,7 @@ class _FeeScreenState extends State<FeeScreen> {
                       icon: const Icon(Icons.arrow_drop_down, size: 16),
                       style: TextStyle(fontSize: 11, color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
                       onChanged: (val) {
-                        if (val == '__add_new__') {
-                          _showAddBatchDialog();
-                        } else if (val != null) {
+                        if (val != null) {
                           setState(() {
                             _selectedClass = val;
                             _applyFilter();
@@ -1570,24 +1568,10 @@ class _FeeScreenState extends State<FeeScreen> {
                       },
                       items: [
                         ..._batchesList.map((c) => DropdownMenuItem(value: c, child: Text(c))),
-                        DropdownMenuItem(
-                          value: '__add_new__',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.add, size: 14, color: Colors.blue),
-                              const SizedBox(width: 4),
-                              Text(isEn ? '+ Add Batch' : '+ نیا بیچ بنائیں', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle_outline, size: 18, color: Colors.blue),
-                    tooltip: isEn ? 'Add Batch' : 'نیا بیچ بنائیں',
-                    onPressed: _showAddBatchDialog,
-                  ),
+
                 ],
               ),
               // Session Switcher
@@ -1611,13 +1595,13 @@ class _FeeScreenState extends State<FeeScreen> {
             final double grandTotal = totalCollected + totalPending;
             final double progress = grandTotal == 0 ? 0 : (totalCollected / grandTotal).clamp(0.0, 1.0);
             return Container(
-              color: isDark ? const Color(0xFF1E293B) : Colors.green.shade50,
+              color: _kNavy,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 children: [
                   Text(
                     '${loc.translate('collected')}: ₹${_formatCurrency(totalCollected)} | ${loc.translate('due')}: ₹${_formatCurrency(totalPending)} (${(progress * 100).toInt()}%)',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87),
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                   const Spacer(),
                   IconButton(

@@ -799,7 +799,7 @@ class _LessonScreenState extends State<LessonScreen> {
             // TOP INFO BAR
             Container(
               color: Theme.of(context).appBarTheme.backgroundColor ?? (isDark ? const Color(0xFF0F172A) : const Color(0xFF074E32)),
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
