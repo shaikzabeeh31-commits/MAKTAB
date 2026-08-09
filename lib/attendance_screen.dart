@@ -753,7 +753,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                               ),
                             ),
-                            const SizedBox(width: 40),
                           ],
                         ),
                       ),
@@ -765,7 +764,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             final student = _filteredStudents[index];
                             final originalIndex = _students.indexOf(student);
                             final status = student['attendance'] as String? ?? 'present';
-                            final isSelected = _selectedIndices.contains(index);
+                            final isSelected = _selectedIndices.contains(originalIndex);
                             final isEn = widget.languageController.locale.languageCode == 'en';
                             
                             final hasCap = student['hasCap'] as bool? ?? true;

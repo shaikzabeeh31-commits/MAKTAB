@@ -1645,29 +1645,17 @@ class _FeeScreenState extends State<FeeScreen> {
             ),
           ),
         ),
-        const SizedBox(width: 4),
-        const SizedBox(
-            width: 32,
-            child: Center(
-                child: Text('Edit', style: style, textAlign: TextAlign.center))),
-        const SizedBox(width: 4),
-        const SizedBox(
-            width: 32,
-            child: Center(child: Text('Alert', style: style, textAlign: TextAlign.center))),
-        const SizedBox(width: 4),
-        const SizedBox(
-            width: 32,
-            child: Center(
-                child: Text('Paid', style: style, textAlign: TextAlign.center))),
-        const SizedBox(width: 4),
-        const SizedBox(
-            width: 80,
-            child: Center(
-                child: Text('Lang/App', style: style, textAlign: TextAlign.center))),
-        const SizedBox(width: 4),
-        const SizedBox(
-            width: 32,
-            child: Center(child: Text('Call', style: style, textAlign: TextAlign.center))),
+        const Spacer(),
+        SizedBox(
+          width: 40,
+          child: Center(
+            child: Text(
+              isEn ? 'Actions' : 'کارروائی',
+              style: style,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
       ]),
     );
   }
