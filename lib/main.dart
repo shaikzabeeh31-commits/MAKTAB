@@ -2352,11 +2352,11 @@ class _StudentListScreenState extends State<StudentListScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('${isRtl ? "کل طلبہ" : "Total"}: ${displayedStudents.length}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        Text('${loc.translate('total')}: ${displayedStudents.length}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                         const SizedBox(width: 12),
-                        Text('${isRtl ? "حاضر" : "Present"}: ${displayedStudents.where((s) => s['isPresent'] != false).length}', style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
+                        Text('${loc.translate('present')}: ${displayedStudents.where((s) => s['isPresent'] != false).length}', style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
                         const SizedBox(width: 12),
-                        Text('${isRtl ? "غیر حاضر" : "Absent"}: ${displayedStudents.where((s) => s['isPresent'] == false).length}', style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold)),
+                        Text('${loc.translate('absent')}: ${displayedStudents.where((s) => s['isPresent'] == false).length}', style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),

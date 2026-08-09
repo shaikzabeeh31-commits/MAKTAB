@@ -426,9 +426,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('نوٹیفکیشنز (Notifications)', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text('نوٹیفکیشنز (Notifications)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const Divider(),
-            ListTile(leading: const Icon(Icons.check_circle, color: Colors.green), title: const Text('پچھلی حاضری کامیابی سے محفوظ ہو گئی۔', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq'))),
+            ListTile(leading: const Icon(Icons.check_circle, color: Colors.green), title: const Text('پچھلی حاضری کامیابی سے محفوظ ہو گئی۔', style: TextStyle())),
           ],
         ),
       ),

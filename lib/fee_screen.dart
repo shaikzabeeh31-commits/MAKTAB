@@ -1285,7 +1285,7 @@ class _FeeScreenState extends State<FeeScreen> {
               child: Row(
                 children: [
                   Text(
-                    'Collected: ₹${_formatCurrency(totalCollected)} | Due: ₹${_formatCurrency(totalPending)} (${(progress * 100).toInt()}%)',
+                    '${loc.translate('collected')}: ₹${_formatCurrency(totalCollected)} | ${loc.translate('due')}: ₹${_formatCurrency(totalPending)} (${(progress * 100).toInt()}%)',
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87),
                   ),
                   const Spacer(),

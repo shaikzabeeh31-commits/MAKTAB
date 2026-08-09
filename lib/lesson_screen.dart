@@ -115,7 +115,7 @@ class _LessonScreenState extends State<LessonScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('سبجیکٹ تمام طلبہ پر لاگو کر دیا گیا!', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+        content: Text('سبجیکٹ تمام طلبہ پر لاگو کر دیا گیا!', style: TextStyle()),
         backgroundColor: Colors.green,
       ),
     );
@@ -167,14 +167,14 @@ class _LessonScreenState extends State<LessonScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: Text(isEn ? 'Select Subject' : 'مضمون منتخب کریں', style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+          title: Text(isEn ? 'Select Subject' : 'مضمون منتخب کریں', style: const TextStyle()),
           content: SingleChildScrollView(
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
               children: subjects.map((sub) {
                 return ActionChip(
-                  label: Text(sub, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+                  label: Text(sub, style: const TextStyle()),
                   onPressed: () {
                     setState(() {
                       globalSubjectController.text = sub;
@@ -204,10 +204,10 @@ class _LessonScreenState extends State<LessonScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('نوٹیفکیشنز (Notifications)', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text('نوٹیفکیشنز (Notifications)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const Divider(),
-            ListTile(leading: const Icon(Icons.check_circle, color: Colors.green), title: const Text('پچھلی حاضری کامیابی سے محفوظ ہو گئی۔', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq'))),
-            ListTile(leading: const Icon(Icons.message, color: Colors.blue), title: const Text('ایڈمن کی جانب سے نیا پیغام موصول ہوا۔', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq'))),
+            ListTile(leading: const Icon(Icons.check_circle, color: Colors.green), title: const Text('پچھلی حاضری کامیابی سے محفوظ ہو گئی۔', style: TextStyle())),
+            ListTile(leading: const Icon(Icons.message, color: Colors.blue), title: const Text('ایڈمن کی جانب سے نیا پیغام موصول ہوا۔', style: TextStyle())),
           ],
         ),
       ),
@@ -222,11 +222,11 @@ class _LessonScreenState extends State<LessonScreen> {
         return StatefulBuilder(
           builder: (context, setStateSB) {
             return AlertDialog(
-              title: const Text('شفٹ تبدیل کریں', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+              title: const Text('شفٹ تبدیل کریں', style: TextStyle()),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: ['صبح', 'دوپہر', 'شام', 'رات'].map((shift) => RadioListTile(
-                  title: Text(shift, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+                  title: Text(shift, style: const TextStyle()),
                   value: shift,
                   // ignore: deprecated_member_use
                   groupValue: tempShift,
@@ -253,8 +253,8 @@ class _LessonScreenState extends State<LessonScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('استاد کا نام تبدیل کریں', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
-        content: TextField(controller: ctrl, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+        title: const Text('استاد کا نام تبدیل کریں', style: TextStyle()),
+        content: TextField(controller: ctrl, style: const TextStyle()),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('کینسل')),
           ElevatedButton(onPressed: () async {
@@ -274,13 +274,13 @@ class _LessonScreenState extends State<LessonScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('آج کا موضوع تبدیل کریں', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+        title: const Text('آج کا موضوع تبدیل کریں', style: TextStyle()),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: bookCtrl, decoration: const InputDecoration(labelText: 'کتاب کا نام'), style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+            TextField(controller: bookCtrl, decoration: const InputDecoration(labelText: 'کتاب کا نام'), style: const TextStyle()),
             const SizedBox(height: 8),
-            TextField(controller: chapterCtrl, decoration: const InputDecoration(labelText: 'سبق/سورت'), style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq')),
+            TextField(controller: chapterCtrl, decoration: const InputDecoration(labelText: 'سبق/سورت'), style: const TextStyle()),
           ],
         ),
         actions: [
@@ -328,7 +328,7 @@ class _LessonScreenState extends State<LessonScreen> {
           foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
           title: Column(
             children: [
-              Text(loc.translate('madrasa_title'), style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 24, fontWeight: FontWeight.bold)),
+              Text(loc.translate('madrasa_title'), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               Text(loc.translate('lesson_plan'), style: const TextStyle(color: Colors.amberAccent, fontSize: 14)),
             ],
           ),
@@ -367,7 +367,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), side: const BorderSide(color: Colors.blue)),
                       onPressed: _editShiftDialog,
                       icon: const Icon(Icons.edit, size: 12),
-                      label: Text(currentShift, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 14)),
+                      label: Text(currentShift, style: const TextStyle(fontSize: 14)),
                     ),
                   ),
                   _buildTopInfoBox(
@@ -377,7 +377,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       children: [
                         const Text('ہفتہ Saturday', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                         Text(DateFormat('dd-MM-yyyy').format(selectedDate), style: const TextStyle(fontSize: 10)),
-                        Text(_getIslamicDate(), style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 12)),
+                        Text(_getIslamicDate(), style: const TextStyle(fontSize: 12)),
                       ],
                     ),
                   ),
@@ -391,7 +391,7 @@ class _LessonScreenState extends State<LessonScreen> {
                         const SizedBox(width: 4),
                         InkWell(
                           onTap: _editTeacherDialog,
-                          child: Text(teacherName, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 14, fontWeight: FontWeight.bold)),
+                          child: Text(teacherName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
@@ -404,7 +404,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       isDense: true,
                       isExpanded: true,
                       underline: const SizedBox(),
-                      style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', color: Colors.black, fontSize: 14),
+                      style: const TextStyle(color: Colors.black, fontSize: 14),
                       items: _availableGroups.map((g) {
                         return DropdownMenuItem(value: g, child: Text(g == 'all' ? 'تمام گروپس' : g));
                       }).toList(),
@@ -426,7 +426,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       alignment: Alignment.topRight,
                       child: Text(
                         loc.translate('lesson_entry_title'),
-                        style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF074E32)),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF074E32)),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -443,12 +443,12 @@ class _LessonScreenState extends State<LessonScreen> {
                         children: [
                           Align(
                             alignment: Alignment.topRight,
-                            child: Text(loc.translate('overview'), style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', color: Colors.green, fontSize: 16)),
+                            child: Text(loc.translate('overview'), style: const TextStyle(color: Colors.green, fontSize: 16)),
                           ),
                           const Icon(Icons.menu_book_rounded, size: 40, color: Colors.green),
                           const SizedBox(height: 8),
-                          Text(currentBook, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 28, fontWeight: FontWeight.bold)),
-                          Text(currentChapter, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 16, color: Colors.grey)),
+                          Text(currentBook, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                          Text(currentChapter, style: const TextStyle(fontSize: 16, color: Colors.grey)),
                           Align(
                             alignment: Alignment.bottomLeft,
                             child: IconButton(icon: const Icon(Icons.edit, color: Colors.green), onPressed: _editTopicDialog),
@@ -470,7 +470,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(loc.translate('select_subject'), style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', color: Colors.blue, fontSize: 16)),
+                          Text(loc.translate('select_subject'), style: const TextStyle(color: Colors.blue, fontSize: 16)),
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -479,7 +479,7 @@ class _LessonScreenState extends State<LessonScreen> {
                                 child: TextFormField(
                                   controller: globalSubjectController,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 18, height: 1.6),
+                                  style: const TextStyle(fontSize: 18, height: 1.6),
                                   decoration: InputDecoration(
                                     isDense: true,
                                     contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -499,13 +499,13 @@ class _LessonScreenState extends State<LessonScreen> {
                               ),
                               onPressed: _applySubjectToAll,
                               icon: const Icon(Icons.sync),
-                              label: Text(loc.locale.languageCode == 'en' ? 'Apply to All' : 'سب پر لاگو کریں', style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 18)),
+                              label: Text(loc.locale.languageCode == 'en' ? 'Apply to All' : 'سب پر لاگو کریں', style: const TextStyle(fontSize: 18)),
                             ),
                           ),
                           const SizedBox(height: 8),
                           Center(
                             child: Text(loc.locale.languageCode == 'en' ? 'Click here to copy the subject above to all students' : 'اوپر والے سبجیکٹ کو تمام طلبہ کے سبجیکٹ باکس میں کاپی کرنے کے لئے یہاں کلک کریں',
-                                style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 12, color: Colors.grey)),
+                                style: const TextStyle(fontSize: 12, color: Colors.grey)),
                           ),
                         ],
                       ),
@@ -520,7 +520,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       children: [
                         Text(
                           loc.translate('dars_entry_title'),
-                          style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF074E32)),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF074E32)),
                         ),
                         Row(
                           mainAxisSize: MainAxisSize.min,
@@ -578,7 +578,7 @@ class _LessonScreenState extends State<LessonScreen> {
                           Expanded(
                             child: Text(
                               'نوٹ: اگر آپ کسی خاص طالب علم کے لئے سبجیکٹ تبدیل کریں گے (جیسے سبق نمبر 6) تو صرف اسی طالب علم کے باقی طلبہ پر اوپر والا سبجیکٹ لاگو رہے گا۔',
-                              style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 14),
+                              style: TextStyle(fontSize: 14),
                             ),
                           ),
                         ],
@@ -660,7 +660,7 @@ class _LessonScreenState extends State<LessonScreen> {
               children: [
                 Icon(icon, size: 14, color: Colors.blue),
                 const SizedBox(width: 4),
-                Text(title, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 12, fontWeight: FontWeight.bold)),
+                Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
               ],
             ),
             const Divider(height: 8),
@@ -701,10 +701,10 @@ class _LessonScreenState extends State<LessonScreen> {
                       children: [
                         const Icon(Icons.people, color: Colors.blue),
                         const SizedBox(width: 8),
-                        Text(groupName, style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
+                        Text(groupName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
                       ],
                     ),
-                    Text('طلبہ: ${indices.length}', style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 16, color: Colors.blue)),
+                    Text('طلبہ: ${indices.length}', style: const TextStyle(fontSize: 16, color: Colors.blue)),
                   ],
                 ),
               ),
@@ -714,9 +714,9 @@ class _LessonScreenState extends State<LessonScreen> {
                 child: Row(
                   children: [
                     SizedBox(width: 24, child: Text('#', style: TextStyle(fontSize: 10, color: Colors.grey), textAlign: TextAlign.center)),
-                    Expanded(flex: 2, child: Text('طالب علم کا نام', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
-                    Expanded(flex: 3, child: Text('سبجیکٹ (ایڈٹ کیا جا سکتا ہے)', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
-                    SizedBox(width: 60, child: Text('ریکارڈنگ / تصویر', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 10, color: Colors.grey), textAlign: TextAlign.center)),
+                    Expanded(flex: 2, child: Text('طالب علم کا نام', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+                    Expanded(flex: 3, child: Text('سبجیکٹ (ایڈٹ کیا جا سکتا ہے)', style: TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)),
+                    SizedBox(width: 60, child: Text('ریکارڈنگ / تصویر', style: TextStyle(fontSize: 10, color: Colors.grey), textAlign: TextAlign.center)),
                   ],
                 ),
               ),
@@ -757,13 +757,13 @@ class _LessonScreenState extends State<LessonScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                TranslatedText(student['name'], style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 15, fontWeight: FontWeight.bold, height: 1.5, color: textColor)),
+                TranslatedText(student['name'], style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, height: 1.5, color: textColor)),
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    TranslatedText('والد/سرپرست: ', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 10, color: subColor, height: 1.2)),
+                    TranslatedText('والد/سرپرست: ', style: TextStyle(fontSize: 10, color: subColor, height: 1.2)),
                     Expanded(
-                      child: TranslatedText(student['fatherName'], style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 10, color: subColor, height: 1.2)),
+                      child: TranslatedText(student['fatherName'], style: TextStyle(fontSize: 10, color: subColor, height: 1.2)),
                     ),
                   ],
                 ),
@@ -827,7 +827,7 @@ class _LessonScreenState extends State<LessonScreen> {
               child: TextFormField(
                 controller: studentLessonControllers[globalIndex],
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontFamily: 'Jameel Noori Nastaleeq', fontSize: 14, height: 1.6),
+                style: const TextStyle(fontSize: 14, height: 1.6),
                 decoration: InputDecoration(
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),

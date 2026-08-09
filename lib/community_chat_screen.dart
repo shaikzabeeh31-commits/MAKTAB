@@ -631,7 +631,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
       await launchUrl(phoneUri);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نہیں کال کر سکتے', style: TextStyle(fontFamily: 'Jameel Noori Nastaleeq'))));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نہیں کال کر سکتے', style: TextStyle())));
       }
     }
   }
