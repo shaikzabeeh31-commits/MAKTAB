@@ -988,29 +988,6 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                         },
                       ),
                     if (_maktabProfiles.isNotEmpty) const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedMaktabType,
-                      isExpanded: true,
-                      dropdownColor: dialogBgColor,
-                      decoration: InputDecoration(
-                        labelText: 'Maktab Type / مکتب کی قسم و شعبہ',
-                        labelStyle: TextStyle(color: fieldLabelColor, fontSize: 13),
-                        prefixIcon: Icon(Icons.mosque_rounded, color: fieldLabelColor),
-                        filled: true,
-                        fillColor: inputBgColor,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'شعبه ناظره قرآن (Nazira Dept)', child: Text('شعبه ناظره قرآن (Nazira Dept)')),
-                        DropdownMenuItem(value: 'شعبه حفظ قرآن (Hifz Dept)', child: Text('شعبه حفظ قرآن (Hifz Dept)')),
-                        DropdownMenuItem(value: 'تجوید و دینیات (Tajweed & Deeniyat)', child: Text('تجوید و دینیات (Tajweed & Deeniyat)')),
-                        DropdownMenuItem(value: 'ابتدائی دینی تعلیم (Primary Maktab)', child: Text('ابتدائی دینی تعلیم (Primary Maktab)')),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) setDialogState(() => selectedMaktabType = val);
-                      },
-                    ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
