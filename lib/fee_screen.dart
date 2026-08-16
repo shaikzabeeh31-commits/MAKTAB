@@ -585,6 +585,48 @@ class _FeeScreenState extends State<FeeScreen> {
     await widget.onSave(widget.students);
   }
 
+  Future<void> _deleteStudent(int globalIdx) async {
+    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
+    final s = _students[globalIdx];
+    final name = s['name']?.toString() ?? (isEn ? 'Student' : 'طالب علم');
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isEn ? 'Delete Student' : 'طالب علم کو حذف کریں'),
+        content: Text(isEn
+            ? 'Are you sure you want to delete "$name"? This will remove the student from the fee ledger. This action cannot be undone.'
+            : 'کیا آپ واقعی "$name" کو حذف کرنا چاہتے ہیں؟ یہ طالب علم فیس لیجر سے ہٹ جائے گا۔ یہ عمل واپس نہیں ہوسکتا۔'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(isEn ? 'Cancel' : 'منسوخ'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(isEn ? 'Delete' : 'حذف کریں'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    setState(() {
+      _students.removeAt(globalIdx);
+      _selectedIndices.remove(globalIdx);
+      _expandedRows.remove(globalIdx);
+      _applyFilter();
+    });
+    await _saveChanges();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isEn ? '"$name" has been deleted.' : '"$name" حذف ہوگیا۔'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
+  }
+
   // ── update month record ──
   void _updateMonthRecord(
     int globalIdx,
@@ -2658,6 +2700,8 @@ class _FeeScreenState extends State<FeeScreen> {
                         _saveChanges();
                       } else if (value == 'call') {
                         _openCall(s['fatherPhone']?.toString() ?? '');
+                      } else if (value == 'delete') {
+                        _deleteStudent(globalIdx);
                       }
                     },
                     itemBuilder: (context) => [
@@ -2730,6 +2774,17 @@ class _FeeScreenState extends State<FeeScreen> {
                             const Icon(Icons.phone_rounded, color: Colors.green),
                             const SizedBox(width: 8),
                             Text(loc.locale.languageCode == 'en' ? 'Call Father' : 'والد کو کال کریں'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.delete_rounded, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Text(loc.locale.languageCode == 'en' ? 'Delete Student' : 'طالب علم حذف کریں'),
                           ],
                         ),
                       ),

@@ -1034,6 +1034,46 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
+  Future<void> _deleteStudent(Map<String, dynamic> student) async {
+    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
+    final name = student['name']?.toString() ?? (isEn ? 'Student' : 'طالب علم');
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isEn ? 'Delete Student' : 'طالب علم کو حذف کریں'),
+        content: Text(isEn
+            ? 'Are you sure you want to delete "$name"? This action cannot be undone.'
+            : 'کیا آپ واقعی "$name" کو حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہوسکتا۔'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(isEn ? 'Cancel' : 'منسوخ'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(isEn ? 'Delete' : 'حذف کریں'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    setState(() {
+      _students.remove(student);
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('students_data', jsonEncode(_students));
+    widget.onSave?.call(_students);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isEn ? '"$name" has been deleted.' : '"$name" حذف ہوگیا۔'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
+  }
+
   BoxDecoration _threeD({double radius = 14}) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(
@@ -1713,6 +1753,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               onPressed: () => _callParent(student),
               tooltip: 'کال',
               icon: const Icon(Icons.call_rounded, color: Colors.blue, size: 25),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: IconButton(
+              onPressed: () => _deleteStudent(student),
+              tooltip: 'حذف',
+              icon: const Icon(Icons.delete_rounded, color: Colors.red, size: 22),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
               visualDensity: VisualDensity.compact,
