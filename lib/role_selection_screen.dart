@@ -971,7 +971,10 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        items: _maktabProfiles.map((p) {
+                        items: (widget.currentRole == AppRole.teacher
+                                ? _maktabProfiles.where((p) => p['id']?.toString() == selectedMaktabTargetId || p['id']?.toString() == _activeMaktabId).toList()
+                                : _maktabProfiles)
+                            .map((p) {
                           final name = p['name']?.toString() ?? 'مکتب';
                           final section = p['sectionName']?.toString() ?? '';
                           return DropdownMenuItem<String>(
@@ -983,9 +986,11 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                             ),
                           );
                         }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setDialogState(() => selectedMaktabTargetId = val);
-                        },
+                        onChanged: widget.currentRole == AppRole.teacher
+                            ? null
+                            : (val) {
+                                if (val != null) setDialogState(() => selectedMaktabTargetId = val);
+                              },
                       ),
                     if (_maktabProfiles.isNotEmpty) const SizedBox(height: 12),
                     const SizedBox(height: 12),

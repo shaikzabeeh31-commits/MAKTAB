@@ -202,6 +202,30 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
     String error = '';
     bool obscurePin = true;
 
+    final maktabOptions = [
+      {'id': 'm1', 'name': 'مکتب الفاروق (مرکزی ڈویژن)'},
+      {'id': 'm2', 'name': 'مکتب النور (شاخ 1)'},
+      {'id': 'm3', 'name': 'مکتب الصفاء (شاخ 2)'},
+    ];
+    String selectedMaktabId = 'm1';
+    String selectedBatch = isEn ? 'Subah (Morning / صبح)' : 'صبح (Subah / Morning)';
+    String selectedClass = isEn ? 'Darja Awwal (Class 1 / درجہ اول)' : 'درجہ اول (Darja 1 / Class 1)';
+
+    final batchOptions = [
+      isEn ? 'Subah (Morning / صبح)' : 'صبح (Subah / Morning)',
+      isEn ? 'Shaam (Evening / شام)' : 'شام (Shaam / Evening)',
+      isEn ? 'Dopahar (Afternoon / دوپہر)' : 'دوپہر (Dopahar / Afternoon)',
+    ];
+
+    final classOptions = [
+      isEn ? 'Darja Awwal (Class 1 / درجہ اول)' : 'درجہ اول (Darja 1 / Class 1)',
+      isEn ? 'Darja Dom (Class 2 / درجہ دوم)' : 'درجہ دوم (Darja 2 / Class 2)',
+      isEn ? 'Darja Som (Class 3 / درجہ سوم)' : 'درجہ سوم (Darja 3 / Class 3)',
+      isEn ? 'Darja Chaharum (Class 4 / درجہ چہارم)' : 'درجہ چہارم (Darja 4 / Class 4)',
+      isEn ? 'Hifz Class (حفظ کلاس)' : 'حفظ کلاس (Hifz Class)',
+      isEn ? 'Nazira Class (ناظرہ کلاس)' : 'ناظرہ کلاس (Nazira Class)',
+    ];
+
     showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -245,6 +269,63 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
                     prefixIcon: const Icon(Icons.phone_rounded),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   ),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: selectedMaktabId,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: isEn ? 'Assign Maktab' : 'مکتب منتخب کریں (Select Maktab)',
+                    prefixIcon: const Icon(Icons.account_balance_rounded, color: Colors.green),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  items: maktabOptions.map((m) {
+                    return DropdownMenuItem<String>(
+                      value: m['id'],
+                      child: Text(m['name'] ?? '', style: const TextStyle(fontSize: 13)),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setDialogState(() => selectedMaktabId = val);
+                  },
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: selectedBatch,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: isEn ? 'Assign Batch / Shift' : 'بیچ / شفٹ منتخب کریں (Select Batch)',
+                    prefixIcon: const Icon(Icons.schedule_rounded, color: Colors.orange),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  items: batchOptions.map((b) {
+                    return DropdownMenuItem<String>(
+                      value: b,
+                      child: Text(b, style: const TextStyle(fontSize: 13)),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setDialogState(() => selectedBatch = val);
+                  },
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: selectedClass,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: isEn ? 'Assign Class / Darja' : 'کلاس / درجہ منتخب کریں (Select Class)',
+                    prefixIcon: const Icon(Icons.class_rounded, color: Colors.indigo),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  items: classOptions.map((c) {
+                    return DropdownMenuItem<String>(
+                      value: c,
+                      child: Text(c, style: const TextStyle(fontSize: 13)),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setDialogState(() => selectedClass = val);
+                  },
                 ),
                 const SizedBox(height: 10),
                 TextField(
@@ -317,6 +398,9 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
                 await prefs.setString('cred_teacher_name', name);
                 await prefs.setString('cred_teacher_${phone}_pin', pin);
                 await prefs.setString('cred_teacher_${phone}_name', name);
+                await prefs.setString('cred_teacher_${phone}_maktabId', selectedMaktabId);
+                await prefs.setString('cred_teacher_${phone}_batch', selectedBatch);
+                await prefs.setString('cred_teacher_${phone}_class', selectedClass);
 
                 setState(() {
                   _phoneControllers[AppRole.teacher]?.text = phone;
