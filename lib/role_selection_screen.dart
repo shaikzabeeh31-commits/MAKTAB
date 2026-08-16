@@ -912,6 +912,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
     String selectedLanguage = 'ur';
     String selectedMessageMethod = 'WhatsApp';
     String selectedMaktabType = 'شعبه ناظره قرآن (Nazira Dept)';
+    String selectedMaktabTargetId = maktabId ?? _activeMaktabId ?? (_maktabProfiles.isNotEmpty ? _maktabProfiles.first['id']?.toString() ?? 'm1' : 'm1');
 
     if (!mounted) return;
 
@@ -954,6 +955,39 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (_maktabProfiles.isNotEmpty)
+                      DropdownButtonFormField<String>(
+                        initialValue: _maktabProfiles.any((p) => p['id']?.toString() == selectedMaktabTargetId)
+                            ? selectedMaktabTargetId
+                            : _maktabProfiles.first['id']?.toString(),
+                        isExpanded: true,
+                        dropdownColor: dialogBgColor,
+                        decoration: InputDecoration(
+                          labelText: 'Select Maktab / مکتب منتخب کریں',
+                          labelStyle: TextStyle(color: fieldLabelColor, fontSize: 13),
+                          prefixIcon: Icon(Icons.account_balance_rounded, color: fieldLabelColor),
+                          filled: true,
+                          fillColor: inputBgColor,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        items: _maktabProfiles.map((p) {
+                          final name = p['name']?.toString() ?? 'مکتب';
+                          final section = p['sectionName']?.toString() ?? '';
+                          return DropdownMenuItem<String>(
+                            value: p['id']?.toString(),
+                            child: Text(
+                              section.isNotEmpty ? '$name ($section)' : name,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: fieldTextColor, fontSize: 13.5),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) setDialogState(() => selectedMaktabTargetId = val);
+                        },
+                      ),
+                    if (_maktabProfiles.isNotEmpty) const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       initialValue: selectedMaktabType,
                       isExpanded: true,
@@ -1224,9 +1258,9 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
 
                     final newStudent = {
                       'id': 'student_${DateTime.now().microsecondsSinceEpoch}',
-                      'maktabId': activeId,
+                      'maktabId': selectedMaktabTargetId,
                       'maktabType': selectedMaktabType,
-                      'maktabName': _activeMaktabName.isNotEmpty ? _activeMaktabName : 'مکتب الفاروق',
+                      'maktabName': _maktabProfiles.firstWhere((p) => p['id']?.toString() == selectedMaktabTargetId, orElse: () => {'name': _activeMaktabName.isNotEmpty ? _activeMaktabName : 'مکتب الفاروق'})['name']?.toString() ?? 'مکتب الفاروق',
                       'admissionNo': nextAdmissionNo.toString().padLeft(4, '0'),
                       'name': name,
                       'fatherName': fatherNameCtrl.text.trim(),
@@ -1264,6 +1298,11 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                         ..clear()
                         ..addAll(updatedList);
                     } catch (_) {}
+                    if (mounted) {
+                      setState(() {
+                        _activeStudents = updatedList;
+                      });
+                    }
 
                     if (fatherPhone.isNotEmpty) {
                       final prefs = await SharedPreferences.getInstance();

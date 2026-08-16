@@ -1013,13 +1013,32 @@ class _FeeScreenState extends State<FeeScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.person_rounded, size: 18, color: _kNavy),
+                        const Icon(Icons.mosque_rounded, size: 16, color: _kNavy),
                         const SizedBox(width: 6),
-                        Text(
-                          widget.languageController.locale.languageCode == 'en'
-                              ? 'Teacher: Qari Mohammad Tariq'
-                              : 'استاد کا نام: قاری محمد طارق (استاد)',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor),
+                        Expanded(
+                          child: Text(
+                            widget.languageController.locale.languageCode == 'en'
+                                ? 'Maktab: Maktab Al-Farooq (ID: MKT-001)'
+                                : 'مکتب: مکتب الفاروق (آئی ڈی: MKT-001)',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.person_rounded, size: 16, color: Colors.green),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            widget.languageController.locale.languageCode == 'en'
+                                ? 'Teacher: Qari Mohammad Tariq ✓'
+                                : 'استاد: قاری محمد طارق (استاد) ✓',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: textColor),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
@@ -1028,11 +1047,14 @@ class _FeeScreenState extends State<FeeScreen> {
                       children: [
                         const Icon(Icons.class_rounded, size: 16, color: Colors.indigo),
                         const SizedBox(width: 6),
-                        Text(
-                          widget.languageController.locale.languageCode == 'en'
-                              ? 'Class: $_selectedClass | Shift: ${_selectedSession == 'subah' ? 'Morning' : 'Evening'}'
-                              : 'کلاس: $_selectedClass | شفٹ: ${_selectedSession == 'subah' ? 'صبح' : 'شام'}',
-                          style: TextStyle(fontSize: 12, color: subColor),
+                        Expanded(
+                          child: Text(
+                            widget.languageController.locale.languageCode == 'en'
+                                ? 'Class: $_selectedClass | Batch: ${_selectedSession == 'subah' ? 'Morning Batch' : 'Evening Batch'}'
+                                : 'کلاس: $_selectedClass | بیـچ: ${_selectedSession == 'subah' ? 'صبح کا بیچ' : 'شام کا بیچ'}',
+                            style: TextStyle(fontSize: 12, color: subColor),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
@@ -1831,7 +1853,7 @@ class _FeeScreenState extends State<FeeScreen> {
                       const Icon(Icons.mosque_rounded, color: _kNavy, size: 18),
                       const SizedBox(width: 6),
                       Text(
-                        isEn ? 'Maktab: Maktab Al-Farooq' : 'مکتب: مکتب الفاروق',
+                        isEn ? 'Maktab: Maktab Al-Farooq (ID: MKT-001)' : 'مکتب: مکتب الفاروق (آئی ڈی: MKT-001)',
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
