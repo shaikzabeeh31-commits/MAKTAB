@@ -87,8 +87,8 @@ void main() {
 
       expect(find.byType(AppBar), findsOneWidget);
       expect(find.textContaining('Manager'), findsAtLeastNWidgets(1));
-      expect(find.textContaining('Main Owner'), findsAtLeastNWidgets(1));
-      expect(find.textContaining('Book Request List'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('Master Admin'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('اساتذہ'), findsAtLeastNWidgets(1));
     });
 
     testWidgets('Opens Announcement dialog when icon is pressed', (tester) async {
