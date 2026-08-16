@@ -1673,6 +1673,29 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               );
             }).toList(),
           ),
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(
+                color: Color(0xFFEAF7F0),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF08734B), size: 20),
+            ),
+            title: Text(
+              isEn ? 'Add New Student' : 'طالب علم کا نیا داخلہ (Add Student)',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF065F46), fontSize: 14),
+            ),
+            subtitle: Text(
+              isEn ? 'Simplest admission form' : 'سادہ داخلہ فارم',
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              _triggerAddStudentModal(maktabId: _activeMaktabId);
+            },
+          ),
+          const Divider(),
           if (_activeMaktabId != null && _activeMaktabName.isNotEmpty)
             Container(
               margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
