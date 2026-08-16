@@ -1822,17 +1822,23 @@ class _FeeScreenState extends State<FeeScreen> {
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
           child: Column(
             children: [
-              // Month Picker Action Chip & Period Navigation
+              // Maktab Name & Period Navigation
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    isEn ? 'Monthly Collection Summary' : 'ماہانہ فیس وصولی خلاصہ',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: _kNavy,
-                    ),
+                  Row(
+                    children: [
+                      const Icon(Icons.mosque_rounded, color: _kNavy, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        isEn ? 'Maktab: Maktab Al-Farooq' : 'مکتب: مکتب الفاروق',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: _kNavy,
+                        ),
+                      ),
+                    ],
                   ),
                   Row(
                     children: [
@@ -1887,9 +1893,8 @@ class _FeeScreenState extends State<FeeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
               const SizedBox(height: 10),
-              // Class & Teacher Details Bar (Same as Attendance Screen)
+              // Class & Teacher Details Bar
               Row(
                 children: [
                   Expanded(
@@ -1908,7 +1913,7 @@ class _FeeScreenState extends State<FeeScreen> {
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              '$_selectedClass (${_selectedSession == 'subah' ? (isEn ? 'Morning' : 'صبح') : (isEn ? 'Evening' : 'شام')})',
+                              '${isEn ? "Class" : "کلاس"}: $_selectedClass (${_selectedSession == 'subah' ? (isEn ? 'Morning' : 'صبح') : (isEn ? 'Evening' : 'شام')})',
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _kNavy),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -1934,7 +1939,7 @@ class _FeeScreenState extends State<FeeScreen> {
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              isEn ? 'Qari Mohammad Tariq' : 'قاری محمد طارق (استاد)',
+                              isEn ? 'Teacher: Qari Mohammad Tariq' : 'استاد: قاری محمد طارق',
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _kNavy),
                               overflow: TextOverflow.ellipsis,
                             ),

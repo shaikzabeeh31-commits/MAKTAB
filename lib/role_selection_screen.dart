@@ -622,6 +622,14 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             .map((item) => Map<String, dynamic>.from(item as Map))
             .toList();
       }
+      if (profiles.isEmpty) {
+        profiles = [
+          {'id': 'm1', 'name': 'مکتب الفاروق', 'sectionName': 'مرکزی ڈویژن'},
+          {'id': 'm2', 'name': 'مکتب النور', 'sectionName': 'شاخ 1'},
+          {'id': 'm3', 'name': 'مکتب الصفاء', 'sectionName': 'شاخ 2'},
+        ];
+        await prefs.setString('maktab_profiles_v1', jsonEncode(profiles));
+      }
     } catch (_) {}
     final activeProfile = profiles.where(
       (item) => item['id']?.toString() == activeMaktabId,
@@ -1551,6 +1559,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
 
   Widget _buildSideDrawer(BuildContext context, RoleInfo info) {
     final loc = AppLocalizations.of(context);
+    final isEn = loc.locale.languageCode == 'en';
     // ignore: unused_local_variable
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bool canAddStudent = widget.currentRole == AppRole.admin ||
@@ -1617,52 +1626,53 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 await _openMaktabSetup();
               },
             ),
-          if (_maktabProfiles.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 2, 12, 10),
-              child: DropdownButtonFormField<String>(
-                value: _maktabProfiles.any(
-                        (item) => item['id']?.toString() == _activeMaktabId)
-                    ? _activeMaktabId
-                    : null,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  labelText: 'محفوظ مکاتب / مکتب منتخب کریں',
-                  prefixIcon: const Icon(Icons.account_balance_rounded,
-                      color: Color(0xFF08734B)),
-                  filled: true,
-                  fillColor: const Color(0xFFEAF7F0),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(13),
-                    borderSide: const BorderSide(color: Color(0xFF79B99C)),
+          ExpansionTile(
+            leading: const Icon(Icons.mosque_rounded, color: Color(0xFF08734B)),
+            title: Text(
+              isEn ? 'Maktabs List & Switcher' : 'تمام مکاتب کی فہرست (Maktabs List)',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF065F46)),
+            ),
+            initiallyExpanded: true,
+            children: _maktabProfiles.map((p) {
+              final isSelected = p['id']?.toString() == _activeMaktabId;
+              final name = p['name']?.toString() ?? 'مکتب';
+              final section = p['sectionName']?.toString() ?? '';
+              return ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.only(left: 20, right: 16),
+                leading: Icon(
+                  isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                  color: isSelected ? const Color(0xFF08734B) : Colors.grey,
+                  size: 18,
+                ),
+                title: Text(
+                  section.isNotEmpty ? '$name — $section' : name,
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? const Color(0xFF065F46) : null,
                   ),
                 ),
-                items: _maktabProfiles.map((profile) {
-                  final name = profile['name']?.toString().trim();
-                  final section = profile['sectionName']?.toString().trim();
-                  return DropdownMenuItem<String>(
-                    value: profile['id']?.toString(),
-                    child: Text(
-                      [name, section]
-                          .whereType<String>()
-                          .where((text) => text.isNotEmpty)
-                          .join(' — '),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                }).toList(),
-                onChanged: (widget.currentRole == AppRole.admin ||
-                        widget.currentRole == AppRole.manager)
-                    ? (value) async {
-                        if (value == null || value == _activeMaktabId) return;
-                        Navigator.pop(context);
-                        await _activateMaktab(value);
-                      }
+                trailing: isSelected
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEAF7F0),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isEn ? 'Active' : 'فعال',
+                          style: const TextStyle(fontSize: 10, color: Color(0xFF08734B), fontWeight: FontWeight.bold),
+                        ),
+                      )
                     : null,
-              ),
-            ),
+                onTap: () async {
+                  if (isSelected) return;
+                  Navigator.pop(context);
+                  await _activateMaktab(p['id']?.toString() ?? '');
+                },
+              );
+            }).toList(),
+          ),
           if (_activeMaktabId != null && _activeMaktabName.isNotEmpty)
             Container(
               margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
