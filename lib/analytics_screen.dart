@@ -418,15 +418,15 @@ class AnalyticsScreen extends StatelessWidget {
                         children: [
                           Chip(
                             avatar: const Icon(Icons.wb_sunny_outlined, size: 18),
-                            label: Text('صبح: $morningShiftCount'),
+                            label: Text(AppLocalizations.of(context).locale.languageCode == 'en' ? 'Morning: $morningShiftCount' : 'صبح: $morningShiftCount'),
                           ),
                           Chip(
                             avatar: const Icon(Icons.wb_twilight_rounded, size: 18),
-                            label: Text('شام: $eveningShiftCount'),
+                            label: Text(AppLocalizations.of(context).locale.languageCode == 'en' ? 'Evening: $eveningShiftCount' : 'شام: $eveningShiftCount'),
                           ),
                           Chip(
                             avatar: const Icon(Icons.nights_stay_outlined, size: 18),
-                            label: Text('شبینہ: ${nightShiftCount > 0 ? nightShiftCount : 0}'),
+                            label: Text(AppLocalizations.of(context).locale.languageCode == 'en' ? 'Night: ${nightShiftCount > 0 ? nightShiftCount : 0}' : 'شبینہ: ${nightShiftCount > 0 ? nightShiftCount : 0}'),
                           ),
                         ],
                       ),

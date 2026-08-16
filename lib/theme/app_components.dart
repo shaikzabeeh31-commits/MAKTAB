@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
-import 'package:permission_handler/permission_handler.dart' hide PermissionStatus;
+
 import 'app_colors.dart';
 import 'app_spacing.dart';
 

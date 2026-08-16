@@ -366,7 +366,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
                     child: Icon(Icons.person, color: isPresent ? Colors.green : Colors.red, size: 18),
                   ),
                   title: Text(s['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  subtitle: Text('عہدہ: ${s['role']} | شفٹ: ${s['shift']}', style: const TextStyle(fontSize: 11)),
+                  subtitle: Text('${loc.locale.languageCode == 'en' ? 'Role' : 'عہدہ'}: ${s['role']} | ${loc.locale.languageCode == 'en' ? 'Shift' : 'شفٹ'}: ${s['shift']}', style: const TextStyle(fontSize: 11)),
                   trailing: ChoiceChip(
                     label: Text(isPresent ? 'حاضر (Present)' : 'غائب (Absent)', style: const TextStyle(fontSize: 10)),
                     selected: isPresent,
@@ -540,7 +540,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('مکتب شاخیں (Select Branch)'),
+        title: Text(AppLocalizations.of(context).locale.languageCode == 'en' ? 'Select Branch' : 'مکتب شاخیں (Select Branch)'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: branches.map((b) {
@@ -577,11 +577,11 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
               Text(loc.translate('db_import_export'), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
             ],
           ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('مکتب کے تمام ڈاٹا کا .db.json فارمیٹ میں بیک اپ لیں یا بحال کریں:',
-                style: TextStyle(fontSize: 11.5, color: Colors.grey)),
+            Text(loc.locale.languageCode == 'en' ? 'Backup or restore all Maktab data in .db.json format:' : 'مکتب کے تمام ڈاٹا کا .db.json فارمیٹ میں بیک اپ لیں یا بحال کریں:',
+                style: const TextStyle(fontSize: 11.5, color: Colors.grey)),
           ],
         ),
         actions: [
