@@ -1829,169 +1829,195 @@ class _FeeScreenState extends State<FeeScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildIslamicFeeHeader() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final double totalCollected = _filtered.fold(0, (sum, e) => sum + _paid(_students[e.key]));
-    final double totalPending = _filtered.fold(0, (sum, e) => sum + _pending(_students[e.key]));
-    final double grandTotal = totalCollected + totalPending;
-    final double progress = grandTotal == 0 ? 0 : (totalCollected / grandTotal).clamp(0.0, 1.0);
-    final loc = AppLocalizations.of(context);
-    final isEn = loc.locale.languageCode == 'en';
-
+    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       child: CustomPaint(
         painter: _FeeArchPainter(dark: isDark),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-          child: Column(
-            children: [
-              // Maktab Name & Period Navigation
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Stack(
+          children: [
+            Positioned(
+              top: 2,
+              left: 4,
+              child: IconButton(
+                icon: const Icon(Icons.home_rounded, color: Colors.white, size: 20),
+                tooltip: isEn ? 'Home Dashboard' : 'ہوم ڈیش بورڈ (Return to Home)',
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.popUntil(context, (route) => route.isFirst);
+                  }
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        const Icon(Icons.mosque_rounded, color: _kNavy, size: 18),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            isEn ? 'Maktab: Maktab Al-Farooq (ID: MKT-001)' : 'مکتب: مکتب الفاروق (آئی ڈی: MKT-001)',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: _kNavy,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                  // Main Institution Title (Matching Attendance Arch)
+                  SizedBox(
+                    height: 28,
+                    child: Container(
+                      width: double.infinity,
+                      alignment: Alignment.center,
+                      child: Text(
+                        isEn ? 'Maktab Al-Farooq' : 'مکتب الفاروق',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : _kNavy,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  // Address & ID Line (Matching Attendance Subtitle)
+                  SizedBox(
+                    height: 20,
+                    child: Container(
+                      width: double.infinity,
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        isEn ? 'Madina Masjid, Khannapet (ID: MKT-001)' : 'مدینہ مسجد، خنّاپیٹ (آئی ڈی: MKT-001)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : const Color(0xFF334155),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Class & Teacher Mini Boxes (Matching Attendance Arch Mini Boxes)
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Container(
+                          height: 31,
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : Colors.white.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(color: _kNavy.withValues(alpha: 0.4)),
                           ),
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                '${isEn ? "Class" : "کلاس"}: $_selectedClass (${_selectedSession == 'subah' ? (isEn ? 'Morning' : 'صبح') : (isEn ? 'Evening' : 'شام')})',
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : _kNavy),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 3,
+                        child: Container(
+                          height: 31,
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : Colors.white.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(color: _kNavy.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Center(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      isEn ? 'Teacher: Qari Mohammad Tariq' : 'استاد: قاری محمد طارق',
+                                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : _kNavy),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.verified_rounded, size: 16, color: Colors.green),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Period Selector Row (Matching Attendance Info Box bar style)
+                  Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : Colors.white.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _kNavy.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left_rounded, size: 20, color: _kNavy),
+                          onPressed: () {
+                            setState(() {
+                              if (_selectedMonthIndex == 0) {
+                                _selectedMonthIndex = 11;
+                                _selectedYear--;
+                              } else {
+                                _selectedMonthIndex--;
+                              }
+                              _applyFilter();
+                            });
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        InkWell(
+                          onTap: _selectPeriod,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_month_rounded, size: 15, color: _kNavy),
+                              const SizedBox(width: 5),
+                              Text(
+                                _selectedDateRange == null
+                                    ? '${kFeeMonths[_selectedMonthIndex]} $_selectedYear'
+                                    : '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? Colors.white : _kNavy),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right_rounded, size: 20, color: _kNavy),
+                          onPressed: () {
+                            setState(() {
+                              if (_selectedMonthIndex == 11) {
+                                _selectedMonthIndex = 0;
+                                _selectedYear++;
+                              } else {
+                                _selectedMonthIndex++;
+                              }
+                              _applyFilter();
+                            });
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
                         ),
                       ],
                     ),
                   ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left_rounded, size: 20, color: _kNavy),
-                        onPressed: () {
-                          setState(() {
-                            if (_selectedMonthIndex == 0) {
-                              _selectedMonthIndex = 11;
-                              _selectedYear--;
-                            } else {
-                              _selectedMonthIndex--;
-                            }
-                            _applyFilter();
-                          });
-                        },
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                      const SizedBox(width: 2),
-                      ActionChip(
-                        avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: _kNavy),
-                        label: Text(
-                          _selectedDateRange == null
-                              ? '${kFeeMonths[_selectedMonthIndex]} $_selectedYear'
-                              : '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _kNavy),
-                        ),
-                        backgroundColor: Colors.white.withValues(alpha: 0.8),
-                        onPressed: _selectPeriod,
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      const SizedBox(width: 2),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_right_rounded, size: 20, color: _kNavy),
-                        onPressed: () {
-                          setState(() {
-                            if (_selectedMonthIndex == 11) {
-                              _selectedMonthIndex = 0;
-                              _selectedYear++;
-                            } else {
-                              _selectedMonthIndex++;
-                            }
-                            _applyFilter();
-                          });
-                        },
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
                 ],
               ),
-              const SizedBox(height: 10),
-              // Class & Teacher Details Bar
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E293B) : Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF0A1F5C).withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.class_rounded, size: 16, color: _kNavy),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              '${isEn ? "Class" : "کلاس"}: $_selectedClass (${_selectedSession == 'subah' ? (isEn ? 'Morning' : 'صبح') : (isEn ? 'Evening' : 'شام')})',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _kNavy),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 3,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E293B) : Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF0A1F5C).withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.person_rounded, size: 16, color: _kNavy),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              isEn ? 'Teacher: Qari Mohammad Tariq' : 'استاد: قاری محمد طارق',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _kNavy),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.verified_rounded, size: 16, color: Colors.green),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              // Linear Progress Bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 8,
-                  backgroundColor: Colors.orange.shade100,
-                  valueColor: const AlwaysStoppedAnimation<Color>(_kGreen),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
