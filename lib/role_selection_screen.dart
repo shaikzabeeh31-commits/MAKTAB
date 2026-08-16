@@ -1801,6 +1801,38 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             ),
           if (widget.currentRole == AppRole.admin || widget.currentRole == AppRole.manager)
             ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFDCFCE7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.person_add_rounded, color: Color(0xFF15803D), size: 20),
+              ),
+              title: Text(
+                isEn ? 'Add New Teacher' : 'استاد کا نیا داخلہ (Add Teacher)',
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF15803D), fontSize: 14),
+              ),
+              subtitle: Text(
+                isEn ? 'Set Teacher Name, Phone & PIN' : 'استاد کا نام، فون نمبر اور PIN سیٹ کریں',
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ManageStaffLoginsScreen(
+                      languageController: widget.languageController,
+                      currentUserRole: widget.currentRole,
+                      openAddTeacherModal: true,
+                    ),
+                  ),
+                );
+              },
+            ),
+          if (widget.currentRole == AppRole.admin || widget.currentRole == AppRole.manager)
+            ListTile(
               leading: const Icon(Icons.security_rounded, color: Color(0xFF0F172A)),
               title: Text(
                 loc.translate('staff_logins'),

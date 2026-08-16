@@ -7,11 +7,13 @@ import 'role_selection_screen.dart';
 class ManageStaffLoginsScreen extends StatefulWidget {
   final LanguageController languageController;
   final AppRole currentUserRole;
+  final bool openAddTeacherModal;
 
   const ManageStaffLoginsScreen({
     super.key,
     required this.languageController,
     this.currentUserRole = AppRole.admin,
+    this.openAddTeacherModal = false,
   });
 
   @override
@@ -55,6 +57,11 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
   void initState() {
     super.initState();
     _loadSavedCredentials();
+    if (widget.openAddTeacherModal) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showAddNewTeacherDialog();
+      });
+    }
   }
 
   Future<void> _loadSavedCredentials() async {
