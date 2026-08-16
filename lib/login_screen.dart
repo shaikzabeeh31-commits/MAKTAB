@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:local_auth/local_auth.dart';
 import 'app_localizations.dart';
 import 'role_selection_screen.dart';
 
@@ -181,10 +182,16 @@ class _LoginScreenState extends State<LoginScreen> {
       isAuthenticated = true;
     }
 
-    // 2. Role-specific saved PIN or per-student parent PIN check
+    // 2. Role-specific saved PIN or per-user PIN check
     if (!isAuthenticated && widget.role == AppRole.parent) {
       final perStudentPin = prefs.getString('cred_parent_${phone}_pin');
       if (perStudentPin != null && perStudentPin == pin) {
+        isAuthenticated = true;
+      }
+    }
+    if (!isAuthenticated && widget.role == AppRole.teacher) {
+      final perTeacherPin = prefs.getString('cred_teacher_${phone}_pin');
+      if (perTeacherPin != null && perTeacherPin == pin) {
         isAuthenticated = true;
       }
     }
@@ -205,7 +212,10 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (isAuthenticated) {
-      final displayName = name.isNotEmpty ? name : '${widget.role.name.toUpperCase()} User';
+      final perTeacherName = prefs.getString('cred_teacher_${phone}_name');
+      final displayName = name.isNotEmpty 
+          ? name 
+          : (perTeacherName != null && perTeacherName.isNotEmpty ? perTeacherName : '${widget.role.name.toUpperCase()} User');
       final now = DateTime.now();
       final timeStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
 
@@ -266,6 +276,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (targetRole == AppRole.parent) {
       await prefs.setString('cred_parent_${phone}_pin', pin);
     }
+    if (targetRole == AppRole.teacher) {
+      await prefs.setString('cred_teacher_${phone}_pin', pin);
+      await prefs.setString('cred_teacher_${phone}_name', name);
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -282,13 +296,14 @@ class _LoginScreenState extends State<LoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     final savedPhone = prefs.getString('cred_${widget.role.name}_phone') ?? '';
     final savedPin = prefs.getString('cred_${widget.role.name}_pin') ?? '';
-    
+    final loc = AppLocalizations.of(context);
+    final isEn = loc.locale.languageCode == 'en';
+
     if (savedPhone.isEmpty || savedPin.isEmpty) {
       if (mounted) {
-        final loc = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(loc.locale.languageCode == 'en' 
+            content: Text(isEn 
                 ? 'Please log in manually once to set up biometric access.' 
                 : 'بائیو میٹرک کے لیے پہلے ایک بار مینوئل لاگ ان کریں۔'),
             backgroundColor: Colors.orange,
@@ -297,7 +312,39 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       return;
     }
-    
+
+    try {
+      final auth = LocalAuthentication();
+      final bool canAuthenticateWithBiometrics = await auth.canCheckBiometrics;
+      final bool canAuthenticate = canAuthenticateWithBiometrics || await auth.isDeviceSupported();
+
+      if (canAuthenticate) {
+        final bool didAuthenticate = await auth.authenticate(
+          localizedReason: isEn 
+              ? 'Authenticate using fingerprint / face to log into Maktab' 
+              : 'مکتب پورٹل میں داخلے کے لیے بائیو میٹرک تصدیق کریں',
+          options: const AuthenticationOptions(
+            biometricOnly: false,
+            stickyAuth: true,
+          ),
+        );
+
+        if (!didAuthenticate) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(isEn ? 'Biometric authentication canceled or failed.' : 'بائیو میٹرک تصدیق ناکام یا منسوخ ہوگئی۔'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      // Fallback gracefully if biometric hardware is unavailable (e.g. Windows desktop without biometric hardware)
+    }
+
     _phoneCtrl.text = savedPhone;
     _pinCtrl.text = savedPin;
     await _handleLogin();

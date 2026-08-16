@@ -1648,7 +1648,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               ),
             ),
           ),
-          if (canAddStudent)
+          if (widget.currentRole == AppRole.admin || widget.currentRole == AppRole.manager)
             ListTile(
               leading: const Icon(
                 Icons.account_balance_rounded,
@@ -1674,7 +1674,10 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF065F46)),
             ),
             initiallyExpanded: true,
-            children: _maktabProfiles.map((p) {
+            children: (widget.currentRole == AppRole.teacher
+                    ? _maktabProfiles.where((p) => p['id']?.toString() == _activeMaktabId || _activeMaktabId == null).toList()
+                    : _maktabProfiles)
+                .map((p) {
               final isSelected = p['id']?.toString() == _activeMaktabId;
               final name = p['name']?.toString() ?? 'مکتب';
               final section = p['sectionName']?.toString() ?? '';
@@ -1810,6 +1813,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                   MaterialPageRoute(
                     builder: (_) => ManageStaffLoginsScreen(
                       languageController: widget.languageController,
+                      currentUserRole: widget.currentRole,
                     ),
                   ),
                 );
@@ -1837,26 +1841,27 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               },
             ),
           if (canAddStudent) const Divider(),
-          ListTile(
-            leading: const Icon(Icons.analytics_rounded, color: Colors.purple),
-            title: Text(
-              loc.translate('advanced_dashboard'),
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => AnalyticsScreen(
-                      students: _activeStudents,
-                    languageController: widget.languageController,
-                    themeController: ThemeController(),
+          if (widget.currentRole != AppRole.manager)
+            ListTile(
+              leading: const Icon(Icons.analytics_rounded, color: Colors.purple),
+              title: Text(
+                loc.translate('advanced_dashboard'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => AnalyticsScreen(
+                        students: _activeStudents,
+                      languageController: widget.languageController,
+                      themeController: ThemeController(),
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
           if (!canAddStudent)
             ListTile(
             leading: const Icon(Icons.people_rounded, color: Color(0xFF074E32)),
@@ -1900,22 +1905,23 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               setState(() => _selectedIndex = 2);
             },
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.assignment_turned_in_rounded, color: Colors.teal),
-            title: Text(loc.translate('results_performance')),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ResultsScreen(
-                    languageController: widget.languageController,
+          if (widget.currentRole != AppRole.manager) const Divider(),
+          if (widget.currentRole != AppRole.manager)
+            ListTile(
+              leading: const Icon(Icons.assignment_turned_in_rounded, color: Colors.teal),
+              title: Text(loc.translate('results_performance')),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ResultsScreen(
+                      languageController: widget.languageController,
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
           ListTile(
             leading: const Icon(Icons.mark_email_unread_rounded, color: Colors.green),
             title: Text(loc.translate('leave_portal')),

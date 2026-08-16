@@ -94,6 +94,11 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
     await prefs.setString('cred_${role.name}_phone', phone);
     await prefs.setString('cred_${role.name}_pin', pin);
 
+    if (role == AppRole.teacher) {
+      await prefs.setString('cred_teacher_${phone}_pin', pin);
+      await prefs.setString('cred_teacher_${phone}_name', 'استاد ($phone)');
+    }
+
     if (mounted) {
       _showShareCredentialsDialog(role, phone, pin);
     }
@@ -181,6 +186,148 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
     );
   }
 
+  void _showAddNewTeacherDialog() {
+    final isEn = widget.languageController.locale.languageCode == 'en';
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final pinCtrl = TextEditingController();
+    final confirmPinCtrl = TextEditingController();
+    String error = '';
+    bool obscurePin = true;
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.person_add_alt_1_rounded, color: Colors.green),
+              const SizedBox(width: 8),
+              Text(
+                isEn ? 'Add New Teacher' : 'استاد کا نیا اکاؤنٹ بنائیں',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (error.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
+                    child: Text(error, style: TextStyle(color: Colors.red.shade900, fontSize: 12)),
+                  ),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                    labelText: isEn ? 'Teacher Name' : 'استاد کا نام',
+                    prefixIcon: const Icon(Icons.person_rounded),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: isEn ? 'Mobile Phone' : 'موبائل نمبر',
+                    prefixIcon: const Icon(Icons.phone_rounded),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: pinCtrl,
+                  obscureText: obscurePin,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  decoration: InputDecoration(
+                    labelText: isEn ? '4-Digit PIN' : '4-ہندسوں کا PIN',
+                    prefixIcon: const Icon(Icons.lock_rounded),
+                    counterText: '',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscurePin ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () => setDialogState(() => obscurePin = !obscurePin),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: confirmPinCtrl,
+                  obscureText: obscurePin,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  decoration: InputDecoration(
+                    labelText: isEn ? 'Confirm PIN' : 'PIN کی تصدیق کریں',
+                    prefixIcon: const Icon(Icons.lock_outline_rounded),
+                    counterText: '',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(isEn ? 'Cancel' : 'منسوخ'),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: Colors.green),
+              icon: const Icon(Icons.check_circle_rounded, size: 18),
+              label: Text(isEn ? 'Create Teacher' : 'اکاؤنٹ بنائیں'),
+              onPressed: () async {
+                final name = nameCtrl.text.trim();
+                final phone = phoneCtrl.text.trim();
+                final pin = pinCtrl.text.trim();
+                final confirmPin = confirmPinCtrl.text.trim();
+
+                if (name.isEmpty) {
+                  setDialogState(() => error = isEn ? 'Please enter teacher name.' : 'براہ کرم استاد کا نام درج کریں۔');
+                  return;
+                }
+                if (phone.isEmpty || phone.length < 8) {
+                  setDialogState(() => error = isEn ? 'Please enter a valid phone number.' : 'براہ کرم صحیح فون نمبر درج کریں۔');
+                  return;
+                }
+                if (pin.length < 4) {
+                  setDialogState(() => error = isEn ? 'PIN must be at least 4 digits.' : 'PIN کم از کم 4 ہندسوں کا ہونا چاہیے۔');
+                  return;
+                }
+                if (pin != confirmPin) {
+                  setDialogState(() => error = isEn ? 'PIN confirmation does not match.' : 'PIN کی تصدیق میچ نہیں ہوئی۔');
+                  return;
+                }
+
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setString('cred_teacher_phone', phone);
+                await prefs.setString('cred_teacher_pin', pin);
+                await prefs.setString('cred_teacher_name', name);
+                await prefs.setString('cred_teacher_${phone}_pin', pin);
+                await prefs.setString('cred_teacher_${phone}_name', name);
+
+                setState(() {
+                  _phoneControllers[AppRole.teacher]?.text = phone;
+                  _pinControllers[AppRole.teacher]?.text = pin;
+                });
+
+                if (mounted) {
+                  Navigator.pop(ctx);
+                  _showShareCredentialsDialog(AppRole.teacher, phone, pin);
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isRtl = widget.languageController.locale.languageCode != 'en';
@@ -232,6 +379,17 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
                                       ? 'After setting or changing a PIN, send it directly via WhatsApp or SMS.'
                                       : 'نیا PIN سیٹ یا تبدیل کرنے کے بعد WhatsApp یا SMS پر ڈائریکٹ بھیجیں۔',
                                   style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                                ),
+                                const SizedBox(height: 8),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green.shade700,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                                  label: Text(isEn ? '+ Add New Teacher (Name & PIN)' : '+ استاد کا نیا اکاؤنٹ بنائیں (نام اور PIN)'),
+                                  onPressed: _showAddNewTeacherDialog,
                                 ),
                               ],
                             ),
