@@ -1299,9 +1299,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                         ..addAll(updatedList);
                     } catch (_) {}
                     if (mounted) {
-                      setState(() {
-                        _activeStudents = updatedList;
-                      });
+                      setState(() {});
                     }
 
                     if (fatherPhone.isNotEmpty) {

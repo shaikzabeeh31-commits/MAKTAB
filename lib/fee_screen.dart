@@ -1848,19 +1848,24 @@ class _FeeScreenState extends State<FeeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.mosque_rounded, color: _kNavy, size: 18),
-                      const SizedBox(width: 6),
-                      Text(
-                        isEn ? 'Maktab: Maktab Al-Farooq (ID: MKT-001)' : 'مکتب: مکتب الفاروق (آئی ڈی: MKT-001)',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: _kNavy,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.mosque_rounded, color: _kNavy, size: 18),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            isEn ? 'Maktab: Maktab Al-Farooq (ID: MKT-001)' : 'مکتب: مکتب الفاروق (آئی ڈی: MKT-001)',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: _kNavy,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   Row(
                     children: [
@@ -2090,6 +2095,7 @@ class _FeeScreenState extends State<FeeScreen> {
   // ignore: unused_element
   Widget _buildDashboardSummary() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEn = widget.languageController.locale.languageCode == 'en';
     final double totalCollected = _filtered.fold(0, (sum, e) => sum + _paid(_students[e.key]));
     final double totalPending = _filtered.fold(0, (sum, e) => sum + _pending(_students[e.key]));
     final double grandTotal = totalCollected + totalPending;
@@ -2121,18 +2127,18 @@ class _FeeScreenState extends State<FeeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Revenue Dashboard', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : _kNavy)),
-                Text('Collected: ₹${_formatCurrency(totalCollected)}  |  Due: ₹${_formatCurrency(totalPending)}', style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.grey.shade700)),
+                Text(isEn ? 'Revenue Dashboard' : 'آمدنی ڈیش بورڈ', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : _kNavy)),
+                Text('${isEn ? "Collected" : "وصول شدہ"}: ₹${_formatCurrency(totalCollected)}  |  ${isEn ? "Due" : "واجب الادا"}: ₹${_formatCurrency(totalPending)}', style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.grey.shade700)),
               ],
             ),
           ),
           ElevatedButton.icon(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reminders sent to all defaulters!'), backgroundColor: _kGreen));
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEn ? 'Reminders sent to all defaulters!' : 'تمام بقایاجات والے طلبہ کو تنبیہی پیغام بھیج دیا گیا!'), backgroundColor: _kGreen));
             },
             style: ElevatedButton.styleFrom(backgroundColor: _kRed, foregroundColor: Colors.white),
             icon: const Icon(Icons.notifications_active, size: 16),
-            label: const Text('Nudge All', style: TextStyle(fontSize: 13)),
+            label: Text(isEn ? 'Nudge All' : 'یاد دہانی بھیجیں', style: const TextStyle(fontSize: 13)),
           ),
         ],
       ),
@@ -2310,6 +2316,7 @@ class _FeeScreenState extends State<FeeScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildSelectAllRow(AppLocalizations loc) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEn = loc.locale.languageCode == 'en';
     return Container(
       color: isDark ? const Color(0xFF1E293B) : Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
@@ -2319,15 +2326,15 @@ class _FeeScreenState extends State<FeeScreen> {
           activeColor: isDark ? Colors.indigoAccent : _kNavy,
           onChanged: _toggleSelectAll,
         ),
-        const Text('Select All',
+        Text(isEn ? 'Select All' : 'سب منتخب کریں',
             style:
-                TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
         const Spacer(),
         // timeline toggle hint
         const Icon(Icons.timeline, size: 14, color: Colors.grey),
         const SizedBox(width: 4),
-        const Text('Tap row to see timeline',
-            style: TextStyle(fontSize: 11, color: Colors.grey)),
+        Text(isEn ? 'Tap row to see timeline' : 'ٹائم لائن کے لیے کلک کریں',
+            style: const TextStyle(fontSize: 11, color: Colors.grey)),
       ]),
     );
   }
