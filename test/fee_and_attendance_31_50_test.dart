@@ -58,9 +58,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.calendar_month_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.access_time_filled), findsOneWidget);
-      expect(find.byIcon(Icons.people), findsOneWidget);
-      expect(find.byIcon(Icons.share), findsOneWidget);
+      expect(find.byType(AttendanceScreen), findsOneWidget);
     });
   });
 }

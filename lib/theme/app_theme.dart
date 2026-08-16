@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' as std_io;
 import 'app_colors.dart';
 import 'app_spacing.dart';
@@ -8,7 +9,8 @@ import 'package:google_fonts/google_fonts.dart';
 class AppTheme {
   static TextTheme _getTextTheme(String langCode) {
     try {
-      if (std_io.Platform.environment.containsKey('FLUTTER_TEST')) {
+      if (!kIsWeb &&
+    std_io.Platform.environment.containsKey('FLUTTER_TEST')) {
         return const TextTheme();
       }
     } catch (_) {}

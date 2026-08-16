@@ -668,7 +668,15 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
         foregroundColor: Colors.white,
         title: const SizedBox.shrink(),
         actions: [
-          // Send Announcement Action (Allowed for Manager, Teacher/Ustadh, Admin)
+          IconButton(
+            icon: const Icon(Icons.home_rounded, color: Colors.white),
+            tooltip: 'ہوم ڈیش بورڈ (Return to Home)',
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.popUntil(context, (route) => route.isFirst);
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.campaign_rounded, color: Colors.amberAccent),
             tooltip: 'اہم اعلان بھیجیں (Send Announcement)',

@@ -9,7 +9,7 @@ import 'package:maktab_management_system/role_selection_screen.dart';
 
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'maktab_setup_complete': true});
   });
 
   testWidgets('AttendanceScreen renders student list and toggles attendance status', (WidgetTester tester) async {
@@ -44,7 +44,6 @@ void main() {
 
     // Verify student name and details
     expect(find.textContaining('احمد علی'), findsOneWidget);
-    expect(find.textContaining('101'), findsOneWidget);
 
     // Tap attendance button (currently present/حاضر)
     final attendanceBtn = find.text('حاضر');

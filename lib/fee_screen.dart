@@ -12,9 +12,61 @@ import 'role_selection_screen.dart';
 const Color _kNavy = Color(0xFF0A1F5C);
 const Color _kGreen = Color(0xFF1DB954);
 const Color _kOrange = Color(0xFFFF6D00);
-// ignore: unused_element
 const Color _kWhatsApp = Color(0xFF25D366);
 const Color _kRed = Color(0xFFD32F2F);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ISLAMIC ARCH PAINTER (FEE SCREEN)
+// ─────────────────────────────────────────────────────────────────────────────
+class _FeeArchPainter extends CustomPainter {
+  final bool dark;
+
+  const _FeeArchPainter({required this.dark});
+
+  Path _path(Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    return Path()
+      ..moveTo(3, h - 3)
+      ..lineTo(3, h * .45)
+      ..quadraticBezierTo(3, h * .27, w * .15, h * .27)
+      ..quadraticBezierTo(w * .20, h * .11, w * .36, h * .11)
+      ..quadraticBezierTo(w * .44, h * .10, w * .50, 3)
+      ..quadraticBezierTo(w * .56, h * .10, w * .64, h * .11)
+      ..quadraticBezierTo(w * .80, h * .11, w * .85, h * .27)
+      ..quadraticBezierTo(w - 3, h * .27, w - 3, h * .45)
+      ..lineTo(w - 3, h - 3)
+      ..close();
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Path arch = _path(size);
+    canvas.drawShadow(arch, const Color(0x440A1F5C), 6, false);
+    canvas.drawPath(
+      arch,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: dark
+              ? const [Color(0xFF334155), Color(0xFF1E293B)]
+              : const [Colors.white, Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
+        ).createShader(Offset.zero & size),
+    );
+    canvas.drawPath(
+      arch,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2
+        ..color = const Color(0xFF0A1F5C),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _FeeArchPainter oldDelegate) =>
+      oldDelegate.dark != dark;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -33,6 +85,8 @@ class FeeScreen extends StatefulWidget {
   final Future<void> Function(List<Map<String, dynamic>>) onSave;
   final bool showAppBarLanguageButton;
   final AppRole? currentRole;
+  final String? maktabId;
+  final ValueChanged<String>? onMaktabChanged;
 
   const FeeScreen({
     super.key,
@@ -41,6 +95,8 @@ class FeeScreen extends StatefulWidget {
     required this.onSave,
     this.showAppBarLanguageButton = false,
     this.currentRole,
+    this.maktabId,
+    this.onMaktabChanged,
   });
 
   @override
@@ -53,6 +109,8 @@ class _FeeScreenState extends State<FeeScreen> {
   // ── filters ──
   String _selectedSession = 'subah';
   String _selectedClass = 'All';
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
   final List<String> _batchesList = ['All', 'Class 7 (A)', 'Class 6 (B)', 'Morning Hifz Batch', 'Nazira Batch A'];
   int _selectedYear = DateTime.now().year;
   int _selectedMonthIndex = DateTime.now().month - 1; // 0-based
@@ -134,6 +192,62 @@ class _FeeScreenState extends State<FeeScreen> {
     super.initState();
     _students =
         widget.students.map((s) => Map<String, dynamic>.from(s)).toList();
+    if (_students.isEmpty) {
+      _students = [
+        {
+          'id': '101',
+          'name': 'محمد علی',
+          'fatherName': 'عبداللہ',
+          'fatherPhone': '9876543210',
+          'className': 'کلاس ۱ (ابتدائی)',
+          'shift': 'morning',
+          'feeAmount': '500',
+          'paidAmount': '500',
+          'feeStatus': 'paid',
+          'preferredApp': 'WhatsApp',
+          'preferredLanguage': 'ur',
+        },
+        {
+          'id': '102',
+          'name': 'عبدالرحمن',
+          'fatherName': 'محمد عثمان',
+          'fatherPhone': '9876543211',
+          'className': 'کلاس ۱ (ابتدائی)',
+          'shift': 'morning',
+          'feeAmount': '500',
+          'paidAmount': '250',
+          'feeStatus': 'partially_paid',
+          'preferredApp': 'WhatsApp',
+          'preferredLanguage': 'ur',
+        },
+        {
+          'id': '103',
+          'name': 'حمزہ خان',
+          'fatherName': 'تنویر خان',
+          'fatherPhone': '9876543212',
+          'className': 'کلاس ۲ (ناظرہ)',
+          'shift': 'morning',
+          'feeAmount': '500',
+          'paidAmount': '0',
+          'feeStatus': 'due',
+          'preferredApp': 'SMS',
+          'preferredLanguage': 'ur',
+        },
+        {
+          'id': '104',
+          'name': 'عمر فاروق',
+          'fatherName': 'خالد محمود',
+          'fatherPhone': '9876543213',
+          'className': 'کلاس ۳ (حفظ)',
+          'shift': 'evening',
+          'feeAmount': '600',
+          'paidAmount': '600',
+          'feeStatus': 'paid',
+          'preferredApp': 'WhatsApp',
+          'preferredLanguage': 'en',
+        },
+      ];
+    }
     _loadSavedBatches();
     _applyFilter();
   }
@@ -181,16 +295,43 @@ class _FeeScreenState extends State<FeeScreen> {
   }
 
   void _applyFilter() {
+    final currentMaktab = widget.maktabId ?? '';
+    final query = _searchQuery.trim().toLowerCase();
+
     setState(() {
-      _filtered = _students.asMap().entries.where((e) {
+      var matches = _students.asMap().entries.where((e) {
         final s = e.value;
-        final shiftOk = _selectedSession == 'subah'
-            ? (s['shift'] ?? 'morning') == 'morning'
-            : (s['shift'] ?? 'morning') == 'evening';
+        if (currentMaktab.isNotEmpty) {
+          final ownerId = s['maktabId']?.toString();
+          if (ownerId != null && ownerId.isNotEmpty && ownerId != 'maktab_default' && ownerId != currentMaktab) {
+            return false;
+          }
+        }
+        final shiftVal = (s['shift'] ?? s['timing'] ?? s['shift_timing'] ?? '').toString().toLowerCase();
+        final isEvening = shiftVal.contains('even') || shiftVal.contains('shaam') || shiftVal.contains('شام');
+        final isMorning = !isEvening;
+        final shiftOk = _selectedSession == 'subah' ? isMorning : isEvening;
         final classOk = _selectedClass == 'All' ||
-            (s['className']?.toString() ?? '') == _selectedClass;
-        return shiftOk && classOk;
-      }).toList()
+            (s['className']?.toString() ?? s['grade'] ?? '') == _selectedClass;
+
+        final name = (s['name'] ?? '').toString().toLowerCase();
+        final fatherName = (s['fatherName'] ?? s['parentName'] ?? '').toString().toLowerCase();
+        final rollNo = (s['rollNo'] ?? s['id'] ?? '').toString().toLowerCase();
+        final searchOk = query.isEmpty || name.contains(query) || fatherName.contains(query) || rollNo.contains(query);
+
+        return shiftOk && classOk && searchOk;
+      }).toList();
+
+      if (matches.isEmpty && _students.isNotEmpty && query.isEmpty) {
+        matches = _students.asMap().entries.where((e) {
+          final s = e.value;
+          final classOk = _selectedClass == 'All' ||
+              (s['className']?.toString() ?? s['grade'] ?? '') == _selectedClass;
+          return classOk;
+        }).toList();
+      }
+
+      _filtered = matches
         ..sort((a, b) {
           final statusA = _feeStatus(a.value);
           final statusB = _feeStatus(b.value);
@@ -356,7 +497,7 @@ class _FeeScreenState extends State<FeeScreen> {
     final paid = _paid(s).toInt();
     final pending = _pending(s).toInt();
     final status = _feeStatus(s);
-    final lang = s['language']?.toString() ?? 'ur';
+    final lang = (s['preferredLanguage'] ?? s['language'] ?? 'ur').toString();
 
     if (status == 'paid' || pending <= 0) {
       switch (lang) {
@@ -831,35 +972,166 @@ class _FeeScreenState extends State<FeeScreen> {
   }
 
   void _showTeacherLedgerDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dialogBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : _kNavy;
+    final subColor = isDark ? Colors.white70 : Colors.grey.shade700;
+
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        backgroundColor: dialogBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
           children: [
-            Icon(Icons.receipt_long_rounded, color: Colors.green),
-            SizedBox(width: 8),
-            Text('استاد فیس وصولی کھاتہ (Teacher Ledger)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const Icon(Icons.receipt_long_rounded, color: Colors.green, size: 24),
+            const SizedBox(width: 8),
+            Text(
+              widget.languageController.locale.languageCode == 'en'
+                  ? 'Fee Ledger Roster'
+                  : 'فیس وصولی کھاتہ رجسٹر',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+            ),
           ],
         ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              dense: true,
-              title: Text('قاری محمد طارق (استاد)', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('جمع شدہ رقم: ₹4,500 | ایڈمن کے پاس جمع شدہ: ₹4,000'),
-              trailing: Text('باقی: ₹500', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-            ),
-            ListTile(
-              dense: true,
-              title: Text('مولانا عبداللہ علی (استاد)', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('جمع شدہ رقم: ₹3,200 | ایڈمن کے پاس جمع شدہ: ₹3,200'),
-              trailing: Text('باقی: ₹0', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-            ),
-          ],
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Teacher & Class Info Header Card (Same details as Attendance)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF0F4FF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFD0E1FD)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.person_rounded, size: 18, color: _kNavy),
+                        const SizedBox(width: 6),
+                        Text(
+                          widget.languageController.locale.languageCode == 'en'
+                              ? 'Teacher: Qari Mohammad Tariq'
+                              : 'استاد کا نام: قاری محمد طارق (استاد)',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.class_rounded, size: 16, color: Colors.indigo),
+                        const SizedBox(width: 6),
+                        Text(
+                          widget.languageController.locale.languageCode == 'en'
+                              ? 'Class: $_selectedClass | Shift: ${_selectedSession == 'subah' ? 'Morning' : 'Evening'}'
+                              : 'کلاس: $_selectedClass | شفٹ: ${_selectedSession == 'subah' ? 'صبح' : 'شام'}',
+                          style: TextStyle(fontSize: 12, color: subColor),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Student Ledger Roster
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 320),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _students.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, idx) {
+                    final s = _students[idx];
+                    final paid = _paid(s);
+                    final pending = _pending(s);
+                    final total = _total(s);
+                    final status = _feeStatus(s);
+                    final isPaid = status == 'paid';
+                    final isPresent = s['isPresent'] != false && s['attendanceStatus'] != 'absent';
+
+                    return ListTile(
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      leading: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: isPaid
+                            ? Colors.green.shade100
+                            : (pending > 0 ? Colors.orange.shade100 : Colors.blue.shade100),
+                        child: Icon(
+                          isPaid
+                              ? Icons.check_circle_rounded
+                              : (paid > 0 ? Icons.account_balance_wallet_rounded : Icons.error_outline_rounded),
+                          size: 18,
+                          color: isPaid ? Colors.green.shade800 : (paid > 0 ? Colors.orange.shade800 : Colors.red.shade800),
+                        ),
+                      ),
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              s['name']?.toString() ?? 'طالب علم',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isPresent ? Colors.green.shade50 : Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isPresent
+                                  ? (widget.languageController.locale.languageCode == 'en' ? 'Present' : 'حاضر')
+                                  : (widget.languageController.locale.languageCode == 'en' ? 'Absent' : 'غیر حاضر'),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: isPresent ? Colors.green.shade800 : Colors.red.shade800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      subtitle: Text(
+                        'والد: ${s['fatherName'] ?? '-'} | ${s['className'] ?? s['grade'] ?? '-'}',
+                        style: TextStyle(fontSize: 11, color: subColor),
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'ادائیگی: ₹${_formatCurrency(paid)} / ₹${_formatCurrency(total)}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _kGreen),
+                          ),
+                          Text(
+                            pending > 0 ? 'باقی: ₹${_formatCurrency(pending)}' : 'مکمل ادا',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: pending > 0 ? _kOrange : _kGreen,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
-          ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('بند کریں')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(widget.languageController.locale.languageCode == 'en' ? 'Close' : 'بند کریں'),
+          ),
         ],
       ),
     );
@@ -1352,13 +1624,25 @@ class _FeeScreenState extends State<FeeScreen> {
         _filtered.where((e) => _feeStatus(_students[e.key]) == 'paid').length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4FF),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF0F4FF),
       appBar: AppBar(
         backgroundColor: _kNavy,
         foregroundColor: Colors.white,
-        title: const SizedBox.shrink(),
+        title: Text(
+          isEn ? 'Fee Collection Portal' : 'مکتب فیس وصولی پورٹل',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.home_rounded, color: Colors.white),
+            tooltip: isEn ? 'Return to Home' : 'ہوم ڈیش بورڈ',
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.popUntil(context, (route) => route.isFirst);
+              }
+            },
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
             tooltip: isEn ? 'Tools' : 'ٹولز',
@@ -1482,142 +1766,8 @@ class _FeeScreenState extends State<FeeScreen> {
         ],
       ),
       body: Column(children: [
-        // Compact Fee header controls
-        Container(
-          color: _kNavy,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-              // Period Chip with Chevrons
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left_rounded, size: 20),
-                    onPressed: () {
-                      setState(() {
-                        if (_selectedMonthIndex == 0) {
-                          _selectedMonthIndex = 11;
-                          _selectedYear--;
-                        } else {
-                          _selectedMonthIndex--;
-                        }
-                        _applyFilter();
-                      });
-                    },
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 4),
-                  ActionChip(
-                    avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: _kNavy),
-                    label: Text(
-                      _selectedDateRange == null
-                          ? '${kFeeMonths[_selectedMonthIndex]} $_selectedYear'
-                          : '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                    onPressed: _selectPeriod,
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right_rounded, size: 20),
-                    onPressed: () {
-                      setState(() {
-                        if (_selectedMonthIndex == 11) {
-                          _selectedMonthIndex = 0;
-                          _selectedYear++;
-                        } else {
-                          _selectedMonthIndex++;
-                        }
-                        _applyFilter();
-                      });
-                    },
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-              // Batch selector
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: DropdownButton<String>(
-                      value: _batchesList.contains(_selectedClass) ? _selectedClass : 'All',
-                      underline: const SizedBox(),
-                      icon: const Icon(Icons.arrow_drop_down, size: 16),
-                      style: TextStyle(fontSize: 11, color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() {
-                            _selectedClass = val;
-                            _applyFilter();
-                          });
-                        }
-                      },
-                      items: [
-                        ..._batchesList.map((c) => DropdownMenuItem(value: c, child: Text(c))),
-                      ],
-                    ),
-                  ),
-
-                ],
-              ),
-              // Session Switcher
-              _SessionToggle(
-                value: _selectedSession,
-                onChanged: (v) {
-                  _selectedSession = v;
-                  _applyFilter();
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-        // Compact Revenue stats row
-        Builder(
-          builder: (ctx) {
-            final isDark = Theme.of(ctx).brightness == Brightness.dark;
-            final double totalCollected = _filtered.fold(0, (sum, e) => sum + _paid(_students[e.key]));
-            final double totalPending = _filtered.fold(0, (sum, e) => sum + _pending(_students[e.key]));
-            final double grandTotal = totalCollected + totalPending;
-            final double progress = grandTotal == 0 ? 0 : (totalCollected / grandTotal).clamp(0.0, 1.0);
-            return Container(
-              color: _kNavy,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Row(
-                children: [
-                  Text(
-                    '${loc.translate('collected')}: ₹${_formatCurrency(totalCollected)} | ${loc.translate('due')}: ₹${_formatCurrency(totalPending)} (${(progress * 100).toInt()}%)',
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_active, size: 16, color: _kRed),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: 'Nudge All Defaulters',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reminders sent to all defaulters!'), backgroundColor: _kGreen));
-                    },
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
+        _buildIslamicFeeHeader(),
+        _buildFilterBar(),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -1649,6 +1799,261 @@ class _FeeScreenState extends State<FeeScreen> {
             _selectedIndices.length, alertCount, pendingCount, paidCount),
         _buildSendButton(loc),
       ]),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ISLAMIC HEADER & FILTER BAR
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildIslamicFeeHeader() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final double totalCollected = _filtered.fold(0, (sum, e) => sum + _paid(_students[e.key]));
+    final double totalPending = _filtered.fold(0, (sum, e) => sum + _pending(_students[e.key]));
+    final double grandTotal = totalCollected + totalPending;
+    final double progress = grandTotal == 0 ? 0 : (totalCollected / grandTotal).clamp(0.0, 1.0);
+    final loc = AppLocalizations.of(context);
+    final isEn = loc.locale.languageCode == 'en';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: CustomPaint(
+        painter: _FeeArchPainter(dark: isDark),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+          child: Column(
+            children: [
+              // Month Picker Action Chip & Period Navigation
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    isEn ? 'Monthly Collection Summary' : 'ماہانہ فیس وصولی خلاصہ',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: _kNavy,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left_rounded, size: 20, color: _kNavy),
+                        onPressed: () {
+                          setState(() {
+                            if (_selectedMonthIndex == 0) {
+                              _selectedMonthIndex = 11;
+                              _selectedYear--;
+                            } else {
+                              _selectedMonthIndex--;
+                            }
+                            _applyFilter();
+                          });
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 2),
+                      ActionChip(
+                        avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: _kNavy),
+                        label: Text(
+                          _selectedDateRange == null
+                              ? '${kFeeMonths[_selectedMonthIndex]} $_selectedYear'
+                              : '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _kNavy),
+                        ),
+                        backgroundColor: Colors.white.withValues(alpha: 0.8),
+                        onPressed: _selectPeriod,
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      const SizedBox(width: 2),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right_rounded, size: 20, color: _kNavy),
+                        onPressed: () {
+                          setState(() {
+                            if (_selectedMonthIndex == 11) {
+                              _selectedMonthIndex = 0;
+                              _selectedYear++;
+                            } else {
+                              _selectedMonthIndex++;
+                            }
+                            _applyFilter();
+                          });
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const SizedBox(height: 10),
+              // Class & Teacher Details Bar (Same as Attendance Screen)
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF0A1F5C).withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.class_rounded, size: 16, color: _kNavy),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              '$_selectedClass (${_selectedSession == 'subah' ? (isEn ? 'Morning' : 'صبح') : (isEn ? 'Evening' : 'شام')})',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _kNavy),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF0A1F5C).withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.person_rounded, size: 16, color: _kNavy),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              isEn ? 'Qari Mohammad Tariq' : 'قاری محمد طارق (استاد)',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _kNavy),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.verified_rounded, size: 16, color: Colors.green),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // Linear Progress Bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 8,
+                  backgroundColor: Colors.orange.shade100,
+                  valueColor: const AlwaysStoppedAnimation<Color>(_kGreen),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Column(
+        children: [
+          // Search Field
+          TextField(
+            controller: _searchController,
+            onChanged: (val) {
+              _searchQuery = val;
+              _applyFilter();
+            },
+            decoration: InputDecoration(
+              hintText: isEn ? 'Search student by name or father name...' : 'طالب علم کا نام، والد کا نام یا رول نمبر تلاش کریں...',
+              hintStyle: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.grey.shade600),
+              prefixIcon: const Icon(Icons.search_rounded, size: 20, color: _kNavy),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _searchQuery = '';
+                          _applyFilter();
+                        });
+                      },
+                    )
+                  : null,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              filled: true,
+              fillColor: isDark ? const Color(0xFF1E293B) : Colors.grey.shade100,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : Colors.grey.shade300),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Session Switcher & Class Filter Dropdown
+          Row(
+            children: [
+              _SessionToggle(
+                value: _selectedSession,
+                onChanged: (v) {
+                  setState(() {
+                    _selectedSession = v;
+                    _applyFilter();
+                  });
+                },
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    border: Border.all(color: isDark ? const Color(0xFF334155) : Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _batchesList.contains(_selectedClass) ? _selectedClass : 'All',
+                      icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: _kNavy),
+                      isExpanded: true,
+                      style: TextStyle(fontSize: 11, color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedClass = val;
+                            _applyFilter();
+                          });
+                        }
+                      },
+                      items: _batchesList.map((c) => DropdownMenuItem(value: c, child: Text(c, overflow: TextOverflow.ellipsis))).toList(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1707,41 +2112,7 @@ class _FeeScreenState extends State<FeeScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // FILTER BAR  (session / class)
-  // ─────────────────────────────────────────────────────────────────────────
-  // ignore: unused_element
-  Widget _buildFilterBar() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      child: Row(children: [
-        _SessionToggle(
-          value: _selectedSession,
-          onChanged: (v) {
-            _selectedSession = v;
-            _applyFilter();
-          },
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _FilterDropdown(
-            value: _selectedClass,
-            items: _classOptions,
-            onChanged: (v) {
-              if (v != null) {
-                _selectedClass = v;
-                _applyFilter();
-              }
-            },
-          ),
-        ),
-        const SizedBox(width: 8),
-        _DateTimeBox(),
-      ]),
-    );
-  }
+
 
   // ─────────────────────────────────────────────────────────────────────────
   // CALENDAR BAR  (← month → navigation)
@@ -1949,7 +2320,7 @@ class _FeeScreenState extends State<FeeScreen> {
         const SizedBox(width: 44),
         const SizedBox(width: 4),
         SizedBox(
-          width: 150,
+          width: 140,
           child: Text(
             isEn ? 'Student / Father Name' : 'طالب علم / والد کا نام',
             style: style,
@@ -1958,7 +2329,7 @@ class _FeeScreenState extends State<FeeScreen> {
         ),
         const SizedBox(width: 4),
         SizedBox(
-          width: 90,
+          width: 105,
           child: Center(
             child: Text(
               isEn ? 'Fee Status' : 'فیس کی حالت',
@@ -1969,10 +2340,10 @@ class _FeeScreenState extends State<FeeScreen> {
         ),
         const Spacer(),
         SizedBox(
-          width: 40,
+          width: 80,
           child: Center(
             child: Text(
-              isEn ? 'Actions' : 'کارروائی',
+              isEn ? 'Actions' : 'پیغام و کارروائی',
               style: style,
               overflow: TextOverflow.ellipsis,
             ),
@@ -1996,9 +2367,9 @@ class _FeeScreenState extends State<FeeScreen> {
     final status = _feeStatus(s);
     final isPaid = status == 'paid';
     final hasPending = pending > 0;
-    final method = s['messageMethod']?.toString() ?? 'SMS';
-    final isWhatsApp = method == 'WhatsApp';
-    final langCode = s['language']?.toString() ?? 'ur';
+    final method = (s['preferredApp'] ?? s['messageMethod'] ?? 'WhatsApp').toString();
+    final isWhatsApp = method.toLowerCase().contains('whatsapp');
+    final langCode = (s['preferredLanguage'] ?? s['language'] ?? 'ur').toString();
     final langOption = kAllLanguages.firstWhere(
         (l) => l.code == langCode,
         orElse: () => kAllLanguages.first);
@@ -2069,7 +2440,7 @@ class _FeeScreenState extends State<FeeScreen> {
                   const SizedBox(width: 4),
                   // name + parent
                   SizedBox(
-                    width: 150,
+                    width: 140,
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -2093,47 +2464,104 @@ class _FeeScreenState extends State<FeeScreen> {
                         ]),
                   ),
                   const SizedBox(width: 4),
-                  // fee status compact
+                  // fee status compact with icon badge
                   SizedBox(
-                    width: 90,
+                    width: 105,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.center,
-                            children: [
-                              Text(_formatCurrency(paid),
-                                  style: const TextStyle(
-                                      color: _kGreen,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 11)),
-                              const Text('/',
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey)),
-                              Text(_formatCurrency(pending),
-                                  style: const TextStyle(
-                                      color: _kOrange,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 11)),
-                            ]),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.center,
+                              children: [
+                                Text('₹${_formatCurrency(paid)}',
+                                    style: const TextStyle(
+                                        color: _kGreen,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11)),
+                                const Text(' / ',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey)),
+                                Text('₹${_formatCurrency(pending)}',
+                                    style: TextStyle(
+                                        color: pending > 0 ? _kOrange : _kGreen,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11)),
+                              ]),
+                        ),
                         const SizedBox(height: 2),
                         _FeeProgressBar(paid: paid, total: total),
                         const SizedBox(height: 3),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: isPaid ? _kGreen : (hasPending ? _kRed : _kOrange),
-                            borderRadius: BorderRadius.circular(4),
+                            color: isPaid
+                                ? Colors.green.shade700
+                                : (paid > 0 ? Colors.amber.shade800 : Colors.red.shade700),
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text(
-                            isPaid ? 'PAID' : (paid > 0 ? 'PARTIAL' : 'DUE'),
-                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isPaid
+                                      ? Icons.check_circle_rounded
+                                      : (paid > 0
+                                          ? Icons.account_balance_wallet_rounded
+                                          : Icons.error_outline_rounded),
+                                  color: Colors.white,
+                                  size: 12,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  isPaid
+                                      ? (loc.locale.languageCode == 'en' ? 'PAID' : 'مکمل ادا')
+                                      : (paid > 0
+                                          ? (loc.locale.languageCode == 'en' ? 'PARTIAL' : 'بقیہ')
+                                          : (loc.locale.languageCode == 'en' ? 'DUE' : 'واجب الادا')),
+                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
                     ),
+                  ),
+                  const SizedBox(width: 4),
+                  // ── DIRECT MESSAGE BUTTON IN PREFERRED APP & PREFERRED LANGUAGE ──
+                  IconButton(
+                    icon: Icon(
+                      isWhatsApp ? Icons.chat_rounded : Icons.textsms_rounded,
+                      color: isWhatsApp ? Colors.green.shade600 : Colors.blue.shade600,
+                      size: 20,
+                    ),
+                    tooltip: loc.locale.languageCode == 'en'
+                        ? 'Send Message ($method - ${langOption.nativeScript})'
+                        : 'والدین کو میسج بھیجیں ($method - ${langOption.nativeScript})',
+                    onPressed: () async {
+                      final msg = _feeMessage(s);
+                      final phone = (s['fatherPhone'] ?? s['parentPhone'] ?? s['phone'] ?? '').toString().trim();
+                      if (phone.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('اس طالب علم کے والدین کا فون نمبر موجود نہیں ہے۔'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                      if (isWhatsApp) {
+                        await _openWhatsApp(phone, msg);
+                      } else {
+                        await _openSms(phone, msg);
+                      }
+                    },
                   ),
                   const Spacer(),
                   PopupMenuButton<String>(

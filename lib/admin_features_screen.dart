@@ -97,6 +97,15 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
           title: const SizedBox.shrink(),
           actions: [
             IconButton(
+              icon: const Icon(Icons.home_rounded),
+              tooltip: isRtl ? 'ہوم ڈیش بورڈ' : 'Return to Home',
+              onPressed: () {
+                if (Navigator.canPop(context)) {
+                  Navigator.popUntil(context, (route) => route.isFirst);
+                }
+              },
+            ),
+            IconButton(
               icon: const Icon(Icons.account_tree_rounded),
               tooltip: 'Multi-Branch Switch',
               onPressed: _showBranchSwitchDialog,
@@ -310,6 +319,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
   }
 
   Widget _buildStaffAttendanceSection() {
+    final loc = AppLocalizations.of(context);
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
@@ -321,23 +331,23 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
               alignment: WrapAlignment.spaceBetween,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                const Row(
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.badge_rounded, color: Color(0xFF074E32)),
-                    SizedBox(width: 8),
-                    Text('عملے و اساتذہ کی حاضری (Staff)',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    const Icon(Icons.badge_rounded, color: Color(0xFF074E32)),
+                    const SizedBox(width: 8),
+                    Text(loc.translate('staff_attendance'),
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 TextButton.icon(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('اساتذہ کی حاضری محفوظ کر دی گئی (Staff Attendance Saved)!')),
+                      SnackBar(content: Text(loc.translate('staff_attendance_saved'))),
                     );
                   },
                   icon: const Icon(Icons.check, size: 16),
-                  label: const Text('محفوظ کریں'),
+                  label: Text(loc.translate('save')),
                 ),
               ],
             ),
@@ -377,6 +387,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
   }
 
   Widget _buildBudgetingSection() {
+    final loc = AppLocalizations.of(context);
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
@@ -388,19 +399,19 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
               alignment: WrapAlignment.spaceBetween,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                const Row(
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.monetization_on_rounded, color: Colors.orange),
-                    SizedBox(width: 8),
-                    Text('مکتب آمدن و اخراجات (Expenses)',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    const Icon(Icons.monetization_on_rounded, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    Text(loc.translate('expenses'),
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 OutlinedButton.icon(
                   onPressed: _showAddExpenseDialog,
                   icon: const Icon(Icons.add, size: 14),
-                  label: const Text('نیا خرچ درج کریں', style: TextStyle(fontSize: 11)),
+                  label: Text(loc.translate('add_expense'), style: const TextStyle(fontSize: 11)),
                 ),
               ],
             ),
@@ -431,24 +442,26 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
   }
 
   Widget _buildSubstituteTeacherCard() {
+    final loc = AppLocalizations.of(context);
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: ListTile(
         leading: const Icon(Icons.swap_horiz_rounded, color: Colors.indigo, size: 28),
-        title: const Text('متبادل استاد کی ڈیوٹی (Substitute Teacher Manager)',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-        subtitle: Text('غیر حاضر استاد ($absentTeacher) کے لیے متبادل استاد مقرر کریں',
+        title: Text(loc.translate('substitute_teacher'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        subtitle: Text(loc.translate('substitute_desc'),
             style: const TextStyle(fontSize: 11)),
         trailing: ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
           onPressed: _showSubstituteAssignDialog,
-          child: const Text('ڈیوٹی سونپیں', style: TextStyle(fontSize: 11)),
+          child: Text(loc.translate('substitute_duty'), style: const TextStyle(fontSize: 11)),
         ),
       ),
     );
   }
 
   Widget _buildDropoutAnalyticsCard() {
+    final loc = AppLocalizations.of(context);
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
@@ -456,12 +469,12 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.person_remove_rounded, color: Colors.red),
-                SizedBox(width: 8),
-                Text('ترکِ تعلیم کا رجسٹر (Dropout Analytics)',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                const Icon(Icons.person_remove_rounded, color: Colors.red),
+                const SizedBox(width: 8),
+                Text(loc.translate('dropout_analytics'),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
               ],
             ),
             const Divider(height: 14),
@@ -474,7 +487,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
                 return ListTile(
                   dense: true,
                   title: Text(d['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
-                  subtitle: Text('وجہ: ${d['reason']}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  subtitle: Text('${loc.translate('reason')}: ${d['reason']}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                   trailing: Text(d['date'], style: const TextStyle(fontSize: 10, color: Colors.grey)),
                 );
               },
@@ -486,6 +499,7 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
   }
 
   Widget _buildAuditLogCard() {
+    final loc = AppLocalizations.of(context);
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
@@ -493,12 +507,12 @@ class _AdminFeaturesScreenState extends State<AdminFeaturesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.history_rounded, color: Colors.purple),
-                SizedBox(width: 8),
-                Text('ایڈمن ہسٹری و لاگز (Audit Log)',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                const Icon(Icons.history_rounded, color: Colors.purple),
+                const SizedBox(width: 8),
+                Text(loc.translate('audit_log'),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
               ],
             ),
             const Divider(height: 14),

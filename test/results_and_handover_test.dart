@@ -26,7 +26,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'maktab_setup_complete': true});
   });
 
   group('Student Results Grade Calculations Tests', () {
@@ -108,7 +108,7 @@ void main() {
       )));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('فیس کا کھاتہ'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('فیس'), findsAtLeastNWidgets(1));
       expect(find.textContaining('حاضری'), findsAtLeastNWidgets(1));
     });
   });

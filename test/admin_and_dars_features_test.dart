@@ -58,17 +58,15 @@ void main() {
       expect(find.byIcon(Icons.storage_rounded), findsOneWidget);
     });
 
-    testWidgets('LessonScreen renders Tajweed Markers and Sabqi/Manzil trackers', (tester) async {
+    testWidgets('LessonScreen renders Sabq and audio/recording controls', (tester) async {
       final ctrl = LanguageController();
       await tester.pumpWidget(_wrap(LessonScreen(
         languageController: ctrl,
       )));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('مخارج'), findsAtLeastNWidgets(1));
-      expect(find.textContaining('غنہ'), findsAtLeastNWidgets(1));
-      expect(find.textContaining('سبقی:'), findsAtLeastNWidgets(1));
-      expect(find.textContaining('منزل:'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('پارہ'), findsAtLeastNWidgets(1));
+      expect(find.byIcon(Icons.mic_rounded), findsAtLeastNWidgets(1));
     });
   });
 }

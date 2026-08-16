@@ -1391,7 +1391,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
                                               isRtl ? 'سرپرست اور رابطہ' : 'Guardian & Contact Info',
                                               style: TextStyle(fontWeight: FontWeight.bold, color: fieldLabelColor),
                                             ),
-                                            // Modern "Import from Contacts" button!
                                             TextButton.icon(
                                               onPressed: () async {
                                                 try {
@@ -1401,10 +1400,9 @@ class _StudentListScreenState extends State<StudentListScreen> {
                                                       properties: {ContactProperty.phone, ContactProperty.name},
                                                     );
                                                     if (contact != null) {
+                                                      final cName = (contact.displayName ?? '${contact.name?.first ?? ''} ${contact.name?.last ?? ''}').trim();
                                                       setDialogState(() {
-                                                        if (contact.name != null) {
-                                                          fatherNameController.text = '${contact.name!.first ?? ''} ${contact.name!.last ?? ''}'.trim();
-                                                        }
+                                                        if (cName.isNotEmpty) fatherNameController.text = cName;
                                                         if (contact.phones.isNotEmpty) {
                                                           fatherPhoneController.text = contact.phones.first.number;
                                                         }

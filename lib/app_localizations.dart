@@ -1,4 +1,5 @@
 import 'dart:io' as std_io;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'google_translate_service.dart';
@@ -132,6 +133,8 @@ class AppLocalizations {
       'leave_portal': 'رخصت پورٹل',
       'fee_collection': 'فیس وصولی',
       'attendance_result': 'حاضری کا نتیجہ',
+      'teacher_attendance_status': 'اساتذہ کی حاضری کی صورتحال',
+      'recorded_by_teacher': 'استاد کا درج کردہ حاضری ریکارڈ',
       'madrasa_title': 'مدرسہ خیر العلوم اشرفیہ',
       'select_subject': 'سبجیکٹ سلیکشن',
       'lesson_entry_title': 'سبق کی انٹری (بولیں یا لکھیں)',
@@ -339,6 +342,8 @@ class AppLocalizations {
       'leave_portal': 'Leave Portal',
       'fee_collection': 'Fee Collection',
       'attendance_result': 'Attendance Result',
+      'teacher_attendance_status': 'Teacher Attendance Status',
+      'recorded_by_teacher': 'Attendance Recorded by Teacher',
       'madrasa_title': 'Madrasa AIB',
       'select_subject': 'Select Subject',
       'lesson_entry_title': 'Lesson Entry (Speak or Type)',
@@ -1829,7 +1834,8 @@ class _TranslatedTextState extends State<TranslatedText> {
       );
     }
 
-    final bool isTest = std_io.Platform.environment.containsKey('FLUTTER_TEST');
+    final bool isTest =
+    !kIsWeb && std_io.Platform.environment.containsKey('FLUTTER_TEST');
     if (isTest) {
       return Text(
         widget.text,

@@ -386,6 +386,17 @@ class _TeacherLeavePortalState extends State<_TeacherLeavePortal>
         title: const SizedBox.shrink(),
         backgroundColor: const Color(0xFF047857),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home_rounded, color: Colors.white),
+            tooltip: 'ہوم ڈیش بورڈ (Return to Home)',
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.popUntil(context, (route) => route.isFirst);
+              }
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabCtrl,
           indicatorColor: Colors.amber,

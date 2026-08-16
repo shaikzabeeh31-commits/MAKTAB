@@ -1,1204 +1,2049 @@
 import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import 'app_localizations.dart';
-import 'theme_controller.dart';
 import 'role_selection_screen.dart';
+import 'shift_manager.dart';
+import 'theme_controller.dart';
 
 class AttendanceScreen extends StatefulWidget {
   final List<Map<String, dynamic>> students;
   final LanguageController languageController;
   final ThemeController? themeController;
-  final Function(List<Map<String, dynamic>> updatedStudents)? onSave;
   final AppRole? currentRole;
+  final Function(List<Map<String, dynamic>> updatedStudents)? onSave;
+  final String? maktabId;
 
   const AttendanceScreen({
     super.key,
     required this.students,
     required this.languageController,
     this.themeController,
-    this.onSave,
     this.currentRole,
+    this.onSave,
+    this.maktabId,
   });
 
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
 }
 
+class _AttendanceArchPainter extends CustomPainter {
+  final bool dark;
+
+  const _AttendanceArchPainter({required this.dark});
+
+  Path _path(Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    return Path()
+      ..moveTo(3, h - 3)
+      ..lineTo(3, h * .45)
+      ..quadraticBezierTo(3, h * .27, w * .15, h * .27)
+      ..quadraticBezierTo(w * .20, h * .11, w * .36, h * .11)
+      ..quadraticBezierTo(w * .44, h * .10, w * .50, 3)
+      ..quadraticBezierTo(w * .56, h * .10, w * .64, h * .11)
+      ..quadraticBezierTo(w * .80, h * .11, w * .85, h * .27)
+      ..quadraticBezierTo(w - 3, h * .27, w - 3, h * .45)
+      ..lineTo(w - 3, h - 3)
+      ..close();
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Path arch = _path(size);
+    canvas.drawShadow(arch, const Color(0x44065F46), 6, false);
+    canvas.drawPath(
+      arch,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: dark
+              ? const [Color(0xFF334155), Color(0xFF172033)]
+              : const [Colors.white, Color(0xFFF1FAF5), Color(0xFFE2F3EA)],
+        ).createShader(Offset.zero & size),
+    );
+    canvas.drawPath(
+      arch,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2
+        ..color = const Color(0xFF08734B),
+    );
+    final Path inner = Path.from(arch);
+    canvas.save();
+    canvas.translate(0, 3);
+    canvas.drawPath(
+      inner,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = .8
+        ..color = const Color(0xFF68AD91),
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _AttendanceArchPainter oldDelegate) =>
+      oldDelegate.dark != dark;
+}
+
+class _IslamicCapIcon extends StatelessWidget {
+  final Color color;
+  final double size;
+
+  const _IslamicCapIcon({required this.color, this.size = 18});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(size, size * .72),
+      painter: _IslamicCapPainter(color),
+    );
+  }
+}
+
+class _IslamicCapPainter extends CustomPainter {
+  final Color color;
+
+  const _IslamicCapPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final path = Path()
+      ..moveTo(size.width * .08, size.height * .82)
+      ..quadraticBezierTo(size.width * .10, size.height * .28,
+          size.width * .50, size.height * .12)
+      ..quadraticBezierTo(size.width * .90, size.height * .28,
+          size.width * .92, size.height * .82)
+      ..quadraticBezierTo(size.width * .50, size.height * .96,
+          size.width * .08, size.height * .82)
+      ..close();
+    canvas.drawPath(path, paint);
+    canvas.drawLine(
+      Offset(size.width * .13, size.height * .66),
+      Offset(size.width * .87, size.height * .66),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _IslamicCapPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
 class _AttendanceScreenState extends State<AttendanceScreen> {
-  late List<Map<String, dynamic>> _students;
+  static const String _studentsStorageKey = 'students_data';
+
+  List<MaktabShift> _shifts = ShiftStore.defaults;
+  List<Map<String, dynamic>> _students = <Map<String, dynamic>>[];
+
   DateTime _selectedDate = DateTime.now();
-  DateTimeRange? _selectedDateRange;
-  String _selectedClassFilter = 'All';
-  final List<String> _batchesList = ['All', 'Class 7 (A)', 'Class 6 (B)', 'Morning Hifz Batch', 'Nazira Batch A'];
-  String _selectedShiftSlot = 'morning';
-  final Set<int> _selectedIndices = {};
+  String _selectedShiftId = 'morning';
+  String _classHeading = 'مکتب اطفال';
+  String _teacherHeading = 'معلم/معلمہ کا نام';
+  String _institutionName = 'مکتب الفاروق';
+  String _institutionAddress = 'مدینہ مسجد، خنّاپیٹ، ڈون';
+  bool _isLoading = true;
+  bool _isWorking = false;
+  bool _detailsExpanded = false;
+  bool _teacherPresent = false;
+  String _holidayNotice = '';
 
-  void _showAddBatchDialog() {
-    final ctrl = TextEditingController();
-    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  @override
+  void initState() {
+    super.initState();
+    _loadStudentsAndAttendance();
+  }
 
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-        title: Row(
-          children: [
-            const Icon(Icons.group_add_rounded, color: Colors.indigo),
-            const SizedBox(width: 8),
-            Text(
-              isEn ? 'Add New Batch / Class' : 'نیا بیچ یا کلاس شامل کریں',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+  @override
+  void didUpdateWidget(covariant AttendanceScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // A newly admitted student is saved by the parent screen and then passed
+    // back to this already-open AttendanceScreen. Refresh the local list when
+    // that parent list changes; initState alone only runs the first time.
+    if (!identical(oldWidget.students, widget.students) ||
+        oldWidget.students.length != widget.students.length) {
+      _loadStudentsAndAttendance();
+    }
+  }
+
+  String get _dateKey {
+    final String year = _selectedDate.year.toString();
+    final String month = _selectedDate.month.toString().padLeft(2, '0');
+    final String day = _selectedDate.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
+  }
+
+  String get _attendanceStorageKey =>
+      'attendance_${widget.maktabId ?? 'legacy'}_${_dateKey}_$_selectedShiftId';
+
+  String get _legacyAttendanceStorageKey => 'attendance_$_dateKey';
+
+  String get _classHeadingStorageKey =>
+      'attendance_class_heading_${widget.maktabId ?? 'legacy'}_$_selectedShiftId';
+
+  String get _teacherHeadingStorageKey =>
+      'attendance_teacher_heading_${widget.maktabId ?? 'legacy'}_$_selectedShiftId';
+
+  String get _teacherAttendanceStorageKey =>
+      'teacher_attendance_${widget.maktabId ?? 'legacy'}_${_dateKey}_$_selectedShiftId';
+
+  MaktabShift get _selectedShift => _shifts.firstWhere(
+        (shift) => shift.id == _selectedShiftId,
+        orElse: () => _shifts.first,
+      );
+
+  List<Map<String, dynamic>> get _visibleStudents {
+    return _students.where((Map<String, dynamic> student) {
+      final bool correctShift =
+          ShiftStore.studentShiftIds(student).contains(_selectedShiftId);
+      return correctShift && _isActiveStudent(student);
+    }).toList();
+  }
+
+  bool _isActiveStudent(Map<String, dynamic> student) {
+    if (student['isActive'] == false || student['active'] == false) return false;
+    final String status = (student['studentStatus'] ?? student['status'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    return status != 'inactive' &&
+        status != 'left' &&
+        status != 'deleted' &&
+        status != 'غیر فعال' &&
+        status != 'ترک';
+  }
+
+  List<Map<String, dynamic>> get _selectedAbsentees {
+    return _visibleStudents.where((Map<String, dynamic> student) {
+      return _hasParentMessageIssue(student) &&
+          student['selectedForMessage'] == true;
+    }).toList();
+  }
+
+  bool _hasParentMessageIssue(Map<String, dynamic> student) {
+    final status = _attendanceStatus(student);
+    return status == 'absent' ||
+        status == 'late' ||
+        student['hasCap'] == false ||
+        student['hasUniform'] == false ||
+        student['hasBooks'] == false;
+  }
+
+  String _parentMessage(Map<String, dynamic> student) {
+    final name = student['name']?.toString().trim() ?? 'آپ کا لڑکا';
+    final messages = <String>[];
+    final status = _attendanceStatus(student);
+    if (status == 'absent') {
+      messages.add('آج $name مکتب میں غیر حاضر رہا۔ براہ کرم غیر حاضری کی وجہ بتائیں۔');
+    } else if (status == 'late') {
+      messages.add('آج $name مکتب میں تاخیر سے پہنچا۔ براہ کرم اسے وقت پر بھیجیں۔');
+    }
+    if (student['hasCap'] == false) {
+      messages.add('آج آپ کا لڑکا $name مکتب آتے وقت گھر سے ٹوپی پہن کر نہیں آیا۔');
+    }
+    if (student['hasUniform'] == false) {
+      messages.add('آج آپ کا لڑکا $name مکتب کا مقررہ لباس پہن کر نہیں آیا۔');
+    }
+    if (student['hasBooks'] == false) {
+      messages.add('آج آپ کا لڑکا $name مکتب کی ضروری کتاب ساتھ لے کر نہیں آیا۔');
+    }
+    return 'السلام علیکم، ${messages.join(' ')} براہِ کرم توجہ دیں۔';
+  }
+
+  String _parentPhone(Map<String, dynamic> student) {
+    return (student['fatherPhone'] ??
+            student['parentPhone'] ??
+            student['phone'] ??
+            '')
+        .toString();
+  }
+
+  Future<void> _sendReportBySms(Map<String, dynamic> student) async {
+    final phone = _parentPhone(student).replaceAll(RegExp(r'[^0-9+]'), '');
+    if (phone.isEmpty) {
+      _showMessage('اس طالب علم کے والدین کا فون نمبر موجود نہیں ہے۔', isError: true);
+      return;
+    }
+    final uri = Uri(
+      scheme: 'sms',
+      path: phone,
+      queryParameters: <String, String>{'body': _parentMessage(student)},
+    );
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      _showMessage('SMS App نہیں کھل سکی۔', isError: true);
+    }
+  }
+
+  Future<void> _sendReportByWhatsApp(Map<String, dynamic> student) async {
+    var phone = _parentPhone(student).replaceAll(RegExp(r'[^0-9]'), '');
+    if (phone.isEmpty) {
+      _showMessage('اس طالب علم کے والدین کا فون نمبر موجود نہیں ہے۔', isError: true);
+      return;
+    }
+    if (phone.length == 10) phone = '91$phone';
+    final uri = Uri.parse(
+      'https://wa.me/$phone?text=${Uri.encodeComponent(_parentMessage(student))}',
+    );
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      _showMessage('WhatsApp نہیں کھل سکا۔', isError: true);
+    }
+  }
+
+  int get _presentCount => _visibleStudents
+      .where((student) => _attendanceStatus(student) == 'present')
+      .length;
+  int get _absentCount => _visibleStudents
+      .where((student) => _attendanceStatus(student) == 'absent')
+      .length;
+  int get _lateCount => _visibleStudents
+      .where((student) => _attendanceStatus(student) == 'late')
+      .length;
+
+  String _studentClass(Map<String, dynamic> student) {
+    return (student['className'] ??
+            student['class'] ??
+            student['selectedClass'] ??
+            student['grade'] ??
+            // Legacy records used group as the class field.
+            student['group'])
+            ?.toString()
+            .trim() ??
+        '';
+  }
+
+  String _attendanceStatus(Map<String, dynamic> student) {
+    final String? status = student['attendanceStatus']?.toString();
+    if (status == 'present' || status == 'absent' || status == 'late') {
+      return status!;
+    }
+    return student['isPresent'] == false ? 'absent' : 'present';
+  }
+
+  String _studentId(Map<String, dynamic> student) {
+    final String savedId = student['id']?.toString().trim() ?? '';
+    if (savedId.isNotEmpty) return savedId;
+
+    final String name = student['name']?.toString().trim() ?? '';
+    final String phone = student['fatherPhone']?.toString().trim() ?? '';
+    return '$name-$phone';
+  }
+
+  Future<void> _loadStudentsAndAttendance() async {
+    if (mounted) setState(() => _isLoading = true);
+
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      _shifts = await ShiftStore.load();
+      if (_shifts.every((shift) => shift.id != _selectedShiftId)) {
+        _selectedShiftId = _shifts.first.id;
+      }
+      final String? rawStudents = prefs.getString(_studentsStorageKey);
+      final String? rawAttendance = prefs.getString(_attendanceStorageKey) ??
+          prefs.getString(_legacyAttendanceStorageKey);
+      _classHeading =
+          prefs.getString(_classHeadingStorageKey)?.trim().isNotEmpty == true
+              ? prefs.getString(_classHeadingStorageKey)!.trim()
+              : 'مکتب اطفال';
+      _teacherHeading =
+          prefs.getString(_teacherHeadingStorageKey)?.trim().isNotEmpty == true
+              ? prefs.getString(_teacherHeadingStorageKey)!.trim()
+              : 'معلم/معلمہ کا نام';
+      _teacherPresent =
+          prefs.getBool(_teacherAttendanceStorageKey) ?? false;
+      final String? savedInstitution = prefs.getString('cred_maktab_name') ??
+          prefs.getString('maktab_name') ??
+          prefs.getString('mosque_name');
+      if (savedInstitution != null && savedInstitution.trim().isNotEmpty) {
+        _institutionName = savedInstitution.trim();
+      }
+      _institutionAddress =
+          prefs.getString('maktab_address')?.trim().isNotEmpty == true
+              ? prefs.getString('maktab_address')!.trim()
+              : 'مدینہ مسجد، خنّاپیٹ، ڈون';
+      _holidayNotice = '';
+      final holidayRaw = prefs.getString('maktab_holiday_v1');
+      if (holidayRaw != null) {
+        final holiday =
+            Map<String, dynamic>.from(jsonDecode(holidayRaw) as Map);
+        final weeklyDay = holiday['weeklyDay'] as int?;
+        if (holiday['enabled'] == true || weeklyDay == _selectedDate.weekday) {
+          final reason = holiday['reason']?.toString().trim() ?? '';
+          _holidayNotice = reason.isEmpty ? 'چھٹی' : 'چھٹی: $reason';
+        }
+      }
+
+      final Map<String, dynamic> attendance =
+          rawAttendance == null || rawAttendance.isEmpty
+          ? <String, dynamic>{}
+          : Map<String, dynamic>.from(jsonDecode(rawAttendance) as Map);
+
+      final List<Map<String, dynamic>> loaded = <Map<String, dynamic>>[];
+
+      // Merge both sources so every newly admitted/saved student remains
+      // visible in attendance; lesson groups must never hide a student here.
+      final storedStudents = rawStudents != null && rawStudents.isNotEmpty
+          ? (jsonDecode(rawStudents) as List<dynamic>)
+          : <dynamic>[];
+      final mergedById = <String, Map<String, dynamic>>{};
+      for (final source in <List<dynamic>>[storedStudents, widget.students]) {
+        for (final item in source) {
+          if (item is! Map) continue;
+          final student = Map<String, dynamic>.from(item);
+          final id = _studentId(student);
+          mergedById[id] = <String, dynamic>{
+            ...?mergedById[id],
+            ...student,
+          };
+        }
+      }
+      final List<dynamic> decoded = mergedById.values.toList();
+
+      final String? currentMaktab = widget.maktabId ?? prefs.getString('active_maktab_id');
+      for (final dynamic item in decoded) {
+          final Map<String, dynamic> student =
+              Map<String, dynamic>.from(item as Map);
+
+          if (currentMaktab != null && currentMaktab.isNotEmpty) {
+            final ownerId = student['maktabId']?.toString();
+            if (ownerId != null && ownerId.isNotEmpty && ownerId != currentMaktab) {
+              continue;
+            }
+          }
+
+          final dynamic savedValue = attendance[_studentId(student)];
+          final Map<String, dynamic>? saved = savedValue is Map
+              ? Map<String, dynamic>.from(savedValue)
+              : null;
+
+          final String? savedStatus = saved?['attendanceStatus']?.toString();
+          student['attendanceStatus'] = savedStatus == 'present' ||
+                  savedStatus == 'absent' ||
+                  savedStatus == 'late'
+              ? savedStatus
+              : (saved?['isPresent'] == false ? 'absent' : 'present');
+          student['isPresent'] = student['attendanceStatus'] != 'absent';
+          student['selectedForMessage'] =
+              saved?['selectedForMessage'] ?? false;
+          student['hasCap'] = saved?['hasCap'] ?? student['hasCap'] ?? true;
+          student['hasUniform'] =
+              saved?['hasUniform'] ?? student['hasUniform'] ?? true;
+          student['hasBooks'] =
+              saved?['hasBooks'] ?? student['hasBooks'] ?? true;
+          loaded.add(student);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _students = loaded;
+      });
+    } catch (error) {
+      _showMessage('طلبہ کی فہرست لوڈ نہیں ہوسکی: $error', isError: true);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _saveAttendance({bool showConfirmation = true}) async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final Map<String, dynamic> record = <String, dynamic>{};
+
+      for (final Map<String, dynamic> student in _visibleStudents) {
+        record[_studentId(student)] = <String, dynamic>{
+          'attendanceStatus': _attendanceStatus(student),
+          'isPresent': _attendanceStatus(student) != 'absent',
+          'selectedForMessage': student['selectedForMessage'] == true,
+          'hasCap': student['hasCap'] as bool? ?? true,
+          'hasUniform': student['hasUniform'] as bool? ?? true,
+          'hasBooks': student['hasBooks'] as bool? ?? true,
+        };
+      }
+
+      await prefs.setString(_attendanceStorageKey, jsonEncode(record));
+      widget.onSave?.call(_students);
+      if (showConfirmation) _showMessage('$_dateKey کی حاضری محفوظ ہوگئی۔');
+    } catch (error) {
+      _showMessage('حاضری محفوظ نہیں ہوسکی: $error', isError: true);
+    }
+  }
+
+  Future<void> _toggleTeacherAttendance() async {
+    if (_teacherPresent) {
+      final bool? remove = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('استاد کی حاضری'),
+          content: const Text('کیا اس تاریخ اور شفٹ کی حاضری ہٹانی ہے؟'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('نہیں'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('ہاں، ہٹائیں'),
             ),
           ],
         ),
+      );
+      if (remove != true) return;
+    }
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final bool value = !_teacherPresent;
+    await prefs.setBool(_teacherAttendanceStorageKey, value);
+    if (!mounted) return;
+    setState(() => _teacherPresent = value);
+    _showMessage(value
+        ? 'استاد کی حاضری محفوظ ہوگئی۔'
+        : 'استاد کی حاضری ہٹا دی گئی۔');
+  }
+
+  Future<void> _pickDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2040),
+      helpText: 'حاضری کی تاریخ منتخب کریں',
+      cancelText: 'منسوخ',
+      confirmText: 'منتخب کریں',
+    );
+
+    if (picked == null || !mounted) return;
+    setState(() => _selectedDate = picked);
+    await _loadStudentsAndAttendance();
+  }
+
+  void _markAttendance(Map<String, dynamic> student, String status) {
+    setState(() {
+      student['attendanceStatus'] = status;
+      student['isPresent'] = status != 'absent';
+      student['selectedForMessage'] = _hasParentMessageIssue(student);
+    });
+  }
+
+  void _toggleMessageSelection(
+    Map<String, dynamic> student,
+    bool? selected,
+  ) {
+    if (!_hasParentMessageIssue(student)) {
+      _showMessage('اس طالب علم کے لیے کوئی شکایت موجود نہیں ہے۔', isError: true);
+      return;
+    }
+    setState(() => student['selectedForMessage'] = selected ?? false);
+  }
+
+  void _markAllPresent() {
+    setState(() {
+      for (final Map<String, dynamic> student in _visibleStudents) {
+        student['isPresent'] = true;
+        student['attendanceStatus'] = 'present';
+        student['selectedForMessage'] = _hasParentMessageIssue(student);
+      }
+    });
+  }
+
+  Future<void> _openMessageSheet() async {
+    final List<Map<String, dynamic>> selected = _selectedAbsentees;
+    if (selected.isEmpty) {
+      _showMessage('میسج کے لیے کوئی شکایت منتخب نہیں ہے۔',
+          isError: true);
+      return;
+    }
+
+    await _saveAttendance(showConfirmation: false);
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: SafeArea(
+            child: SizedBox(
+              height: MediaQuery.sizeOf(sheetContext).height * 0.68,
+              child: Column(
+                children: <Widget>[
+                  Text(
+                    'والدین کے لیے تیار پیغامات (${selected.length})',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Divider(),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: selected.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (BuildContext context, int index) {
+                        final Map<String, dynamic> student = selected[index];
+                        return ListTile(
+                          leading: CircleAvatar(child: Text('${index + 1}')),
+                          title: Text(
+                            student['name']?.toString() ?? 'طالب علم',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(_parentMessage(student)),
+                          trailing: PopupMenuButton<String>(
+                            tooltip: 'پیغام بھیجنے کا طریقہ',
+                            icon: const Icon(Icons.send_rounded,
+                                color: Colors.green),
+                            onSelected: (method) {
+                              if (method == 'whatsapp') {
+                                _sendReportByWhatsApp(student);
+                              } else {
+                                _sendReportBySms(student);
+                              }
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(
+                                value: 'whatsapp',
+                                child: Row(children: [
+                                  Icon(Icons.chat_rounded, color: Colors.green),
+                                  SizedBox(width: 10),
+                                  Text('WhatsApp'),
+                                ]),
+                              ),
+                              PopupMenuItem(
+                                value: 'sms',
+                                child: Row(children: [
+                                  Icon(Icons.sms_rounded, color: Colors.orange),
+                                  SizedBox(width: 10),
+                                  Text('SMS'),
+                                ]),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          Navigator.pop(sheetContext);
+                          _showMessage('تمام رپورٹس تیار ہیں۔ ہر نام کے سامنے Send دبائیں۔');
+                        },
+                        icon: const Icon(Icons.send),
+                        label: const Text('تمام رپورٹس تیار ہیں'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<Uint8List> _createAttendancePdf() async {
+    final pw.Document document = pw.Document();
+    final pw.Font regularFont = await PdfGoogleFonts.notoSansArabicRegular();
+    final pw.Font boldFont = await PdfGoogleFonts.notoSansArabicBold();
+    final List<Map<String, dynamic>> students = _visibleStudents;
+
+    document.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        theme: pw.ThemeData.withFont(base: regularFont, bold: boldFont),
+        textDirection: pw.TextDirection.rtl,
+        margin: const pw.EdgeInsets.all(28),
+        build: (pw.Context context) => <pw.Widget>[
+          pw.Text(
+            'طلبہ کی حاضری',
+            style: pw.TextStyle(font: boldFont, fontSize: 22),
+          ),
+          pw.SizedBox(height: 6),
+          pw.Text(
+            '$_institutionName\n$_institutionAddress\nمکتب: $_classHeading   |   معلم/معلمہ: $_teacherHeading   |   تاریخ: $_dateKey   |   شفٹ: ${_selectedShift.name}',
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            'کل طلبہ: ${students.length} | حاضر: $_presentCount | غیر حاضر: $_absentCount | تاخیر: $_lateCount',
+          ),
+          pw.SizedBox(height: 16),
+          pw.TableHelper.fromTextArray(
+            context: context,
+            headerStyle: pw.TextStyle(font: boldFont, color: PdfColors.white),
+            headerDecoration: const pw.BoxDecoration(color: PdfColors.green700),
+            cellAlignment: pw.Alignment.centerRight,
+            headers: <String>[
+              'نمبر',
+              'طالب علم',
+              'کلاس',
+              'والد کا نام',
+              'حاضری',
+            ],
+            data: List<List<String>>.generate(students.length, (int index) {
+              final Map<String, dynamic> student = students[index];
+              return <String>[
+                '${index + 1}',
+                student['name']?.toString() ?? '-',
+                _studentClass(student).isEmpty
+                    ? 'مقرر نہیں'
+                    : _studentClass(student),
+                student['fatherName']?.toString() ?? '-',
+                _attendanceStatus(student) == 'absent'
+                    ? 'غیر حاضر'
+                    : _attendanceStatus(student) == 'late'
+                        ? 'تاخیر'
+                        : 'حاضر',
+              ];
+            }),
+          ),
+        ],
+      ),
+    );
+
+    return document.save();
+  }
+
+  Future<void> _sharePdf() async {
+    if (_visibleStudents.isEmpty) {
+      _showMessage('اس شفٹ میں PDF بنانے کے لیے کوئی طالب علم نہیں ہے۔',
+          isError: true);
+      return;
+    }
+
+    setState(() => _isWorking = true);
+    try {
+      await _saveAttendance(showConfirmation: false);
+      final Uint8List pdf = await _createAttendancePdf();
+      await Printing.sharePdf(
+        bytes: pdf,
+        filename: 'attendance_${_selectedShift.name}_$_dateKey.pdf',
+      );
+    } catch (error) {
+      _showMessage('PDF تیار نہیں ہوسکی: $error', isError: true);
+    } finally {
+      if (mounted) setState(() => _isWorking = false);
+    }
+  }
+
+  void _showMessage(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
+      ),
+    );
+  }
+
+  Future<void> _pickShift() async {
+    final value = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text('شفٹ منتخب کریں', textAlign: TextAlign.center),
+            ),
+            for (final shift in _shifts)
+              ListTile(
+                leading: Icon(shift.id == 'morning'
+                    ? Icons.wb_sunny_outlined
+                    : Icons.nightlight_outlined),
+                title: Text(shift.name),
+                subtitle: shift.startTime.isEmpty && shift.endTime.isEmpty
+                    ? null
+                    : Text('${shift.startTime} تا ${shift.endTime}'),
+                trailing: shift.id == _selectedShiftId
+                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    : null,
+                onTap: () => Navigator.pop(ctx, shift.id),
+              ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.edit_calendar_rounded),
+              title: const Text('شفٹیں بنائیں یا تبدیل کریں'),
+              onTap: () => Navigator.pop(ctx, '__manage__'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (value == '__manage__' && mounted) {
+      await showShiftManager(context);
+      await _loadStudentsAndAttendance();
+      return;
+    }
+    if (value != null && mounted && value != _selectedShiftId) {
+      setState(() => _selectedShiftId = value);
+      await _loadStudentsAndAttendance();
+    }
+  }
+
+  Future<void> _editInstitutionName() async {
+    final controller = TextEditingController(text: _institutionName);
+    final value = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('مکتب کا نام'),
         content: TextField(
-          controller: ctrl,
-          decoration: InputDecoration(
-            labelText: isEn ? 'Batch Name (e.g. Hifz Batch A)' : 'بیچ کا نام (مثلاً حفظ بیچ A)',
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            border: const OutlineInputBorder(),
+          controller: controller,
+          autofocus: true,
+          textDirection: TextDirection.rtl,
+          maxLines: 1,
+          maxLength: 50,
+          decoration: const InputDecoration(
+            labelText: 'مثلاً: مکتب الفاروق',
+            border: OutlineInputBorder(),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Cancel' : 'منسوخ')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('منسوخ'),
+          ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.indigo),
-            onPressed: () {
-              final name = ctrl.text.trim();
-              if (name.isNotEmpty) {
-                setState(() {
-                  if (!_batchesList.contains(name)) {
-                    _batchesList.add(name);
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: const Text('محفوظ کریں'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null || value.isEmpty || !mounted) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('maktab_name', value);
+    if (mounted) setState(() => _institutionName = value);
+  }
+
+  Future<void> _editInstitutionAddress() async {
+    final TextEditingController controller =
+        TextEditingController(text: _institutionAddress);
+    final String? value = await showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('مسجد، محلہ، گاؤں یا شہر کا پتہ'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textDirection: TextDirection.rtl,
+          maxLines: 2,
+          maxLength: 100,
+          decoration: const InputDecoration(
+            labelText: 'مثلاً: مدینہ مسجد، خنّاپیٹ، ڈون',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('منسوخ'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
+            child: const Text('محفوظ کریں'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null || value.isEmpty || !mounted) return;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('maktab_address', value);
+    if (mounted) setState(() => _institutionAddress = value);
+  }
+
+  Future<void> _editClassHeading() async {
+    final TextEditingController controller =
+        TextEditingController(text: _classHeading);
+    final String? value = await showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('مکتب کی قسم لکھیں'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textDirection: TextDirection.rtl,
+          maxLength: 30,
+          decoration: const InputDecoration(
+            labelText: 'مثلاً: مکتب اطفال، مکتب نسواں یا مکتب رجال',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (String text) =>
+              Navigator.pop(dialogContext, text.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('منسوخ'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
+            child: const Text('محفوظ کریں'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null || value.isEmpty || !mounted) return;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_classHeadingStorageKey, value);
+    if (mounted) setState(() => _classHeading = value);
+  }
+
+  Future<void> _editTeacherHeading() async {
+    final TextEditingController controller =
+        TextEditingController(text: _teacherHeading);
+    final String? value = await showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('معلم یا معلمہ کا نام لکھیں'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textDirection: TextDirection.rtl,
+          maxLength: 50,
+          decoration: const InputDecoration(
+            labelText: 'مثلاً: مولانا احمد یا معلمہ فاطمہ',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (String text) =>
+              Navigator.pop(dialogContext, text.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('منسوخ'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
+            child: const Text('محفوظ کریں'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null || value.isEmpty || !mounted) return;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_teacherHeadingStorageKey, value);
+    if (mounted) setState(() => _teacherHeading = value);
+  }
+
+  Future<void> _openAttendanceSettings() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text('مکتب اور حاضری کی ترتیب',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.mosque_rounded),
+              title: const Text('مکتب کا نام'),
+              subtitle: Text(_institutionName),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _editInstitutionName();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.location_on_rounded),
+              title: const Text('مسجد اور پتہ'),
+              subtitle: Text(_institutionAddress),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _editInstitutionAddress();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.school_rounded),
+              title: const Text('مکتب کی قسم'),
+              subtitle: Text(_classHeading),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _editClassHeading();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_rounded),
+              title: const Text('معلم یا معلمہ'),
+              subtitle: Text(_teacherHeading),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _editTeacherHeading();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_calendar_rounded),
+              title: const Text('شفٹیں بنائیں یا تبدیل کریں'),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                await showShiftManager(context);
+                await _loadStudentsAndAttendance();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _callParent(Map<String, dynamic> student) async {
+    final phone = (student['fatherPhone'] ??
+            student['parentPhone'] ??
+            student['phone'] ??
+            '')
+        .toString()
+        .replaceAll(RegExp(r'[^0-9+]'), '');
+    if (phone.isEmpty) {
+      _showMessage('والدین کا فون نمبر موجود نہیں ہے۔', isError: true);
+      return;
+    }
+    final uri = Uri(scheme: 'tel', path: phone);
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  BoxDecoration _threeD({double radius = 14}) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: dark
+            ? const [Color(0xFF334155), Color(0xFF172033)]
+            : const [Colors.white, Color(0xFFF5FCF8), Color(0xFFE3F2EA)],
+      ),
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: const Color(0xFF68AD91)),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x33065F46),
+          blurRadius: 9,
+          offset: Offset(0, 5),
+        ),
+      ],
+    );
+  }
+
+  Widget _fit(String text, {Color? color, double size = 11}) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(
+        text,
+        maxLines: 1,
+        softWrap: false,
+        style: TextStyle(
+          color: color,
+          fontSize: size,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _topBox(Widget child, VoidCallback onTap, {int flex = 1}) {
+    return Expanded(
+      flex: flex,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          height: 54,
+          padding: const EdgeInsets.symmetric(horizontal: 5),
+          decoration: _threeD(),
+          child: Center(child: child),
+        ),
+      ),
+    );
+  }
+
+  Widget _infoBox({
+    required Widget child,
+    required VoidCallback onTap,
+    double height = 42,
+    bool holiday = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        height: height,
+        padding: const EdgeInsets.symmetric(horizontal: 7),
+        decoration: holiday
+            ? BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFF1F1), Color(0xFFFFCDD2)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFD32F2F), width: 1.5),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x44D32F2F),
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              )
+            : _threeD(radius: 12),
+        child: Center(child: child),
+      ),
+    );
+  }
+
+  Widget _identityArch(bool dark) {
+    return SizedBox(
+      height: 108,
+      width: double.infinity,
+      child: CustomPaint(
+        painter: _AttendanceArchPainter(dark: dark),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 2,
+              left: 4,
+              child: IconButton(
+                icon: const Icon(Icons.home_rounded, color: Colors.white, size: 20),
+                tooltip: 'ہوم ڈیش بورڈ (Return to Home)',
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.popUntil(context, (route) => route.isFirst);
                   }
-                  _selectedClassFilter = name;
-                });
-                Navigator.pop(ctx);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(isEn ? 'New batch "$name" added successfully!' : 'نیا بیچ "$name" کامیابی سے شامل کر دیا گیا!'),
-                      backgroundColor: Colors.green,
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 7, 18, 4),
+              child: Column(
+            children: [
+              SizedBox(
+                height: 28,
+                child: InkWell(
+                  onTap: _editInstitutionName,
+                  borderRadius: BorderRadius.circular(9),
+                  child: Container(
+                    width: double.infinity,
+                    alignment: Alignment.center,
+                    child: Transform.translate(
+                      // Move only the title into the free space below the
+                      // arch peak; the arch and its other fields stay fixed.
+                      // Match the Lesson Target title-to-address spacing.
+                      offset: const Offset(0, 4),
+                      child: Text(
+                        _institutionName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color:
+                              dark ? Colors.white : const Color(0xFF065F46),
+                        ),
+                      ),
                     ),
-                  );
-                }
-              }
+                  ),
+                ),
+              ),
+              const SizedBox(height: 3),
+              SizedBox(
+                height: 21,
+                child: InkWell(
+                  onTap: _editInstitutionAddress,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    width: double.infinity,
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      _institutionAddress,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color:
+                            dark ? Colors.white70 : const Color(0xFF334155),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: _archMiniBox(
+                      text: _classHeading,
+                      onTap: _editClassHeading,
+                      dark: dark,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: _archMiniBox(
+                      text: _teacherHeading,
+                      onTap: _editTeacherHeading,
+                      dark: dark,
+                      action: SizedBox(
+                        width: 27,
+                        height: 27,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          tooltip: 'استاد کی حاضری',
+                          onPressed: _toggleTeacherAttendance,
+                          icon: Icon(
+                            _teacherPresent
+                                ? Icons.verified_rounded
+                                : Icons.fingerprint_rounded,
+                            size: 18,
+                            color: _teacherPresent
+                                ? Colors.green
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  ),
+);
+  }
+
+  Widget _archMiniBox({
+    required String text,
+    required VoidCallback onTap,
+    required bool dark,
+    Widget? action,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(9),
+      child: Container(
+        height: 31,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF1E293B) : Colors.white70,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: const Color(0xFF68AD91)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(child: Center(child: _fit(text, size: 11.5))),
+            if (action != null) action,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _header(Widget child, {int flex = 1}) {
+    return Expanded(
+      flex: flex,
+      child: Container(
+        height: 43,
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        decoration: _threeD(radius: 10),
+        child: Center(child: child),
+      ),
+    );
+  }
+
+  Widget _combinedDetailsPanel({
+    required List<Map<String, dynamic>> visible,
+    required bool allSelected,
+    required List<Map<String, dynamic>> messageCandidates,
+  }) {
+    void toggle() => setState(() => _detailsExpanded = !_detailsExpanded);
+    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Summary stays hidden until the arrow bar is opened.
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: toggle,
+            onVerticalDragEnd: (details) {
+              final velocity = details.primaryVelocity ?? 0;
+              if (velocity > 120 && !_detailsExpanded) toggle();
+              if (velocity < -120 && _detailsExpanded) toggle();
             },
-            child: Text(isEn ? 'Add Batch' : 'بیچ شامل کریں'),
+            child: Container(
+              height: 25,
+              width: double.infinity,
+              decoration: _threeD(radius: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _detailsExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    size: 16,
+                    color: const Color(0xFF047857),
+                  ),
+                  const SizedBox(width: 3),
+                  _fit(
+                    _detailsExpanded
+                        ? (isEn ? 'Hide Details' : 'تفصیل چھپائیں')
+                        : (isEn ? 'Show Details' : 'تفصیل دکھائیں'),
+                    size: 10.5,
+                    color: const Color(0xFF047857),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            child: _detailsExpanded
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Container(
+                      decoration: _threeD(radius: 13),
+                      clipBehavior: Clip.antiAlias,
+                      child: Row(
+                        children: [
+                          _summaryBox(isEn ? 'Present' : 'حاضر', _presentCount, Colors.green,
+                              Icons.check_circle),
+                          const SizedBox(
+                              height: 28, child: VerticalDivider(width: 1)),
+                          _summaryBox(isEn ? 'Absent' : 'غیر حاضر', _absentCount, Colors.red,
+                              Icons.cancel),
+                          const SizedBox(
+                              height: 28, child: VerticalDivider(width: 1)),
+                          _summaryBox('تاخیر', _lateCount, Colors.orange,
+                              Icons.schedule),
+                          const SizedBox(
+                              height: 28, child: VerticalDivider(width: 1)),
+                          _summaryBox('کل طلبہ', visible.length, Colors.blue,
+                              Icons.groups),
+                        ],
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          const SizedBox(height: 4),
+
+          // This header is always visible. The first checkbox is Select All.
+          Row(
+            textDirection: TextDirection.ltr,
+            children: [
+              SizedBox(
+                width: 42,
+                child: Container(
+                  height: 46,
+                  decoration: _threeD(radius: 10),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Transform.scale(
+                          scale: .58,
+                          child: Checkbox(
+                            value: allSelected,
+                            onChanged: (value) {
+                              setState(() {
+                                for (final student in messageCandidates) {
+                                  student['selectedForMessage'] = value == true;
+                                }
+                              });
+                            },
+                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                        _fit(isEn ? 'All' : 'منتخب تمام', size: 6.8),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              _header(
+                _fit(isEn ? 'Student Name' : 'نام طالب علم / درسگاہ', size: 10.5),
+                flex: 11,
+              ),
+              const SizedBox(width: 4),
+              _header(_fit(isEn ? 'Attendance' : 'حاضری', size: 10.5), flex: 3),
+              const SizedBox(width: 4),
+              _header(
+                Row(
+                  children: [
+                    Expanded(
+                        child: _fit(isEn ? 'Book' : 'کتاب', color: Colors.green, size: 9.5)),
+                    Expanded(
+                        child: _fit(isEn ? 'Uniform' : 'لباس', color: Colors.green, size: 9.5)),
+                    Expanded(
+                        child: _fit(isEn ? 'Cap' : 'ٹوپی', color: Colors.green, size: 9.5)),
+                  ],
+                ),
+                flex: 6,
+              ),
+              const SizedBox(width: 4),
+              _header(_fit(isEn ? 'Call' : 'کال', size: 10.5), flex: 2),
+            ],
           ),
         ],
       ),
     );
   }
 
-  void _editShiftSlotDialog() {
-    final loc = AppLocalizations.of(context);
-    final isEn = loc.locale.languageCode == 'en';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (dialogCtx, setDialogState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-            title: Row(
-              children: [
-                const Icon(Icons.access_time_filled_rounded, color: Colors.indigo),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    isEn ? 'Edit Attendance Shift & Slot' : 'حاضری کی شفٹ و سلاٹ منتخب کریں',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
-                  ),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedShiftSlot,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: isEn ? 'Select Shift / Slot' : 'شفٹ / مارننگ سلاٹ',
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    border: const OutlineInputBorder(),
-                  ),
-                  items: [
-                    DropdownMenuItem(value: 'morning', child: Text(isEn ? 'Morning Shift (صبح کی شفٹ)' : 'صبح کی شفٹ (Morning)')),
-                    DropdownMenuItem(value: 'morning_slot_1', child: Text(isEn ? 'Morning Slot 1 (7:00 AM - 9:00 AM)' : 'مارننگ سلاٹ 1 (7:00 تا 9:00 AM)')),
-                    DropdownMenuItem(value: 'morning_slot_2', child: Text(isEn ? 'Morning Slot 2 (9:00 AM - 11:00 AM)' : 'مارننگ سلاٹ 2 (9:00 تا 11:00 AM)')),
-                    DropdownMenuItem(value: 'evening', child: Text(isEn ? 'Evening Shift (شام کی شفٹ)' : 'شام کی شفٹ (Evening)')),
-                    DropdownMenuItem(value: 'night', child: Text(isEn ? 'Night Shift (رات کی شفٹ)' : 'رات کی شفٹ (Night)')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      setDialogState(() {
-                        _selectedShiftSlot = val;
-                      });
-                    }
-                  },
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Cancel' : 'منسوخ')),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: Colors.indigo),
-                onPressed: () {
-                  setState(() {
-                    for (var s in _students) {
-                      s['shift'] = _selectedShiftSlot;
-                    }
-                  });
-                  _saveData();
-                  Navigator.pop(ctx);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(isEn ? 'Attendance shift slot updated successfully!' : 'حاضری کی شفٹ سلاٹ کامیابی سے تبدیل ہو گئی!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                },
-                child: Text(isEn ? 'Apply Slot' : 'لاگو کریں'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _students = widget.students.map((s) {
-      final copy = Map<String, dynamic>.from(s);
-      copy['attendance'] ??= 'present';
-      copy['hasCap'] ??= true;
-      copy['hasUniform'] ??= true;
-      copy['hasBooks'] ??= true;
-      copy['language'] ??= 'ur'; 
-      return copy;
-    }).toList();
-    _loadSavedBatches();
-  }
-
-  Future<void> _loadSavedBatches() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList('maktab_group_names') ?? [];
-    for (final b in saved) {
-      if (!_batchesList.contains(b)) {
-        _batchesList.add(b);
-      }
-    }
-    for (final s in _students) {
-      final g = s['group'] ?? s['className'];
-      if (g != null && g.toString().isNotEmpty && !_batchesList.contains(g.toString())) {
-        _batchesList.add(g.toString());
-      }
-    }
-    if (mounted) setState(() {});
-  }
-
-  void _saveData() {
-    if (widget.onSave != null) {
-      widget.onSave!(_students);
-    }
-  }
-
-  bool get _isTeacher =>
-      widget.currentRole == null ||
-      widget.currentRole == AppRole.teacher ||
-      widget.currentRole == AppRole.admin ||
-      widget.currentRole == AppRole.manager;
-
-  List<Map<String, dynamic>> get _filteredStudents {
-    if (_selectedClassFilter == 'All') {
-      return _students;
-    }
-    return _students.where((s) => s['className'] == _selectedClassFilter).toList();
-  }
-
-  Future<void> _selectPeriod() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2025),
-      lastDate: DateTime(2030),
-      initialDateRange: _selectedDateRange ?? DateTimeRange(
-        start: _selectedDate.subtract(const Duration(days: 3)),
-        end: _selectedDate,
-      ),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedDateRange = picked;
-        _selectedDate = picked.start;
-      });
-    }
-  }
-
-  void _toggleSelection(int index, bool? selected) {
-    if (!_isTeacher) return;
-    setState(() {
-      if (selected == true) {
-        _selectedIndices.add(index);
-      } else {
-        _selectedIndices.remove(index);
-      }
-    });
-  }
-
-  void _markAttendance(int index, String status) {
-    if (!_isTeacher) return;
-    setState(() {
-      _students[index]['attendance'] = status;
-    });
-    _saveData();
-  }
-
-
-
-  Future<void> _launchUrl(String urlString) async {
-    final url = Uri.parse(urlString);
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch app'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  // ignore: unused_element
-  void _makePhoneCall(String phone) {
-    if (phone.isEmpty) return;
-    _launchUrl('tel:$phone');
-  }
-
-  // ignore: unused_element
-  void _showBulkMessageDialog({Set<int>? indices}) {
-    final targetIndices = indices ?? _selectedIndices;
-    if (targetIndices.isEmpty) return;
-
-    String selectedReason = 'absent';
-    final customMsgController = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-            left: 20, right: 20, top: 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Send Message to ${targetIndices.length} Student(s)', 
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              const Text('Messages will automatically be sent using each parent\'s preferred language and channel (SMS/WhatsApp).',
-                style: TextStyle(fontSize: 12, color: Colors.grey)),
-              const SizedBox(height: 16),
-              const Text('Reason:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Wrap(
-                spacing: 8,
-                children: [
-                  ChoiceChip(
-                    label: const Text('Absent (غیر حاضر)'),
-                    selected: selectedReason == 'absent',
-                    onSelected: (v) => setSheetState(() => selectedReason = 'absent'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Late (دیر سے)'),
-                    selected: selectedReason == 'late',
-                    onSelected: (v) => setSheetState(() => selectedReason = 'late'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Cap Issue (ٹوپی کی کمی)'),
-                    selected: selectedReason == 'cap',
-                    onSelected: (v) => setSheetState(() => selectedReason = 'cap'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Uniform Issue (یونیفارم کی کمی)'),
-                    selected: selectedReason == 'uniform',
-                    onSelected: (v) => setSheetState(() => selectedReason = 'uniform'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Books Issue (کتابوں کی کمی)'),
-                    selected: selectedReason == 'books',
-                    onSelected: (v) => setSheetState(() => selectedReason = 'books'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Custom'),
-                    selected: selectedReason == 'custom',
-                    onSelected: (v) => setSheetState(() => selectedReason = 'custom'),
-                  ),
-                ],
-              ),
-              if (selectedReason == 'custom') ...[
-                const SizedBox(height: 12),
-                TextField(
-                  controller: customMsgController,
-                  decoration: const InputDecoration(
-                    labelText: 'Custom Message',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-              ],
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _executeBulkMessage(targetIndices, selectedReason, customMsgController.text);
-                  },
-                  icon: const Icon(Icons.send_rounded),
-                  label: const Text('Send Automatically'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _executeBulkMessage(Set<int> indices, String reason, String customMsg) async {
-    for (int idx in indices) {
-      final student = _students[idx];
-      final phone = student['fatherPhone']?.toString() ?? '';
-      if (phone.isEmpty) continue;
-
-      // Determine language and generate personalized message
-      final lang = student['language']?.toString() ?? 'ur';
-      String message = '';
-      final studentName = student['name'] ?? 'Student';
-
-      if (reason == 'absent') {
-        if (lang == 'ur') {
-          message = 'السلام علیکم، مکتب کی اطلاع: $studentName آج مدرسے سے غیر حاضر ہے۔';
-        } else if (lang == 'en') {
-          message = 'Assalamu Alaikum. $studentName is absent from Madrasa today.';
-        } else if (lang == 'te') {
-          message = 'అస్సలాము అలైకుమ్. ఈరోజు $studentName మదర్సాకు హాజరు కాలేదు.';
-        } else {
-          message = 'Assalamu Alaikum. $studentName is absent from Madrasa today.';
-        }
-      } else if (reason == 'late') {
-        if (lang == 'ur') {
-          message = 'السلام علیکم، مکتب کی اطلاع: $studentName آج مدرسے دیر سے پہنچا ہے۔';
-        } else if (lang == 'en') {
-          message = 'Assalamu Alaikum. $studentName arrived late to Madrasa today.';
-        } else if (lang == 'te') {
-          message = 'అస్సలాము అలైకుమ్. $studentName ఈరోజు మదర్సాకు ఆలస్యంగా వచ్చారు.';
-        } else {
-          message = 'Assalamu Alaikum. $studentName arrived late to Madrasa today.';
-        }
-      } else if (reason == 'cap') {
-        if (lang == 'ur') {
-          message = 'السلام علیکم، مکتب کی اطلاع: براہ کرم $studentName کی ٹوپی کا خیال رکھیں۔';
-        } else if (lang == 'en') {
-          message = 'Assalamu Alaikum. Please ensure $studentName comes with a proper cap.';
-        } else if (lang == 'te') {
-          message = 'అస్సలాము అలైకుమ్. దయచేసి $studentName సరైన టోపీతో వస్తున్నారని నిర్ధారించుకోండి.';
-        } else {
-          message = 'Assalamu Alaikum. Please ensure $studentName comes with a proper cap.';
-        }
-      } else if (reason == 'uniform') {
-        if (lang == 'ur') {
-          message = 'السلام علیکم، مکتب کی اطلاع: براہ کرم $studentName کے لباس/یونیفارم کا خیال رکھیں۔';
-        } else if (lang == 'en') {
-          message = 'Assalamu Alaikum. Please ensure $studentName comes in proper uniform.';
-        } else if (lang == 'te') {
-          message = 'అస్సలాము అలైకుమ్. దయచేసి $studentName సరైన యూనిఫామ్‌తో వస్తున్నారని నిర్ధారించుకోండి.';
-        } else {
-          message = 'Assalamu Alaikum. Please ensure $studentName comes in proper uniform.';
-        }
-      } else if (reason == 'books') {
-        if (lang == 'ur') {
-          message = 'السلام علیکم، مکتب کی اطلاع: براہ کرم $studentName کی کتابوں کا خیال رکھیں۔';
-        } else if (lang == 'en') {
-          message = 'Assalamu Alaikum. Please ensure $studentName brings their books.';
-        } else if (lang == 'te') {
-          message = 'అస్సలాము అలైకుమ్. దయచేసి $studentName సరైన పుస్తకాలతో వస్తున్నారని నిర్ధారించుకోండి.';
-        } else {
-          message = 'Assalamu Alaikum. Please ensure $studentName brings their books.';
-        }
-      } else {
-        message = customMsg;
-      }
-
-      final cleanPhone = phone.replaceAll(RegExp(r'[^0-9+]'), '');
-      final preferredMode = student['messageMethod']?.toString().toLowerCase() ?? 'whatsapp';
-      
-      if (preferredMode == 'whatsapp') {
-        await _launchUrl('whatsapp://send?phone=$cleanPhone&text=${Uri.encodeComponent(message)}');
-        await Future.delayed(const Duration(seconds: 1));
-      } else if (preferredMode == 'sms') {
-        await _launchUrl('sms:$cleanPhone?body=${Uri.encodeComponent(message)}');
-        await Future.delayed(const Duration(seconds: 1));
-      } else {
-        // App Notification stub
-        debugPrint('App Notification to $cleanPhone: $message');
-      }
-    }
-
-    setState(() {
-      _selectedIndices.clear();
-    });
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Messages sent successfully!'), backgroundColor: Colors.green),
+  ({String label, IconData icon, Color color}) _attendanceVisual(
+    String status,
+  ) {
+    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
+    if (status == 'absent') {
+      return (
+        label: isEn ? 'Absent' : 'غیر حاضر',
+        icon: Icons.cancel_rounded,
+        color: Colors.red,
       );
     }
-  }
-
-  void _sendReportToAdmin(int present, int absent, int lateCount, List<String> absentNames, List<String> lateNames) async {
-    final prefs = await SharedPreferences.getInstance();
-    final String teacherName = prefs.getString('cred_teacher_name') ?? 'Teacher (استاد)';
-    
-    final String dateStr = '${_selectedDate.day}-${_selectedDate.month}-${_selectedDate.year}';
-    
-    final StringBuffer report = StringBuffer();
-    report.writeln('*مدرسہ خیر العلوم اشرفیہ - حاضری رپورٹ*');
-    report.writeln('📅 تاریخ: $dateStr');
-    report.writeln('👨‍🏫 استاد: $teacherName');
-    report.writeln('');
-    report.writeln('📊 *تفصیلات:*');
-    report.writeln('کل طلبہ: ${present + absent + lateCount}');
-    report.writeln('✅ حاضر: $present');
-    report.writeln('❌ غیر حاضر: $absent ${absent > 0 ? "\\n( ${absentNames.join(', ')} )" : ""}');
-    report.writeln('⏰ دیر سے آئے: $lateCount ${lateCount > 0 ? "\\n( ${lateNames.join(', ')} )" : ""}');
-    report.writeln('');
-    report.writeln('(Generated via Maktab App)');
-    
-    // Save locally for Results screen to see
-    _saveTeacherReportLocally(
-      teacherName: teacherName,
-      group: 'All Groups',
-      dateStr: dateStr,
-      present: present,
-      absent: absent,
-      lateCount: lateCount,
-      absentNames: absentNames,
-      lateNames: lateNames,
-    );
-
-    // Inject directly into Community Chat
-    final msgStr = prefs.getString('community_chat_messages_v1');
-    List<dynamic> communityMessages = [];
-    if (msgStr != null && msgStr.isNotEmpty) {
-      communityMessages = jsonDecode(msgStr);
-    }
-    
-    final now = DateTime.now();
-    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}';
-    
-    final chatMsg = {
-      'id': 'm_${DateTime.now().millisecondsSinceEpoch}',
-      'senderId': 'teacher_${DateTime.now().millisecondsSinceEpoch}',
-      'senderName': teacherName,
-      'senderRole': 'teacher',
-      'text': report.toString(),
-      'timestamp': timeStr,
-      'isMe': true,
-      'isRead': true,
-      'attachmentType': 'none'
-    };
-    
-    communityMessages.add(chatMsg);
-    await prefs.setString('community_chat_messages_v1', jsonEncode(communityMessages));
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Report successfully sent to Community Chat!'), backgroundColor: Colors.green),
+    if (status == 'late') {
+      return (
+        label: isEn ? 'Late' : 'دیر حاضر',
+        icon: Icons.schedule_rounded,
+        color: Colors.orange,
       );
     }
+    return (
+      label: isEn ? 'Present' : 'حاضر',
+      icon: Icons.check_circle_rounded,
+      color: Colors.green,
+    );
   }
 
-  Future<void> _saveTeacherReportLocally({
-    required String teacherName,
-    required String group,
-    required String dateStr,
-    required int present,
-    required int absent,
-    required int lateCount,
-    required List<String> absentNames,
-    required List<String> lateNames,
-  }) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? existingStr = prefs.getString('teacher_reports');
-      List<dynamic> existingReports = [];
-      if (existingStr != null) {
-        existingReports = jsonDecode(existingStr) as List<dynamic>;
-      }
-
-      final reportData = {
-        'id': DateTime.now().millisecondsSinceEpoch.toString(),
-        'date': dateStr,
-        'dateTime': DateTime.now().toIso8601String(),
-        'senderName': teacherName,
-        'group': group,
-        'type': 'attendance',
-        'details': {
-          'present': present,
-          'absent': absent,
-          'late': lateCount,
-          'absentNames': absentNames,
-          'lateNames': lateNames,
-        }
-      };
-
-      existingReports.add(reportData);
-      await prefs.setString('teacher_reports', jsonEncode(existingReports));
-    } catch (e) {
-      debugPrint('Failed to save teacher report locally: $e');
-    }
+  void _cycleAttendance(Map<String, dynamic> student) {
+    final String current = _attendanceStatus(student);
+    final String next = current == 'present'
+        ? 'absent'
+        : current == 'absent'
+            ? 'late'
+            : 'present';
+    _markAttendance(student, next);
   }
 
-  void _showNotificationsDialog() {
-    final loc = AppLocalizations.of(context);
-    showModalBottomSheet(
+  Future<void> _chooseAttendance(Map<String, dynamic> student) async {
+    final String? value = await showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(16),
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(loc.translate('notifications_center'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.check_circle, color: Colors.green),
-              title: Text(loc.translate('prev_attendance_saved'), style: const TextStyle()),
+            const ListTile(
+              title: Text('حاضری منتخب کریں', textAlign: TextAlign.center),
             ),
-            ListTile(
-              leading: const Icon(Icons.message, color: Colors.blue),
-              title: Text(loc.translate('new_admin_msg'), style: const TextStyle()),
-            ),
+            for (final entry in const [
+              ('present', 'حاضر', Icons.check_circle_rounded, Colors.green),
+              ('absent', 'غیر حاضر', Icons.cancel_rounded, Colors.red),
+              ('late', 'دیر حاضر', Icons.schedule_rounded, Colors.orange),
+            ])
+              ListTile(
+                leading: Icon(entry.$3, color: entry.$4),
+                title: Text(entry.$2),
+                trailing: _attendanceStatus(student) == entry.$1
+                    ? Icon(Icons.check, color: entry.$4)
+                    : null,
+                onTap: () => Navigator.pop(sheetContext, entry.$1),
+              ),
           ],
         ),
+      ),
+    );
+    if (value != null && mounted) _markAttendance(student, value);
+  }
+
+  Widget _attendanceCycleButton(Map<String, dynamic> student) {
+    final visual = _attendanceVisual(_attendanceStatus(student));
+    return Tooltip(
+      message: 'کلک سے حالت بدلیں، دیر تک دبانے سے براہِ راست منتخب کریں',
+      child: Material(
+        color: visual.color.withValues(alpha: .13),
+        borderRadius: BorderRadius.circular(9),
+        child: InkWell(
+          onTap: () => _cycleAttendance(student),
+          onLongPress: () => _chooseAttendance(student),
+          borderRadius: BorderRadius.circular(9),
+          child: Container(
+            height: 31,
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(color: visual.color, width: 1.2),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              textDirection: TextDirection.rtl,
+              children: [
+                Icon(visual.icon, size: 13, color: visual.color),
+                const SizedBox(width: 2),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      visual.label,
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: visual.color,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _itemButton(
+    Map<String, dynamic> student,
+    String key,
+    IconData? icon,
+    String tooltip,
+  ) {
+    final ok = student[key] as bool? ?? true;
+    final color = ok ? Colors.green : Colors.red;
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: () => setState(() {
+          student[key] = !ok;
+          student['selectedForMessage'] = _hasParentMessageIssue(student);
+        }),
+        borderRadius: BorderRadius.circular(20),
+        child: SizedBox(
+          width: 28,
+          height: 34,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: .11),
+                shape: BoxShape.circle,
+                border: Border.all(color: color.withValues(alpha: .35)),
+              ),
+              child: icon == null
+                  ? _IslamicCapIcon(color: color, size: 18)
+                  : Icon(icon, size: 17, color: color),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _summaryBox(String title, int value, Color color, IconData icon) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 2),
+        child: _fit('$title: $value', color: color, size: 11.5),
+      ),
+    );
+  }
+
+  Widget _studentCard(Map<String, dynamic> student, int index) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final selected = student['selectedForMessage'] == true;
+    final studentName =
+        student['name']?.toString().trim() ?? 'بے نام طالب علم';
+    final studentClass = _studentClass(student).isEmpty
+        ? 'مقرر نہیں'
+        : _studentClass(student);
+    final fatherName = (student['fatherName'] ?? student['parentName'] ?? '')
+        .toString()
+        .trim();
+    final admissionNo = student['admissionNo']?.toString().trim() ?? '';
+    final nameDirection = RegExp(r'[\u0600-\u06FF]').hasMatch(studentName)
+        ? TextDirection.rtl
+        : TextDirection.ltr;
+    return Container(
+      height: 56,
+      margin: const EdgeInsets.fromLTRB(7, 1, 7, 1),
+      decoration: BoxDecoration(
+        color: dark
+            ? (index.isEven
+                ? const Color(0xFF111C30)
+                : const Color(0xFF172238))
+            : (index.isEven ? Colors.white : const Color(0xFFF7FAF9)),
+        border: Border(
+          bottom: BorderSide(
+            color: dark ? const Color(0xFF334155) : Colors.black12,
+          ),
+        ),
+      ),
+      child: Row(
+        textDirection: TextDirection.ltr,
+        children: [
+          SizedBox(
+            width: 32,
+            child: Center(
+              child: Transform.scale(
+                scale: .72,
+                child: Checkbox(
+                  value: selected,
+                  onChanged: (value) => _toggleMessageSelection(student, value),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            flex: 11,
+            child: InkWell(
+              onTap: () => _toggleMessageSelection(student, !selected),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      studentName,
+                      maxLines: 1,
+                      softWrap: false,
+                      textAlign: TextAlign.left,
+                      textDirection: nameDirection,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: dark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      [
+                        if (admissionNo.isNotEmpty) 'داخلہ نمبر: $admissionNo',
+                        'درسگاہ: $studentClass',
+                        if (fatherName.isNotEmpty) 'والد: $fatherName',
+                      ].join('  •  '),
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                      textAlign: TextAlign.left,
+                      textDirection: TextDirection.rtl,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: dark ? Colors.white70 : const Color(0xFF047857),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            flex: 3,
+            child: _attendanceCycleButton(student),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            flex: 6,
+            child: Row(
+              children: [
+                Expanded(child: Center(child: _itemButton(
+                    student, 'hasBooks', Icons.menu_book_rounded, 'کتاب'))),
+                Expanded(child: Center(child: _itemButton(
+                    student, 'hasUniform', Icons.checkroom, 'لباس'))),
+                Expanded(child: Center(child: _itemButton(
+                    student, 'hasCap', null, 'ٹوپی'))),
+              ],
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            flex: 2,
+            child: IconButton(
+              onPressed: () => _callParent(student),
+              tooltip: 'کال',
+              icon: const Icon(Icons.call_rounded, color: Colors.blue, size: 25),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _shiftButton(MaktabShift shift) {
+    return Expanded(
+      child: OutlinedButton(
+        onPressed: () async {
+          if (shift.id == _selectedShiftId) return;
+          setState(() => _selectedShiftId = shift.id);
+          await _loadStudentsAndAttendance();
+        },
+        child: Text(shift.name),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-    int presentCount = 0;
-    int absentCount = 0;
-    int lateCount = 0;
-    final List<String> absentNames = [];
-    final List<String> lateNames = [];
-    for (var s in _students) {
-      final name = s['name']?.toString() ?? 'Unknown';
-      if (s['attendance'] == 'present') {
-        presentCount++;
-      } else if (s['attendance'] == 'absent') {
-        absentCount++;
-        absentNames.add(name);
-      } else if (s['attendance'] == 'late') {
-        lateCount++;
-        lateNames.add(name);
-      }
-    }
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final visible = _visibleStudents;
+    final messageCandidates = visible
+        .where((student) => _hasParentMessageIssue(student))
+        .toList();
+    final allSelected = messageCandidates.isNotEmpty &&
+        messageCandidates.every((student) => student['selectedForMessage'] == true);
 
-    // ignore: unused_local_variable
-    final String selectedCountText = _selectedIndices.isEmpty ? '' : 'منتخب طلبہ\n${_selectedIndices.length}';
-
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        appBar: AppBar(
-            title: const SizedBox.shrink(),
-            centerTitle: true,
-            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-            foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, size: 20),
-              onPressed: () => Navigator.pop(context),
-            ),
-            actions: [
-              if (_isTeacher)
-                IconButton(
-                  icon: const Icon(Icons.share, color: Colors.greenAccent, size: 20),
-                  tooltip: 'Send Report to Admin',
-                  onPressed: () => _sendReportToAdmin(presentCount, absentCount, lateCount, absentNames, lateNames),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  // Use the exact same arch positioning system as the Lesson
+                  // Target screen so both headers meet the green app bar at
+                  // the same visual height on web and mobile.
+                  Padding(
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.paddingOf(context).top + 2,
+                    ),
+                    child: SizedBox(
+                      height: 93,
+                      child: OverflowBox(
+                        alignment: Alignment.topCenter,
+                        minHeight: 108,
+                        maxHeight: 108,
+                        child: Transform.translate(
+                          offset: const Offset(0, -15),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 7),
+                            child: _identityArch(dark),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(7, 0, 7, 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _infoBox(
+                            height: 43,
+                            onTap: _pickDate,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.calendar_month_rounded,
+                                    size: 16, color: Color(0xFF047857)),
+                                const SizedBox(width: 5),
+                                Flexible(child: _fit(_dateKey, size: 11.5)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: _infoBox(
+                            height: 43,
+                            holiday: _holidayNotice.isNotEmpty,
+                            onTap: _pickShift,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.schedule_rounded,
+                                  size: 16,
+                                  color: _holidayNotice.isNotEmpty
+                                      ? const Color(0xFFD32F2F)
+                                      : const Color(0xFF047857),
+                                ),
+                                const SizedBox(width: 5),
+                                Flexible(
+                                  child: _fit(
+                                    _holidayNotice.isEmpty
+                                        ? _selectedShift.name
+                                        : '${_selectedShift.name} • $_holidayNotice',
+                                    size: 12,
+                                    color: _holidayNotice.isNotEmpty
+                                        ? const Color(0xFFD32F2F)
+                                        : null,
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.arrow_drop_down_rounded,
+                                  size: 18,
+                                  color: _holidayNotice.isNotEmpty
+                                      ? const Color(0xFFD32F2F)
+                                      : const Color(0xFF047857),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _combinedDetailsPanel(
+                    visible: visible,
+                    allSelected: allSelected,
+                    messageCandidates: messageCandidates,
+                  ),
+                  const SizedBox(height: 4),
+                  Expanded(
+                    child: visible.isEmpty
+                        ? Center(
+                            child: Text(
+                                '${_selectedShift.name} کی شفٹ میں کوئی طالب علم موجود نہیں ہے۔'),
+                          )
+                        : ListView.builder(
+                            itemCount: visible.length,
+                            itemBuilder: (_, index) =>
+                                _studentCard(visible[index], index),
+                          ),
+                  ),
+                ],
+              ),
+        bottomNavigationBar: SizedBox(
+          height: 40,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(3, 1, 3, 1),
+            child: Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _isLoading ? null : _saveAttendance,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      maximumSize: const Size(double.infinity, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      visualDensity: VisualDensity.compact,
+                      textStyle: const TextStyle(
+                          fontSize: 11, fontWeight: FontWeight.w700),
+                    ),
+                    icon: const Icon(Icons.save, size: 16),
+                    label: const Text('حاضری محفوظ کریں', maxLines: 1),
+                  ),
                 ),
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  IconButton(icon: const Icon(Icons.notifications_none, size: 20), onPressed: _showNotificationsDialog),
-                  Positioned(
-                    right: 6,
-                    top: 6,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                      child: const Text('5', style: TextStyle(fontSize: 10, color: Colors.white)),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _isLoading ? null : _openMessageSheet,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      maximumSize: const Size(double.infinity, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      visualDensity: VisualDensity.compact,
+                      textStyle: const TextStyle(
+                          fontSize: 11, fontWeight: FontWeight.w700),
                     ),
+                    icon: const Icon(Icons.send, size: 16),
+                    label: Text('میسج (${_selectedAbsentees.length})',
+                        maxLines: 1),
                   ),
-                ],
-              )
-            ],
+                ),
+              ],
+            ),
           ),
-        body: Column(
-          children: [
-            Container(
-              color: Theme.of(context).appBarTheme.backgroundColor ?? (isDark ? const Color(0xFF0F172A) : const Color(0xFF074E32)),
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ActionChip(
-                    avatar: const Icon(Icons.calendar_month_rounded, size: 14, color: Colors.indigo),
-                    label: Text(
-                      _selectedDateRange == null
-                          ? '${_selectedDate.day}-${_selectedDate.month}-${_selectedDate.year}'
-                          : '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                    onPressed: _selectPeriod,
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: DropdownButton<String>(
-                      value: _batchesList.contains(_selectedClassFilter) ? _selectedClassFilter : 'All',
-                      underline: const SizedBox(),
-                      icon: const Icon(Icons.arrow_drop_down, size: 16),
-                      style: TextStyle(fontSize: 11, color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() {
-                            _selectedClassFilter = val;
-                          });
-                        }
-                      },
-                      items: _batchesList.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                    ),
-                  ),
-                  ActionChip(
-                    avatar: const Icon(Icons.access_time_filled, size: 14, color: Colors.indigo),
-                    label: Text(
-                      _selectedShiftSlot == 'morning_slot_1'
-                          ? (loc.locale.languageCode == 'en' ? 'Morning Slot 1' : 'مارننگ سلاٹ 1')
-                          : (_selectedShiftSlot == 'morning_slot_2'
-                              ? (loc.locale.languageCode == 'en' ? 'Morning Slot 2' : 'مارننگ سلاٹ 2')
-                              : (_selectedShiftSlot == 'evening'
-                                  ? (loc.locale.languageCode == 'en' ? 'Evening' : 'شام')
-                                  : (_selectedShiftSlot == 'night'
-                                      ? (loc.locale.languageCode == 'en' ? 'Night' : 'رات')
-                                      : (loc.locale.languageCode == 'en' ? 'Morning' : 'صبح')))),
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                    onPressed: _editShiftSlotDialog,
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-              ),
+        ),
+      ),
+    );
+  }
+
+  Widget _oldBuild(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('طلبہ کی حاضری',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          centerTitle: true,
+          backgroundColor: Colors.green.shade700,
+          foregroundColor: Colors.white,
+          actions: <Widget>[
+            IconButton(
+              onPressed: _isLoading ? null : _loadStudentsAndAttendance,
+              tooltip: 'فہرست تازہ کریں',
+              icon: const Icon(Icons.refresh),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade700,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '${loc.translate('present')}: $presentCount',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 10),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade700,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '${loc.translate('absent')}: $absentCount',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 10),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade800,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '${loc.translate('late')}: $lateCount',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 10),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.indigo,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '${loc.translate('total_students')}: ${_filteredStudents.length}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 10),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 4),
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: 580,
-                  child: Column(
-                    children: [
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade100,
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                    child: InkWell(
+                      onTap: _pickDate,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(13),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          border: Border.all(color: Colors.green.shade600),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: Row(
-                          children: [
-                            SizedBox(
-                              width: 40,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  if (_isTeacher)
-                                    Checkbox(
-                                      value: _selectedIndices.length == _students.length && _students.isNotEmpty,
-                                      onChanged: (v) {
-                                        setState(() {
-                                          if (v == true) {
-                                            for (int i = 0; i < _students.length; i++) {
-                                              _selectedIndices.add(i);
-                                            }
-                                          } else {
-                                            _selectedIndices.clear();
-                                          }
-                                        });
-                                      },
-                                      visualDensity: VisualDensity.compact,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                    ),
-                                  Text(loc.translate('select'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              flex: 3, 
-                              child: Text(
-                                loc.translate('cap_uniform_books'), 
-                                textAlign: TextAlign.center, 
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 6, 
-                              child: Text(
-                                loc.translate('attendance_tap'), 
-                                textAlign: TextAlign.center, 
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 3, 
-                              child: Text(
-                                loc.translate('student_father_header'), 
-                                textAlign: TextAlign.start, 
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ),
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            Icon(Icons.calendar_month,
+                                color: Colors.green.shade700),
+                            const SizedBox(width: 9),
+                            Text('تاریخ: $_dateKey',
+                                style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: _filteredStudents.length,
-                          itemBuilder: (ctx, index) {
-                            final student = _filteredStudents[index];
-                            final originalIndex = _students.indexOf(student);
-                            final status = student['attendance'] as String? ?? 'present';
-                            final isSelected = _selectedIndices.contains(originalIndex);
-                            final isEn = widget.languageController.locale.languageCode == 'en';
-                            
-                            final hasCap = student['hasCap'] as bool? ?? true;
-                            final hasUniform = student['hasUniform'] as bool? ?? true;
-                            final hasBooks = student['hasBooks'] as bool? ?? true;
-
-                            return Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? (index.isEven ? Theme.of(context).cardTheme.color : Theme.of(context).cardTheme.color?.withValues(alpha: 0.8))
-                                    : (index.isEven ? Colors.white : Colors.grey.shade50),
-                                border: Border(bottom: BorderSide(color: isDark ? const Color(0xFF334155) : Colors.grey.shade300)),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 0),
-                              child: Row(
-                                children: [
-                                  SizedBox(
-                                    width: 40,
-                                    child: _isTeacher ? Checkbox(
-                                      value: isSelected,
-                                      onChanged: (v) => _toggleSelection(originalIndex, v),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                    ) : const SizedBox(),
-                                  ),
-                                  Expanded(
-                                    flex: 3,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                      children: [
-                                        GestureDetector(
-                                          onTap: _isTeacher ? () {
-                                            setState(() {
-                                              _students[originalIndex]['hasBooks'] = !hasBooks;
-                                            });
-                                            _saveData();
-                                          } : null,
-                                          child: _buildItemIcon(Icons.menu_book_rounded, hasBooks, isEn ? 'Books' : 'کتابیں'),
-                                        ),
-                                        GestureDetector(
-                                          onTap: _isTeacher ? () {
-                                            setState(() {
-                                              _students[originalIndex]['hasUniform'] = !hasUniform;
-                                            });
-                                            _saveData();
-                                          } : null,
-                                          child: _buildItemIcon(Icons.checkroom, hasUniform, isEn ? 'Uniform' : 'جبہ شریف'),
-                                        ),
-                                        GestureDetector(
-                                          onTap: _isTeacher ? () {
-                                            setState(() {
-                                              _students[originalIndex]['hasCap'] = !hasCap;
-                                            });
-                                            _saveData();
-                                          } : null,
-                                          child: _buildItemIcon(Icons.school, hasCap, isEn ? 'Cap' : 'ٹوپی'),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Present Button
-                                  Expanded(
-                                    flex: 2,
-                                    child: InkWell(
-                                      onTap: _isTeacher ? () => _markAttendance(originalIndex, 'present') : null,
-                                      child: Container(
-                                        height: 32,
-                                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                                        decoration: BoxDecoration(
-                                          color: status == 'present' ? Colors.green.shade600 : (isDark ? const Color(0xFF1E293B) : Colors.grey.shade100),
-                                          border: Border.all(color: status == 'present' ? Colors.green.shade700 : (isDark ? const Color(0xFF334155) : Colors.grey.shade300)),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.check_circle_rounded, size: 13, color: status == 'present' ? Colors.white : Colors.green),
-                                            const SizedBox(width: 2),
-                                            Flexible(
-                                              child: Text(
-                                                loc.translate('present'),
-                                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: status == 'present' ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  // Late Button
-                                  Expanded(
-                                    flex: 2,
-                                    child: InkWell(
-                                      onTap: _isTeacher ? () => _markAttendance(originalIndex, 'late') : null,
-                                      child: Container(
-                                        height: 32,
-                                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                                        decoration: BoxDecoration(
-                                          color: status == 'late' ? Colors.amber.shade700 : (isDark ? const Color(0xFF1E293B) : Colors.grey.shade100),
-                                          border: Border.all(color: status == 'late' ? Colors.amber.shade800 : (isDark ? const Color(0xFF334155) : Colors.grey.shade300)),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.access_time_filled_rounded, size: 13, color: status == 'late' ? Colors.white : Colors.amber.shade800),
-                                            const SizedBox(width: 2),
-                                            Flexible(
-                                              child: Text(
-                                                loc.translate('late'),
-                                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: status == 'late' ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  // Absent Button
-                                  Expanded(
-                                    flex: 2,
-                                    child: InkWell(
-                                      onTap: _isTeacher ? () => _markAttendance(originalIndex, 'absent') : null,
-                                      child: Container(
-                                        height: 32,
-                                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                                        decoration: BoxDecoration(
-                                          color: status == 'absent' ? Colors.red.shade600 : (isDark ? const Color(0xFF1E293B) : Colors.grey.shade100),
-                                          border: Border.all(color: status == 'absent' ? Colors.red.shade700 : (isDark ? const Color(0xFF334155) : Colors.grey.shade300)),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.cancel_rounded, size: 13, color: status == 'absent' ? Colors.white : Colors.red),
-                                            const SizedBox(width: 2),
-                                            Flexible(
-                                              child: Text(
-                                                loc.translate('absent'),
-                                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: status == 'absent' ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 3,
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(right: 4.0),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: TranslatedText(student['name'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: isDark ? Colors.white : Colors.black87)),
-                                              ),
-                                              Text(' (${student['rollNo'] ?? student['roll_no'] ?? ''})', style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey)),
-                                            ],
-                                          ),
-                                          Row(
-                                            children: [
-                                              TranslatedText('والد: ', style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey)),
-                                              Expanded(
-                                                child: TranslatedText(student['fatherName'] ?? '', style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey)),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: 40,
-                                    child: IconButton(
-                                      icon: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(color: Colors.green.shade700, borderRadius: BorderRadius.circular(4)),
-                                        child: const Icon(Icons.call, color: Colors.white, size: 16),
-                                      ),
-                                      onPressed: () {},
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: _shifts.map(_shiftButton).toList(),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: <Widget>[
+                        _summaryBox('کل طلبہ', _visibleStudents.length,
+                            Colors.blue, Icons.groups),
+                        _summaryBox('حاضر', _presentCount, Colors.green,
+                            Icons.how_to_reg),
+                        _summaryBox('غیر حاضر', _absentCount, Colors.red,
+                            Icons.person_off),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _markAllPresent,
+                            icon: const Icon(Icons.done_all),
+                            label: const Text('سب کو حاضر کریں'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _isWorking ? null : _sharePdf,
+                            icon: _isWorking
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.picture_as_pdf),
+                            label: const Text('PDF بھیجیں'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 12),
+                  Expanded(
+                    child: _visibleStudents.isEmpty
+                        ? Center(
+                            child: Text(
+                              '${_selectedShift.name} کی شفٹ میں کوئی طالب علم موجود نہیں ہے۔',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                            itemCount: _visibleStudents.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              return _studentCard(_visibleStudents[index], index);
+                            },
+                          ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
-        bottomNavigationBar: _selectedIndices.isNotEmpty
-            ? Container(
-                color: const Color(0xFF0F766E),
-                child: SafeArea(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.send, color: Colors.white, size: 18),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'منتخب طلبہ کو پیغام بھیجیں',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        '(ان کے والدین کو خودکار پیغام جائے گا)',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                    ],
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _isLoading ? null : _saveAttendance,
+                    icon: const Icon(Icons.save),
+                    label: const Text('حاضری محفوظ کریں'),
                   ),
                 ),
-              )
-            : const SizedBox(),
-      ),
-    );
-  }
-
-  // ignore: unused_element
-  Widget _buildTopBlock(String title, String subtitle, IconData icon, bool hasEdit) {
-    final isDk = Theme.of(context).brightness == Brightness.dark;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isDk ? const Color(0xFF1E293B) : Colors.white,
-          border: Border.all(color: isDk ? const Color(0xFF334155) : Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 14, color: Colors.indigo),
-                const SizedBox(width: 4),
-                Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(subtitle, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: isDk ? Colors.white70 : Colors.black87)),
-            if (hasEdit) ...[
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(border: Border.all(color: isDk ? const Color(0xFF334155) : Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.edit, size: 10, color: Colors.indigo),
-                    SizedBox(width: 2),
-                    Text('تبدیل کریں', style: TextStyle(fontSize: 8)),
-                  ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _isLoading ? null : _openMessageSheet,
+                    icon: const Icon(Icons.send),
+                    label: Text('میسج بھیجیں (${_selectedAbsentees.length})'),
+                  ),
                 ),
-              )
-            ]
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ignore: unused_element
-  Widget _buildCounterBlock(String title, String count, MaterialColor color, IconData icon) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: color.shade50,
-          border: Border.all(color: color.shade200),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(title, style: TextStyle(fontSize: 12, color: color.shade700, fontWeight: FontWeight.bold)),
-                const SizedBox(width: 4),
-                Icon(icon, size: 14, color: color.shade700),
               ],
             ),
-            const SizedBox(height: 4),
-            Text(count, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildItemIcon(IconData icon, bool isOk, String label) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Tooltip(
-      message: label,
-      child: Container(
-        padding: const EdgeInsets.all(3.5),
-        decoration: BoxDecoration(
-          color: isOk
-              ? Colors.green.withValues(alpha: isDark ? 0.18 : 0.08)
-              : Colors.red.withValues(alpha: isDark ? 0.18 : 0.08),
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isOk
-                ? Colors.green.withValues(alpha: 0.3)
-                : Colors.red.withValues(alpha: 0.3),
-            width: 1,
           ),
-        ),
-        child: Icon(
-          icon,
-          size: 13.5,
-          color: isOk ? Colors.green : Colors.red,
         ),
       ),
     );

@@ -33,7 +33,14 @@ void _useSize(WidgetTester tester, double width, double height) {
 }
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() => SharedPreferences.setMockInitialValues({
+        'maktab_setup_complete': true,
+        'maktab_setup_complete_manager': true,
+        'maktab_setup_complete_parent': true,
+        'maktab_setup_complete_teacher': true,
+        'maktab_setup_complete_admin': true,
+        'maktab_setup_complete_mutawalli': true,
+      }));
 
   group('Role Selection Screen Tests', () {
     testWidgets('renders Step 1 with 6 role choices (Urdu locale)',
@@ -155,7 +162,7 @@ void main() {
         currentRole: AppRole.parent,
         languageController: ctrl,
         students: const [
-          {'name': 'Faizan', 'feeStatus': 'paid', 'isPresent': true}
+          {'studentName': 'Faizan', 'name': 'Faizan', 'feeStatus': 'paid', 'isPresent': true}
         ],
         onSave: (_) async {},
         onChangeRole: () {},

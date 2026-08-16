@@ -197,6 +197,15 @@ class _ResultsScreenState extends State<ResultsScreen> {
               backgroundColor: const Color(0xFF0F172A),
               foregroundColor: Colors.white,
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.home_rounded, color: Colors.white),
+                  tooltip: isEn ? 'Return to Home' : 'ہوم ڈیش بورڈ',
+                  onPressed: () {
+                    if (Navigator.canPop(context)) {
+                      Navigator.popUntil(context, (route) => route.isFirst);
+                    }
+                  },
+                ),
                 if (_teacherReports.isNotEmpty)
                   IconButton(
                     icon: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent),

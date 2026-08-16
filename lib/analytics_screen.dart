@@ -170,7 +170,7 @@ class AnalyticsScreen extends StatelessWidget {
                               ),
                               child: Column(
                                 children: [
-                                  const Text('نئے داخلے (New)', style: TextStyle(fontSize: 12, color: Colors.green)),
+                                  Text(loc.translate('new_admissions'), style: const TextStyle(fontSize: 12, color: Colors.green)),
                                   const SizedBox(height: 4),
                                   Text(
                                     '$newAdmissionsCount',
@@ -191,7 +191,7 @@ class AnalyticsScreen extends StatelessWidget {
                               ),
                               child: Column(
                                 children: [
-                                  const Text('سابقہ داخلے (Old)', style: TextStyle(fontSize: 12, color: Colors.blue)),
+                                  Text(loc.translate('old_admissions'), style: const TextStyle(fontSize: 12, color: Colors.blue)),
                                   const SizedBox(height: 4),
                                   Text(
                                     '$oldAdmissionsCount',
@@ -219,13 +219,13 @@ class AnalyticsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Icon(Icons.groups_rounded, color: Colors.purple, size: 22),
-                          SizedBox(width: 8),
+                          const Icon(Icons.groups_rounded, color: Colors.purple, size: 22),
+                          const SizedBox(width: 8),
                           Text(
-                            'گروپ و بیچ تقسیم (Batch Group Analytics)',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            loc.translate('batch_group'),
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -236,19 +236,19 @@ class AnalyticsScreen extends StatelessWidget {
                         children: [
                           Chip(
                             avatar: const CircleAvatar(backgroundColor: Colors.purple, child: Text('A', style: TextStyle(color: Colors.white, fontSize: 10))),
-                            label: Text('حفظ گروپ: $hifzCount'),
+                            label: Text('${loc.translate('hifz_group')}: $hifzCount'),
                           ),
                           Chip(
                             avatar: const CircleAvatar(backgroundColor: Colors.teal, child: Text('B', style: TextStyle(color: Colors.white, fontSize: 10))),
-                            label: Text('ناظرہ گروپ: $naziraCount'),
+                            label: Text('${loc.translate('nazira_group')}: $naziraCount'),
                           ),
                           Chip(
                             avatar: const CircleAvatar(backgroundColor: Colors.indigo, child: Text('C', style: TextStyle(color: Colors.white, fontSize: 10))),
-                            label: Text('تجوید گروپ: $tajweedCount'),
+                            label: Text('${loc.translate('tajweed_group')}: $tajweedCount'),
                           ),
                           Chip(
                             avatar: const CircleAvatar(backgroundColor: Colors.orange, child: Text('D', style: TextStyle(color: Colors.white, fontSize: 10))),
-                            label: Text('ابتدائی گروپ: ${primaryCount > 0 ? primaryCount : 0}'),
+                            label: Text('${loc.translate('primary_group')}: ${primaryCount > 0 ? primaryCount : 0}'),
                           ),
                         ],
                       ),

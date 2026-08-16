@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'theme/app_components.dart';
 import 'app_localizations.dart';
 import 'attendance_screen.dart';
@@ -13,6 +16,7 @@ import 'analytics_screen.dart';
 import 'create_class_group_screen.dart';
 import 'manage_parent_logins_screen.dart';
 import 'manage_staff_logins_screen.dart';
+import 'shift_manager.dart';
 import 'theme_controller.dart';
 import 'main.dart';
 
@@ -586,6 +590,11 @@ class RoleDashboardScreen extends StatefulWidget {
 class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
   int _selectedIndex = 0;
   String _loggedInUserName = '';
+  String _currentClassName = 'کلاس منتخب نہیں';
+  String? _activeMaktabId;
+  String _activeMaktabName = '';
+  List<Map<String, dynamic>> _maktabProfiles = <Map<String, dynamic>>[];
+  bool _maktabSetupComplete = false;
   bool _isLoading = true;
 
   @override
@@ -596,13 +605,43 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
 
   Future<void> _loadUserName() async {
     final prefs = await SharedPreferences.getInstance();
-    final name = prefs.getString('current_user_name') ?? prefs.getString('cred_${widget.currentRole.name}_name');
-    if (name != null && name.isNotEmpty) {
-      setState(() {
-        _loggedInUserName = name;
-      });
+    final savedClass =
+        prefs.getString('current_class_name') ?? 'کلاس منتخب نہیں';
+    final setupComplete = prefs.getBool('maktab_setup_complete') ?? false;
+    final openAttendance =
+        prefs.getBool('post_setup_open_attendance') ?? false;
+    if (openAttendance) {
+      await prefs.remove('post_setup_open_attendance');
     }
+    final activeMaktabId = prefs.getString('active_maktab_id');
+    List<Map<String, dynamic>> profiles = <Map<String, dynamic>>[];
+    try {
+      final raw = prefs.getString('maktab_profiles_v1');
+      if (raw != null) {
+        profiles = (jsonDecode(raw) as List)
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
+      }
+    } catch (_) {}
+    final activeProfile = profiles.where(
+      (item) => item['id']?.toString() == activeMaktabId,
+    );
+    final name = prefs.getString('current_user_name') ?? prefs.getString('cred_${widget.currentRole.name}_name');
+    if (!mounted) return;
     setState(() {
+      _currentClassName = savedClass;
+      _maktabSetupComplete = setupComplete;
+      if (openAttendance && setupComplete) {
+        _selectedIndex = _attendanceTabIndex;
+      }
+      _maktabProfiles = profiles;
+      _activeMaktabId = activeMaktabId;
+      _activeMaktabName = activeProfile.isEmpty
+          ? (prefs.getString('maktab_name') ?? '')
+          : (activeProfile.first['name']?.toString() ?? '');
+      if (name != null && name.isNotEmpty) {
+        _loggedInUserName = name;
+      }
       _isLoading = false;
     });
   }
@@ -610,16 +649,264 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
   RoleInfo get _roleInfo =>
       kAppRoles.firstWhere((r) => r.role == widget.currentRole);
 
-  void _triggerAddStudentModal() {
+  bool get _canManageMaktab =>
+      widget.currentRole == AppRole.admin ||
+      widget.currentRole == AppRole.manager ||
+      widget.currentRole == AppRole.teacher;
+
+  int get _attendanceTabIndex => switch (widget.currentRole) {
+        AppRole.manager => 3,
+        AppRole.admin => 3,
+        AppRole.teacher => 0,
+        AppRole.mutawalli => 2,
+        _ => 0,
+      };
+
+  List<Map<String, dynamic>> get _activeStudents {
+    if (_activeMaktabId == null || _activeMaktabId!.isEmpty) {
+      return widget.students;
+    }
+    final filtered = widget.students
+        .where((student) {
+          final mId = student['maktabId']?.toString();
+          return mId == null || mId.isEmpty || mId == _activeMaktabId || mId == 'maktab_default';
+        })
+        .toList();
+    if (filtered.isNotEmpty) return filtered;
+    return widget.students;
+  }
+
+  Future<void> _saveActiveStudents(
+      List<Map<String, dynamic>> updatedActive) async {
+    final activeId = _activeMaktabId;
+    if (activeId == null || activeId.isEmpty) {
+      // Saving an unscoped list could overwrite/mix students of all Maktabs.
+      return;
+    }
+    final otherMaktabs = widget.students
+        .where((student) => student['maktabId']?.toString() != activeId)
+        .map((student) => Map<String, dynamic>.from(student));
+    final scoped = updatedActive.map((student) {
+      final copy = Map<String, dynamic>.from(student);
+      copy['maktabId'] = activeId;
+      return copy;
+    });
+    await widget.onSave(<Map<String, dynamic>>[
+      ...otherMaktabs,
+      ...scoped,
+    ]);
+  }
+
+  Future<void> _selectMaktab() async {
+    if (_maktabProfiles.length < 2) return;
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SimpleDialog(
+          title: const Text('مکتب منتخب کریں'),
+          children: _maktabProfiles.map((profile) {
+            final id = profile['id']?.toString() ?? '';
+            final selected = id == _activeMaktabId;
+            return ListTile(
+              leading: Icon(
+                selected ? Icons.check_circle : Icons.account_balance_rounded,
+                color: const Color(0xFF08734B),
+              ),
+              title: Text(profile['name']?.toString() ?? 'مکتب'),
+              subtitle: Text(profile['sectionName']?.toString() ?? ''),
+              onTap: () => Navigator.pop(ctx, id),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+    if (selected == null || selected == _activeMaktabId) return;
+    await _activateMaktab(selected);
+  }
+
+  Future<void> _activateMaktab(String selected) async {
+    final profile = _maktabProfiles.firstWhere(
+      (item) => item['id']?.toString() == selected,
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('active_maktab_id', selected);
+    await prefs.setString('maktab_name', profile['name']?.toString() ?? '');
+    await prefs.setString(
+        'maktab_section_name', profile['sectionName']?.toString() ?? '');
+    await prefs.setString(
+        'shared_teacher_name', profile['teacherName']?.toString() ?? '');
+    await prefs.setString('current_class_name',
+        profile['currentClassName']?.toString() ?? 'کلاس منتخب نہیں');
+    final scopedClasses = prefs.getString('maktab_classes_v2_$selected');
+    if (scopedClasses != null) {
+      await prefs.setString('maktab_classes_v2', scopedClasses);
+    }
+    final scopedHoliday = prefs.getString('maktab_holiday_v1_$selected');
+    if (scopedHoliday != null) {
+      await prefs.setString('maktab_holiday_v1', scopedHoliday);
+    } else {
+      await prefs.remove('maktab_holiday_v1');
+    }
+    setState(() {
+      _activeMaktabId = selected;
+      _activeMaktabName = profile['name']?.toString() ?? '';
+      _currentClassName =
+          profile['currentClassName']?.toString() ?? 'کلاس منتخب نہیں';
+      _selectedIndex = _attendanceTabIndex;
+    });
+  }
+
+  Future<void> _activateMaktabKeepingCurrentScreen(String selected) async {
+    final currentIndex = _selectedIndex;
+    await _activateMaktab(selected);
+    if (!mounted) return;
+    setState(() => _selectedIndex = currentIndex);
+  }
+
+  Future<void> _openMaktabSetup({bool editCurrent = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final maktabId = editCurrent && _activeMaktabId != null
+        ? _activeMaktabId!
+        // Every new Maktab must always receive its own fresh identity.
+        // Reusing pending_maktab_id was mixing students from different Maktabs.
+        : 'maktab_${DateTime.now().microsecondsSinceEpoch}';
+    await prefs.setString('pending_maktab_id', maktabId);
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreateClassGroupScreen(
+          students: widget.students,
+          languageController: widget.languageController,
+          onSave: widget.onSave,
+          maktabId: maktabId,
+          onAddStudent: () => _triggerAddStudentModal(maktabId: maktabId),
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    final savedPrefs = await SharedPreferences.getInstance();
+    final savedId = savedPrefs.getString('active_maktab_id');
+
+    if (saved == true || savedId == maktabId) {
+      await savedPrefs.remove('post_setup_open_attendance');
+      await _loadUserName();
+      if (!mounted) return;
+      setState(() {
+        _maktabSetupComplete = true;
+        _activeMaktabId = savedId ?? maktabId;
+        _selectedIndex = _attendanceTabIndex;
+      });
+    } else {
+      await _loadUserName();
+    }
+  }
+
+  Widget _buildMaktabSetupLanding() {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.account_balance_rounded,
+                      size: 64, color: Color(0xFF08734B)),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'مکتب مینیجر میں خوش آمدید',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF065F46),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'پہلے مکتب کی بنیادی تفصیلات مکمل کریں، پھر تمام اسکرینیں خود ظاہر ہو جائیں گی۔',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, height: 1.6),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 58,
+                    child: ElevatedButton.icon(
+                      onPressed: _openMaktabSetup,
+                      icon: const Icon(Icons.add_business_rounded),
+                      label: const Text('مکتب شامل کریں'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF08734B),
+                        foregroundColor: Colors.white,
+                        textStyle: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w800),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openStudentListFromMenu() {
+    final index = switch (widget.currentRole) {
+      AppRole.teacher => 3,
+      AppRole.manager => 1,
+      AppRole.admin => 1,
+      AppRole.parent => 0,
+      _ => 0,
+    };
+    setState(() => _selectedIndex = index);
+  }
+
+  void _openAttendanceFromMenu() {
+    final index = switch (widget.currentRole) {
+      AppRole.teacher => 0,
+      AppRole.manager => 3,
+      AppRole.admin => 3,
+      AppRole.mutawalli => 2,
+      _ => 0,
+    };
+    setState(() => _selectedIndex = index);
+  }
+
+  Future<void> _triggerAddStudentModal({String? maktabId}) async {
     final studentNameCtrl = TextEditingController();
     final fatherNameCtrl = TextEditingController();
     final fatherPhoneCtrl = TextEditingController();
     final teacherNameCtrl = TextEditingController(text: 'حافظ احمد حسن');
     DateTime selectedAdmissionDate = DateTime.now();
-    String selectedShift = 'morning';
-    String selectedGroup = 'Hifz Group A';
+    List<MaktabShift> availableShifts = await ShiftStore.load();
+    final Set<String> selectedShiftIds = <String>{'morning'};
+    final activeId = maktabId ?? _activeMaktabId ?? 'legacy_maktab';
+    final admissionNumbers = widget.students
+        .where((student) => student['maktabId']?.toString() == activeId)
+        .map((student) => int.tryParse(
+                student['admissionNo']?.toString().replaceAll(RegExp(r'\D'), '') ??
+                    '') ??
+            0);
+    final nextAdmissionNo = admissionNumbers.isEmpty
+        ? 1
+        : admissionNumbers.reduce((a, b) => a > b ? a : b) + 1;
+    String selectedLanguage = 'ur';
+    String selectedMessageMethod = 'WhatsApp';
 
-    showDialog<void>(
+    if (!mounted) return;
+
+    await showDialog<void>(
       context: context,
       builder: (dialogCtx) {
         final loc = AppLocalizations.of(context);
@@ -763,50 +1050,123 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'داخلہ نمبر (خودکار)',
+                        prefixIcon: Icon(Icons.confirmation_number_rounded,
+                            color: fieldLabelColor),
+                        filled: true,
+                        fillColor: inputBgColor,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        nextAdmissionNo.toString().padLeft(4, '0'),
+                        style: TextStyle(
+                          color: fieldTextColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      initialValue: selectedGroup,
+                      initialValue: selectedLanguage,
                       isExpanded: true,
                       dropdownColor: dialogBgColor,
                       decoration: InputDecoration(
-                        labelText: loc.translate('batch_group'),
+                        labelText: 'Preferred Language / پسندیدہ زبان',
                         labelStyle: TextStyle(color: fieldLabelColor, fontSize: 13),
-                        prefixIcon: Icon(Icons.groups_rounded, color: fieldLabelColor),
+                        prefixIcon: Icon(Icons.language_rounded, color: fieldLabelColor),
                         filled: true,
                         fillColor: inputBgColor,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         isDense: false,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      items: [
-                        DropdownMenuItem(value: 'Hifz Group A', child: TranslatedText('Hifz Group A', style: TextStyle(color: fieldTextColor))),
-                        DropdownMenuItem(value: 'Nazira Group B', child: TranslatedText('Nazira Group B', style: TextStyle(color: fieldTextColor))),
-                        DropdownMenuItem(value: 'Tajweed Group C', child: TranslatedText('Tajweed Group C', style: TextStyle(color: fieldTextColor))),
-                        DropdownMenuItem(value: 'Primary Group D', child: TranslatedText('Primary Group D', style: TextStyle(color: fieldTextColor))),
+                      items: const [
+                        DropdownMenuItem(value: 'ur', child: Text('اردو')),
+                        DropdownMenuItem(value: 'te', child: Text('తెలుగు / تیلگو')),
+                        DropdownMenuItem(value: 'en', child: Text('English / انگریزی')),
+                        DropdownMenuItem(value: 'hi', child: Text('हिन्दी / ہندی')),
                       ],
                       onChanged: (val) {
-                        if (val != null) setDialogState(() => selectedGroup = val);
+                        if (val != null) setDialogState(() => selectedLanguage = val);
                       },
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      initialValue: selectedShift,
+                      initialValue: selectedMessageMethod,
+                      isExpanded: true,
                       dropdownColor: dialogBgColor,
                       decoration: InputDecoration(
-                        labelText: loc.translate('shift_timing'),
-                        labelStyle: TextStyle(color: fieldLabelColor),
-                        prefixIcon: Icon(Icons.access_time_rounded, color: fieldLabelColor),
+                        labelText: 'Preferred App / پیغام کا پسندیدہ ذریعہ',
+                        labelStyle: TextStyle(color: fieldLabelColor, fontSize: 13),
+                        prefixIcon: Icon(Icons.message_rounded, color: fieldLabelColor),
                         filled: true,
                         fillColor: inputBgColor,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
-                      items: [
-                        DropdownMenuItem(value: 'morning', child: TranslatedText('Morning Shift', style: TextStyle(color: fieldTextColor))),
-                        DropdownMenuItem(value: 'evening', child: TranslatedText('Evening Shift', style: TextStyle(color: fieldTextColor))),
-                        DropdownMenuItem(value: 'night', child: TranslatedText('Night Shift', style: TextStyle(color: fieldTextColor))),
+                      items: const [
+                        DropdownMenuItem(value: 'WhatsApp', child: Text('WhatsApp')),
+                        DropdownMenuItem(value: 'SMS', child: Text('SMS')),
+                        DropdownMenuItem(value: 'Notification', child: Text('App Notification')),
                       ],
                       onChanged: (val) {
-                        if (val != null) setDialogState(() => selectedShift = val);
+                        if (val != null) {
+                          setDialogState(() => selectedMessageMethod = val);
+                        }
                       },
+                    ),
+                    const SizedBox(height: 12),
+                    InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'ایک یا متعدد شفٹیں منتخب کریں',
+                        prefixIcon: Icon(Icons.access_time_rounded,
+                            color: fieldLabelColor),
+                        filled: true,
+                        fillColor: inputBgColor,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: availableShifts
+                            .map((shift) => FilterChip(
+                                  label: Text(shift.name),
+                                  selected: selectedShiftIds.contains(shift.id),
+                                  onSelected: (selected) => setDialogState(() {
+                                    if (selected) {
+                                      selectedShiftIds.add(shift.id);
+                                    } else if (selectedShiftIds.length > 1) {
+                                      selectedShiftIds.remove(shift.id);
+                                    }
+                                  }),
+                                ))
+                            .toList(),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        icon: const Icon(Icons.edit_calendar_rounded),
+                        label: const Text('شفٹیں بنائیں یا تبدیل کریں'),
+                        onPressed: () async {
+                          await showShiftManager(context);
+                          final loaded = await ShiftStore.load();
+                          setDialogState(() {
+                            availableShifts = loaded;
+                            selectedShiftIds.removeWhere((id) =>
+                                availableShifts.every((shift) => shift.id != id));
+                            if (selectedShiftIds.isEmpty &&
+                                availableShifts.isNotEmpty) {
+                              selectedShiftIds.add(availableShifts.first.id);
+                            }
+                          });
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -830,17 +1190,29 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                     final fatherPhone = fatherPhoneCtrl.text.trim();
 
                     final newStudent = {
+                      'id': 'student_${DateTime.now().microsecondsSinceEpoch}',
+                      'maktabId': activeId,
+                      'admissionNo': nextAdmissionNo.toString().padLeft(4, '0'),
                       'name': name,
                       'fatherName': fatherNameCtrl.text.trim(),
                       'fatherPhone': fatherPhone,
                       'dob': '',
-                      'group': selectedGroup,
-                      'className': selectedGroup,
+                      'group': '',
                       'teacherName': teacherNameCtrl.text.trim(),
-                      'shift': selectedShift,
+                      'shiftIds': selectedShiftIds.toList(),
+                      'shifts': selectedShiftIds.toList(),
+                      'shiftId': selectedShiftIds.first,
+                      'shift': availableShifts
+                          .firstWhere(
+                            (shift) => shift.id == selectedShiftIds.first,
+                            orElse: () => availableShifts.first,
+                          )
+                          .name,
                       'gender': 'male',
-                      'language': 'ur',
-                      'messageMethod': 'SMS',
+                      'language': selectedLanguage,
+                      'preferredLanguage': selectedLanguage,
+                      'messageMethod': selectedMessageMethod,
+                      'preferredApp': selectedMessageMethod,
                       'feeAmount': '500',
                       'feeMonth': 'August 2026',
                       'feeStatus': 'due',
@@ -852,6 +1224,11 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
 
                     final updatedList = List<Map<String, dynamic>>.from(widget.students)..add(newStudent);
                     await widget.onSave(updatedList);
+                    try {
+                      widget.students
+                        ..clear()
+                        ..addAll(updatedList);
+                    } catch (_) {}
 
                     if (fatherPhone.isNotEmpty) {
                       final prefs = await SharedPreferences.getInstance();
@@ -1042,35 +1419,93 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final info = _roleInfo;
+    final bool attendanceIsOpen =
+        ((widget.currentRole == AppRole.manager ||
+                    widget.currentRole == AppRole.admin) &&
+                _selectedIndex == 3) ||
+            (widget.currentRole == AppRole.teacher && _selectedIndex == 0) ||
+            (widget.currentRole == AppRole.mutawalli && _selectedIndex == 2);
+    final bool lessonIsOpen =
+        (widget.currentRole == AppRole.teacher && _selectedIndex == 1) ||
+            (widget.currentRole == AppRole.parent && _selectedIndex == 1);
+    final bool compactWorkScreen =
+        _maktabSetupComplete && (lessonIsOpen || attendanceIsOpen);
     return ListenableBuilder(
       listenable: widget.languageController,
       builder: (context, _) {
         final isEn = widget.languageController.locale.languageCode == 'en';
         return Scaffold(
           drawer: _buildSideDrawer(context, info),
+        extendBodyBehindAppBar: compactWorkScreen,
         appBar: AppBar(
-          backgroundColor: Theme.of(context).brightness == Brightness.dark ? null : info.primaryColor,
-          foregroundColor: Theme.of(context).brightness == Brightness.dark ? null : Colors.white,
+          toolbarHeight: compactWorkScreen ? 38 : null,
+          elevation: compactWorkScreen ? 0 : null,
+          systemOverlayStyle: SystemUiOverlayStyle.light.copyWith(
+            statusBarColor: info.primaryColor,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+          ),
+          backgroundColor: compactWorkScreen
+              ? Colors.transparent
+              : (Theme.of(context).brightness == Brightness.dark
+                  ? null
+                  : info.primaryColor),
+          foregroundColor: compactWorkScreen
+              ? Colors.white
+              : (Theme.of(context).brightness == Brightness.dark
+                  ? null
+                  : Colors.white),
+          flexibleSpace: compactWorkScreen
+              ? Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        info.primaryColor,
+                        info.primaryColor,
+                        info.primaryColor.withValues(alpha: 0),
+                      ],
+                      stops: const [0, .55, 1],
+                    ),
+                  ),
+                )
+              : null,
           title: const SizedBox.shrink(),
           actions: [
-            if (widget.currentRole == AppRole.manager ||
+            if (_maktabSetupComplete &&
+                (widget.currentRole == AppRole.manager ||
                 widget.currentRole == AppRole.admin ||
-                widget.currentRole == AppRole.teacher)
-              IconButton(
-                icon: const Icon(Icons.campaign_rounded, color: Colors.amberAccent),
-                tooltip: isEn ? 'Send Announcement' : 'اعلان بھیجیں',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => CommunityChatScreen(
-                        currentRole: widget.currentRole,
-                        languageController: widget.languageController,
-                        initialOpenAnnouncementModal: true,
-                      ),
+                widget.currentRole == AppRole.teacher))
+              Container(
+                constraints: const BoxConstraints(minWidth: 96, maxWidth: 172),
+                margin: const EdgeInsetsDirectional.only(end: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFFFFF), Color(0xFFE0F4EA)],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFF08734B), width: 1.4),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x44065F46),
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
                     ),
-                  );
-                },
+                  ],
+                ),
+                child: Text(
+                  _currentClassName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xFF065F46),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
           ],
         ),
@@ -1080,23 +1515,33 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                   strokeWidth: 3,
                 ),
               )
-            : _buildRoleSpecificBody(),
-        bottomNavigationBar: Container(
-          margin: const EdgeInsets.all(16),
+            : (!_maktabSetupComplete && _canManageMaktab)
+                ? _buildMaktabSetupLanding()
+                : _buildRoleSpecificBody(),
+        bottomNavigationBar: (!_maktabSetupComplete && _canManageMaktab)
+            ? null
+            : Container(
+          margin: EdgeInsets.zero,
           decoration: BoxDecoration(
             color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            border: const Border(
+              top: BorderSide(color: Color(0xFFD6E5DE), width: 1),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
+                color: Colors.black.withValues(alpha: 0.24),
+                blurRadius: 11,
+                offset: const Offset(0, -4),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: _buildBottomNav(),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            child: SizedBox(
+              height: 58,
+              child: _buildBottomNav(),
+            ),
           ),
         ),
       );
@@ -1155,32 +1600,123 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ),
           if (canAddStudent)
             ListTile(
-              leading: const Icon(Icons.person_add_alt_1_rounded, color: Colors.blue),
-              title: Text(
-                loc.translate('add_student'),
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 13.5),
+              leading: const Icon(
+                Icons.account_balance_rounded,
+                color: Color(0xFF08734B),
               ),
-              onTap: () {
+              title: const Text(
+                'مکتب شامل کریں',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF08734B),
+                  fontSize: 14,
+                ),
+              ),
+              onTap: () async {
                 Navigator.pop(context);
-                _triggerAddStudentModal();
+                await _openMaktabSetup();
               },
             ),
-          if (widget.currentRole == AppRole.admin || widget.currentRole == AppRole.manager)
+          if (_maktabProfiles.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 2, 12, 10),
+              child: DropdownButtonFormField<String>(
+                value: _maktabProfiles.any(
+                        (item) => item['id']?.toString() == _activeMaktabId)
+                    ? _activeMaktabId
+                    : null,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: 'محفوظ مکاتب / مکتب منتخب کریں',
+                  prefixIcon: const Icon(Icons.account_balance_rounded,
+                      color: Color(0xFF08734B)),
+                  filled: true,
+                  fillColor: const Color(0xFFEAF7F0),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(13),
+                    borderSide: const BorderSide(color: Color(0xFF79B99C)),
+                  ),
+                ),
+                items: _maktabProfiles.map((profile) {
+                  final name = profile['name']?.toString().trim();
+                  final section = profile['sectionName']?.toString().trim();
+                  return DropdownMenuItem<String>(
+                    value: profile['id']?.toString(),
+                    child: Text(
+                      [name, section]
+                          .whereType<String>()
+                          .where((text) => text.isNotEmpty)
+                          .join(' — '),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
+                onChanged: (widget.currentRole == AppRole.admin ||
+                        widget.currentRole == AppRole.manager)
+                    ? (value) async {
+                        if (value == null || value == _activeMaktabId) return;
+                        Navigator.pop(context);
+                        await _activateMaktab(value);
+                      }
+                    : null,
+              ),
+            ),
+          if (_activeMaktabId != null && _activeMaktabName.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: const Color(0xFF79B99C)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x22065F46),
+                    blurRadius: 6,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: ListTile(
+                dense: true,
+                leading: const Icon(Icons.edit_rounded,
+                    color: Color(0xFF08734B)),
+                title: Text(
+                  _activeMaktabName,
+                  style: const TextStyle(
+                    color: Color(0xFF065F46),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                  ),
+                ),
+                subtitle: const Text('منتخب مکتب کی تفصیلات میں ترمیم کریں'),
+                trailing: const Icon(Icons.arrow_back_ios_new_rounded,
+                    size: 15, color: Color(0xFF08734B)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _openMaktabSetup(editCurrent: true);
+                },
+              ),
+            ),
+          if (widget.currentRole == AppRole.admin ||
+              widget.currentRole == AppRole.manager ||
+              widget.currentRole == AppRole.teacher)
             ListTile(
-              leading: const Icon(Icons.class_rounded, color: Colors.teal),
-              title: Text(
-                loc.translate('create_group'),
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal, fontSize: 13.5),
+              leading: const Icon(Icons.campaign_rounded, color: Colors.orange),
+              title: const Text(
+                'اعلان / Notice',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => CreateClassGroupScreen(
-                      students: widget.students,
+                    builder: (_) => CommunityChatScreen(
+                      currentRole: widget.currentRole,
                       languageController: widget.languageController,
-                      onSave: widget.onSave,
+                      initialOpenAnnouncementModal: true,
                     ),
                   ),
                 );
@@ -1219,8 +1755,8 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                   MaterialPageRoute(
                     builder: (_) => ManageParentLoginsScreen(
                       languageController: widget.languageController,
-                      students: widget.students,
-                      onSaveStudents: widget.onSave,
+                      students: _activeStudents,
+                      onSaveStudents: _saveActiveStudents,
                     ),
                   ),
                 );
@@ -1238,8 +1774,8 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => AnalyticsScreen(
-                    students: widget.students,
+                    builder: (_) => AnalyticsScreen(
+                      students: _activeStudents,
                     languageController: widget.languageController,
                     themeController: ThemeController(),
                   ),
@@ -1247,23 +1783,26 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               );
             },
           ),
-          ListTile(
+          if (!canAddStudent)
+            ListTile(
             leading: const Icon(Icons.people_rounded, color: Color(0xFF074E32)),
             title: Text(loc.translate('students_list')),
             onTap: () {
               Navigator.pop(context);
-              setState(() => _selectedIndex = 1);
+              _openStudentListFromMenu();
             },
           ),
-          ListTile(
+          if (!canAddStudent)
+            ListTile(
             leading: const Icon(Icons.how_to_reg_rounded, color: Color(0xFF074E32)),
             title: Text(loc.translate('attendance')),
             onTap: () {
               Navigator.pop(context);
-              setState(() => _selectedIndex = 3);
+              _openAttendanceFromMenu();
             },
           ),
-          ListTile(
+          if (!canAddStudent)
+            ListTile(
             leading: const Icon(Icons.menu_book_rounded, color: Color(0xFF074E32)),
             title: Text(loc.translate('sabaq_lessons')),
             onTap: () {
@@ -1278,7 +1817,8 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               );
             },
           ),
-          ListTile(
+          if (!canAddStudent)
+            ListTile(
             leading: const Icon(Icons.currency_rupee_rounded, color: Color(0xFF074E32)),
             title: Text(loc.translate('fee_record')),
             onTap: () {
@@ -1425,6 +1965,11 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
       case AppRole.admin:
         return BottomNavigationBar(
           currentIndex: _selectedIndex.clamp(0, 3),
+          iconSize: 21,
+          selectedFontSize: 10.5,
+          unselectedFontSize: 9.5,
+          selectedLabelStyle: const TextStyle(height: 1),
+          unselectedLabelStyle: const TextStyle(height: 1),
           selectedItemColor: _roleInfo.primaryColor,
           unselectedItemColor: Colors.grey,
           type: BottomNavigationBarType.fixed,
@@ -1441,26 +1986,39 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
           ],
         );
       case AppRole.teacher:
-        return BottomNavigationBar(
-          currentIndex: _selectedIndex.clamp(0, 3),
-          selectedItemColor: _roleInfo.primaryColor,
-          unselectedItemColor: Colors.grey,
-          type: BottomNavigationBarType.fixed,
-          onTap: (i) => setState(() => _selectedIndex = i),
-          items: [
-            BottomNavigationBarItem(
-                icon: const Icon(Icons.menu_book_rounded), label: loc.translate('sabaq_lessons')),
-            BottomNavigationBarItem(
-                icon: const Icon(Icons.fact_check_rounded), label: loc.translate('attendance')),
-            BottomNavigationBarItem(
-                icon: const Icon(Icons.currency_rupee_rounded), label: loc.translate('fee_record')),
-            BottomNavigationBarItem(
-                icon: const Icon(Icons.people_outline_rounded), label: loc.translate('students_list')),
-          ],
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: BottomNavigationBar(
+            currentIndex: _selectedIndex.clamp(0, 3),
+            iconSize: 21,
+            selectedFontSize: 10.5,
+            unselectedFontSize: 9.5,
+            selectedLabelStyle: const TextStyle(height: 1),
+            unselectedLabelStyle: const TextStyle(height: 1),
+            selectedItemColor: _roleInfo.primaryColor,
+            unselectedItemColor: Colors.grey,
+            type: BottomNavigationBarType.fixed,
+            onTap: (i) => setState(() => _selectedIndex = i),
+            items: [
+              BottomNavigationBarItem(
+                  icon: const Icon(Icons.fact_check_rounded), label: loc.translate('attendance')),
+              BottomNavigationBarItem(
+                  icon: const Icon(Icons.menu_book_rounded), label: loc.translate('sabaq_lessons')),
+              BottomNavigationBarItem(
+                  icon: const Icon(Icons.currency_rupee_rounded), label: loc.translate('fee_record')),
+              BottomNavigationBarItem(
+                  icon: const Icon(Icons.people_outline_rounded), label: loc.translate('students_list')),
+            ],
+          ),
         );
       case AppRole.parent:
         return BottomNavigationBar(
           currentIndex: _selectedIndex.clamp(0, 2),
+          iconSize: 21,
+          selectedFontSize: 10.5,
+          unselectedFontSize: 9.5,
+          selectedLabelStyle: const TextStyle(height: 1),
+          unselectedLabelStyle: const TextStyle(height: 1),
           selectedItemColor: _roleInfo.primaryColor,
           unselectedItemColor: Colors.grey,
           onTap: (i) => setState(() => _selectedIndex = i),
@@ -1476,6 +2034,11 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
       case AppRole.mutawalli:
         return BottomNavigationBar(
           currentIndex: _selectedIndex.clamp(0, 2),
+          iconSize: 21,
+          selectedFontSize: 10.5,
+          unselectedFontSize: 9.5,
+          selectedLabelStyle: const TextStyle(height: 1),
+          unselectedLabelStyle: const TextStyle(height: 1),
           selectedItemColor: _roleInfo.primaryColor,
           unselectedItemColor: Colors.grey,
           onTap: (i) => setState(() => _selectedIndex = i),
@@ -1491,6 +2054,11 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
       default:
         return BottomNavigationBar(
           currentIndex: _selectedIndex.clamp(0, 1),
+          iconSize: 21,
+          selectedFontSize: 10.5,
+          unselectedFontSize: 9.5,
+          selectedLabelStyle: const TextStyle(height: 1),
+          unselectedLabelStyle: const TextStyle(height: 1),
           selectedItemColor: _roleInfo.primaryColor,
           unselectedItemColor: Colors.grey,
           onTap: (i) => setState(() => _selectedIndex = i),
@@ -1509,72 +2077,74 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
       case AppRole.manager:
       case AppRole.admin:
         if (_selectedIndex == 1) {
-          return StudentListScreen(
-            languageController: widget.languageController,
-            currentRole: widget.currentRole,
-            hideAppBar: true,
-          );
+          return _buildActiveMaktabStudentList();
         }
         if (_selectedIndex == 2) {
           return FeeScreen(
-            students: widget.students,
+            students: _activeStudents,
             languageController: widget.languageController,
-            onSave: widget.onSave,
+            onSave: _saveActiveStudents,
             currentRole: widget.currentRole,
+            maktabId: _activeMaktabId,
+            onMaktabChanged: _activateMaktabKeepingCurrentScreen,
           );
         }
         if (_selectedIndex == 3) {
           return AttendanceScreen(
-            students: widget.students,
+            students: _activeStudents,
             languageController: widget.languageController,
-            onSave: widget.onSave,
+            onSave: _saveActiveStudents,
             currentRole: widget.currentRole,
+            maktabId: _activeMaktabId,
           );
         }
         return _buildManagerAdminOverview();
 
       case AppRole.teacher:
         if (_selectedIndex == 0) {
-          return LessonScreen(
-            students: widget.students,
+          return AttendanceScreen(
+            students: _activeStudents,
             languageController: widget.languageController,
+            onSave: _saveActiveStudents,
+            currentRole: widget.currentRole,
+            maktabId: _activeMaktabId,
           );
         }
         if (_selectedIndex == 1) {
-          return AttendanceScreen(
-            students: widget.students,
+          return LessonScreen(
+            students: _activeStudents,
             languageController: widget.languageController,
-            onSave: widget.onSave,
-            currentRole: widget.currentRole,
+            maktabId: _activeMaktabId,
           );
         }
         if (_selectedIndex == 2) {
           return FeeScreen(
-            students: widget.students,
+            students: _activeStudents,
             languageController: widget.languageController,
-            onSave: widget.onSave,
+            onSave: _saveActiveStudents,
             currentRole: widget.currentRole,
+            maktabId: _activeMaktabId,
+            onMaktabChanged: _activateMaktabKeepingCurrentScreen,
           );
         }
         // index 3 = Students List
-        return StudentListScreen(
-          languageController: widget.languageController,
-          currentRole: widget.currentRole,
-          hideAppBar: true,
-        );
+        return _buildActiveMaktabStudentList();
 
       case AppRole.parent:
         if (_selectedIndex == 1) {
           return LessonScreen(
             languageController: widget.languageController,
+            maktabId: _activeMaktabId,
           );
         }
         if (_selectedIndex == 2) {
           return FeeScreen(
-            students: widget.students,
+            students: _activeStudents,
             languageController: widget.languageController,
-            onSave: widget.onSave,
+            onSave: _saveActiveStudents,
             currentRole: widget.currentRole,
+            maktabId: _activeMaktabId,
+            onMaktabChanged: _activateMaktabKeepingCurrentScreen,
           );
         }
         return _buildParentChildOverview();
@@ -1582,18 +2152,21 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
       case AppRole.mutawalli:
         if (_selectedIndex == 1) {
           return FeeScreen(
-            students: widget.students,
+            students: _activeStudents,
             languageController: widget.languageController,
-            onSave: widget.onSave,
+            onSave: _saveActiveStudents,
             currentRole: widget.currentRole,
+            maktabId: _activeMaktabId,
+            onMaktabChanged: _activateMaktabKeepingCurrentScreen,
           );
         }
         if (_selectedIndex == 2) {
           return AttendanceScreen(
-            students: widget.students,
+            students: _activeStudents,
             languageController: widget.languageController,
-            onSave: widget.onSave,
+            onSave: _saveActiveStudents,
             currentRole: widget.currentRole,
+            maktabId: _activeMaktabId,
           );
         }
         return _buildMutawalliOverview();
@@ -1603,15 +2176,79 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
     }
   }
 
+  Widget _buildActiveMaktabStudentList() {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE9F6EF),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF79B99C)),
+              ),
+              child: Text(
+                '${_activeMaktabName.isEmpty ? 'منتخب مکتب' : _activeMaktabName} — طلبہ: ${_activeStudents.length}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFF065F46),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            Expanded(
+              child: _activeStudents.isEmpty
+                  ? const Center(child: Text('اس مکتب میں کوئی طالب علم موجود نہیں۔'))
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                      itemCount: _activeStudents.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 7),
+                      itemBuilder: (context, index) {
+                        final student = _activeStudents[index];
+                        return Card(
+                          elevation: 2,
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: const Color(0xFFE1F3E9),
+                              child: Text('${index + 1}',
+                                  style: const TextStyle(
+                                      color: Color(0xFF08734B),
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                            title: Text(
+                              student['name']?.toString() ?? 'طالب علم',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w800, fontSize: 16),
+                            ),
+                            subtitle: Text(
+                              'والد: ${student['fatherName'] ?? '-'}  •  کلاس: ${student['className'] ?? '-'}\n'
+                              'شفٹ: ${student['shift'] ?? '-'}  •  فون: ${student['fatherPhone'] ?? '-'}',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── MANAGER / ADMIN OVERVIEW ──
   Widget _buildManagerAdminOverview() {
     final loc = AppLocalizations.of(context);
-    final totalStudents = widget.students.length;
+    final totalStudents = _activeStudents.length;
     final presentCount =
-        widget.students.where((s) => s['isPresent'] == true).length;
+        _activeStudents.where((s) => s['isPresent'] == true).length;
     final absentCount = totalStudents - presentCount;
     final paidCount =
-        widget.students.where((s) => s['feeStatus'] == 'paid').length;
+        _activeStudents.where((s) => s['feeStatus'] == 'paid').length;
     final attendanceRate = totalStudents == 0
         ? 0
         : ((presentCount / totalStudents) * 100).toInt();
@@ -1729,7 +2366,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                         style: const TextStyle(fontSize: 10, color: Colors.white70)),
                   ],
                 ),
-                if (widget.students.where((s) => s['isPresent'] != true).isNotEmpty) ...[
+                if (_activeStudents.where((s) => s['isPresent'] != true).isNotEmpty) ...[
                   const Divider(color: Colors.white30, height: 16),
                   Align(
                     alignment: AlignmentDirectional.centerStart,
@@ -1737,7 +2374,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                         style: const TextStyle(fontSize: 11, color: Colors.amberAccent, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(height: 6),
-                  ...widget.students
+                  ..._activeStudents
                       .where((s) => s['isPresent'] != true)
                       .take(5)
                       .map((s) => Padding(
@@ -1754,15 +2391,100 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                               ],
                             ),
                           )),
-                  if (widget.students.where((s) => s['isPresent'] != true).length > 5)
+                  if (_activeStudents.where((s) => s['isPresent'] != true).length > 5)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        '+${widget.students.where((s) => s['isPresent'] != true).length - 5} more...',
+                        '+${_activeStudents.where((s) => s['isPresent'] != true).length - 5} more...',
                         style: const TextStyle(fontSize: 10, color: Colors.white54),
                       ),
                     ),
                 ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+          // ── TEACHER ATTENDANCE & RECORDED ATTENDANCE CARD FOR MANAGER ──
+          Text(
+            loc.translate('teacher_attendance_status'),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF1E293B)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.teal.shade200),
+              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.badge_rounded, color: Colors.teal, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      loc.translate('recorded_by_teacher'),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${loc.translate('present')}: $presentCount | ${loc.translate('absent')}: $absentCount',
+                        style: TextStyle(fontSize: 10, color: Colors.teal.shade900, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 16),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.green.shade100,
+                      child: const Icon(Icons.person_outline_rounded, size: 18, color: Colors.green),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            loc.locale.languageCode == 'en' ? 'Ustadh Mohammad' : 'استاد محمد علی',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            loc.locale.languageCode == 'en'
+                                ? 'Hifz Class • Recorded $presentCount Present'
+                                : 'حفظ کلاس • درج کردہ حاضری: $presentCount حاضر',
+                            style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        loc.translate('present'),
+                        style: TextStyle(fontSize: 10, color: Colors.green.shade900, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -1871,8 +2593,8 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                     MaterialPageRoute(
                       builder: (_) => AdminFeaturesScreen(
                         languageController: widget.languageController,
-                        students: widget.students,
-                        onSave: widget.onSave,
+                        students: _activeStudents,
+                        onSave: _saveActiveStudents,
                       ),
                     ),
                   );
@@ -1880,8 +2602,218 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 20),
+          // ── BOTTOM SHORTCUT BOX: MAKTAB STUDENTS DIRECTORY ──
+          InkWell(
+            onTap: () => _showMaktabStudentsShortcutModal(context),
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: Theme.of(context).brightness == Brightness.dark
+                      ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
+                      : [const Color(0xFF074E32), const Color(0xFF0D6E48)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF79B99C)),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3))
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.groups_rounded, color: Colors.white, size: 28),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          loc.locale.languageCode == 'en'
+                              ? 'Selected Maktab Students Roster'
+                              : 'اس مکتب کے تمام طلبہ کی فہرست',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          loc.locale.languageCode == 'en'
+                              ? 'Tap to view only the ${_activeStudents.length} students of this Maktab'
+                              : 'اس مکتب کے کل ${_activeStudents.length} طلبہ کی فہرست دیکھنے کے لیے کلک کریں',
+                          style: const TextStyle(fontSize: 11, color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
+    );
+  }
+
+  void _showMaktabStudentsShortcutModal(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final maktabStudents = _activeStudents;
+    final maktabName = _activeMaktabName.isEmpty ? loc.translate('select_branch') : _activeMaktabName;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (modalCtx) {
+        String searchQuery = '';
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final filtered = maktabStudents.where((s) {
+              final name = (s['name'] ?? '').toString().toLowerCase();
+              final fName = (s['fatherName'] ?? '').toString().toLowerCase();
+              final phone = (s['fatherPhone'] ?? s['parentPhone'] ?? '').toString();
+              final query = searchQuery.toLowerCase();
+              return name.contains(query) || fName.contains(query) || phone.contains(query);
+            }).toList();
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE9F6EF),
+                        child: const Icon(Icons.school_rounded, color: Color(0xFF065F46)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              maktabName,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              loc.locale.languageCode == 'en'
+                                  ? 'Total Students: ${maktabStudents.length}'
+                                  : 'اس مکتب کے کل طلبہ: ${maktabStudents.length}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? Colors.tealAccent : const Color(0xFF065F46),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF065F46)),
+                        tooltip: 'نیا طالب علم شامل کریں',
+                        onPressed: () {
+                          Navigator.pop(modalCtx);
+                          _triggerAddStudentModal(maktabId: _activeMaktabId);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: loc.locale.languageCode == 'en' ? 'Search student...' : 'طالب علم کی تلاش...',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF1E293B) : Colors.grey.shade100,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onChanged: (q) => setModalState(() => searchQuery = q),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: filtered.isEmpty
+                        ? Center(
+                            child: Text(
+                              loc.locale.languageCode == 'en'
+                                  ? 'No students found for this Maktab'
+                                  : 'اس مکتب میں کوئی طالب علم نہیں ملا۔',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 8),
+                            itemBuilder: (c, idx) {
+                              final student = filtered[idx];
+                              final phone = (student['fatherPhone'] ?? student['parentPhone'] ?? '').toString();
+                              return Card(
+                                elevation: 1,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: const Color(0xFFE9F6EF),
+                                    child: Text(
+                                      '${idx + 1}',
+                                      style: const TextStyle(
+                                        color: Color(0xFF065F46),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    student['name']?.toString() ?? 'طالب علم',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  subtitle: Text(
+                                    'والد: ${student['fatherName'] ?? '-'} • کلاس: ${student['className'] ?? student['class'] ?? '-'}\nفون: ${phone.isEmpty ? '-' : phone}',
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                  trailing: phone.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(Icons.call_rounded, color: Colors.green),
+                                          onPressed: () async {
+                                            final uri = Uri(scheme: 'tel', path: phone);
+                                            if (await canLaunchUrl(uri)) await launchUrl(uri);
+                                          },
+                                        )
+                                      : null,
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1899,7 +2831,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
   // ── PARENT CHILD OVERVIEW ──
   Widget _buildParentChildOverview() {
     final firstStudent =
-        widget.students.isNotEmpty ? widget.students.first : null;
+        _activeStudents.isNotEmpty ? _activeStudents.first : null;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -2003,8 +2935,8 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
   // ── MUTAWALLI OVERVIEW ──
   Widget _buildMutawalliOverview() {
     final isEn = widget.languageController.locale.languageCode == 'en';
-    final totalStudents = widget.students.length;
-    final totalFeesCollected = widget.students
+    final totalStudents = _activeStudents.length;
+    final totalFeesCollected = _activeStudents
         .where((s) => s['feeStatus'] == 'paid')
         .fold<double>(
             0, (sum, s) => sum + (double.tryParse(s['feeAmount']?.toString() ?? '0') ?? 0));
@@ -2108,9 +3040,12 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => FeeScreen(
-                          students: widget.students,
+                          students: _activeStudents,
                           languageController: widget.languageController,
-                          onSave: widget.onSave,
+                          onSave: _saveActiveStudents,
+                          maktabId: _activeMaktabId,
+                          onMaktabChanged:
+                              _activateMaktabKeepingCurrentScreen,
                         ),
                       ),
                     );
@@ -2170,21 +3105,23 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
 
   // ── OTHER OVERVIEW ──
   Widget _buildOtherOverview() {
+    final loc = AppLocalizations.of(context);
+    final isEn = loc.locale.languageCode == 'en';
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           _RoleBannerCard(
-            title: 'خوش آمدید!',
-            subtitle: 'مکتب مینیجر ایپ میں آپ کا خیر مقدم ہے',
+            title: loc.translate('welcome'),
+            subtitle: isEn ? 'Welcome to Maktab Management System' : 'مکتب مینیجر ایپ میں آپ کا خیر مقدم ہے',
             color: const Color(0xFF374151),
           ),
           const SizedBox(height: 24),
           Card(
             child: ListTile(
               leading: const Icon(Icons.info_rounded, color: Color(0xFF374151)),
-              title: const Text('مکتب کی اوقات کار'),
-              subtitle: const Text('صبح: 7:00 سے 9:00 | شام: 5:00 سے 7:00'),
+              title: Text(isEn ? 'Working Hours' : 'مکتب کی اوقات کار'),
+              subtitle: Text(isEn ? 'Morning: 7:00 to 9:00 AM | Evening: 5:00 to 7:00 PM' : 'صبح: 7:00 سے 9:00 | شام: 5:00 سے 7:00'),
             ),
           ),
         ],
