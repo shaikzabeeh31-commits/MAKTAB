@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:permission_handler/permission_handler.dart' hide PermissionStatus;
 import 'app_colors.dart';
 import 'app_spacing.dart';
 
@@ -151,6 +153,24 @@ class EmptyStateWidget extends StatelessWidget {
 class ContactPickerHelper {
   /// Import actual contact linked by phone number or select from student contacts
   static Future<Map<String, String>?> pickContact(BuildContext context, [List<Map<String, dynamic>>? studentsList]) async {
+    try {
+      final perm = await FlutterContacts.permissions.request(PermissionType.readWrite);
+      if (perm == PermissionStatus.granted || perm == PermissionStatus.limited) {
+        final contact = await FlutterContacts.native.showPicker(
+          properties: {ContactProperty.phone, ContactProperty.name},
+        );
+        if (contact != null) {
+          final cName = (contact.displayName ?? '${contact.name?.first ?? ''} ${contact.name?.last ?? ''}').trim();
+          if (contact.phones.isNotEmpty) {
+            return {
+              'name': cName.isNotEmpty ? cName : 'Contact',
+              'phone': contact.phones.first.number,
+            };
+          }
+        }
+      }
+    } catch (_) {}
+
     final Map<String, Map<String, String>> actualContactsMap = {};
 
     if (studentsList != null && studentsList.isNotEmpty) {
