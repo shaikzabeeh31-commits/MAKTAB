@@ -930,32 +930,35 @@ class _LessonScreenState extends State<LessonScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      _archBox(
-                        _teacherName,
-                        () => _editText(
-                          title: 'استاد کا نام',
-                          current: _teacherName,
-                          storageKey: 'lesson_teacher_name',
-                          onSave: (value) =>
-                              setState(() => _teacherName = value),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Row(
+                      children: [
+                        _archBox(
+                          _teacherName,
+                          () => _editText(
+                            title: 'استاد کا نام',
+                            current: _teacherName,
+                            storageKey: 'lesson_teacher_name',
+                            onSave: (value) =>
+                                setState(() => _teacherName = value),
+                          ),
+                          flex: 4,
                         ),
-                        flex: 4,
-                      ),
-                      const SizedBox(width: 4),
-                      _archBox(_dateKey, _pickDate,
-                          icon: Icons.calendar_month_rounded, flex: 3),
-                      const SizedBox(width: 4),
-                      _archBox(
-                          _holidayNotice.isEmpty
-                              ? _selectedShift.name
-                              : '${_selectedShift.name} • $_holidayNotice',
-                          _pickShift,
-                          holiday: _holidayNotice.isNotEmpty,
-                          icon: Icons.schedule_rounded, flex: 2),
-                    ],
+                        const SizedBox(width: 4),
+                        _archBox(_dateKey, _pickDate,
+                            icon: Icons.calendar_month_rounded, flex: 3),
+                        const SizedBox(width: 4),
+                        _archBox(
+                            _holidayNotice.isEmpty
+                                ? _selectedShift.name
+                                : '${_selectedShift.name} • $_holidayNotice',
+                            _pickShift,
+                            holiday: _holidayNotice.isNotEmpty,
+                            icon: Icons.schedule_rounded, flex: 2),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -1471,32 +1474,37 @@ class _LessonScreenState extends State<LessonScreen> {
                 onTap: _showGroupSelector,
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  height: 46,
+                  height: 44,
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   alignment: Alignment.center,
                   decoration: _box(),
                   child: Text(
                     _selectedGroupName == 'گروپ بنائیں'
-                        ? 'گروپ منتخب کریں'
+                        ? 'گروپ / مضمون منتخب کریں'
                         : _selectedGroupName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF065F46),
+                    ),
                   ),
                 ),
               ),
             ),
             const SizedBox(width: 6),
             SizedBox(
-              height: 46,
+              height: 44,
               child: OutlinedButton.icon(
                 onPressed: _showGroupMenu,
-                icon: const Icon(Icons.group_add_rounded, size: 18),
-                label: const Text('گروپ بنائیں'),
+                icon: const Icon(Icons.group_add_rounded, size: 16),
+                label: const Text('گروپ بنائیں', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _green,
                   side: const BorderSide(color: Color(0xFF68AD91)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1510,16 +1518,18 @@ class _LessonScreenState extends State<LessonScreen> {
           children: [
             Expanded(
               child: Container(
-                height: 47,
+                height: 44,
                 decoration: _box(),
                 child: TextField(
                   controller: _commonLessonController,
                   textDirection: TextDirection.rtl,
+                  style: const TextStyle(fontSize: 12),
                   decoration: InputDecoration(
                     hintText: 'بول کر یا لکھ کر پارہ، صفحہ اور سبق درج کریں',
+                    hintStyle: const TextStyle(fontSize: 11),
                     border: InputBorder.none,
                     contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                     prefixIcon: IconButton(
                       tooltip: 'مائیک',
                       onPressed: () =>
@@ -1529,6 +1539,7 @@ class _LessonScreenState extends State<LessonScreen> {
                             ? Icons.stop_circle_rounded
                             : Icons.mic_rounded,
                         color: _listeningCommon ? Colors.red : _green,
+                        size: 19,
                       ),
                     ),
                   ),
@@ -1537,14 +1548,17 @@ class _LessonScreenState extends State<LessonScreen> {
             ),
             const SizedBox(width: 6),
             SizedBox(
-              height: 47,
+              height: 44,
               child: FilledButton(
                 onPressed: _applyCommonLesson,
                 style: FilledButton.styleFrom(
                   backgroundColor: _green,
                   padding: const EdgeInsets.symmetric(horizontal: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('لاگو کریں'),
+                child: const Text('لاگو کریں', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
