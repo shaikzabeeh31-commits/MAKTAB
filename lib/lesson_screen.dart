@@ -9,6 +9,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:url_launcher/url_launcher.dart';
 
 import 'app_localizations.dart';
 import 'shift_manager.dart';
@@ -133,6 +134,7 @@ class _LessonScreenState extends State<LessonScreen> {
   bool _loading = true;
   bool _listeningCommon = false;
   bool _controlsExpanded = true;
+  final ScrollController _scrollController = ScrollController();
   String? _listeningStudentId;
 
   String get _dateKey =>
@@ -1830,7 +1832,76 @@ class _LessonScreenState extends State<LessonScreen> {
     final controller = _controllerFor(student);
     final repeat = _repeatQueue[id];
     final isAbsent = _absentStudentIds.contains(id);
-    return Container(
+    final studentName = student['name']?.toString() ?? 'طالب علم';
+    return Dismissible(
+      key: Key('les_student_${id}_$index'),
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.green.shade600,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: const [
+            Icon(Icons.send_rounded, color: Colors.white, size: 18),
+            SizedBox(width: 4),
+            Text('سبق میسج (Send)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10.5)),
+          ],
+        ),
+      ),
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.red.shade600,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: const [
+            Text('حذف (Delete)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10.5)),
+            SizedBox(width: 4),
+            Icon(Icons.delete_forever_rounded, color: Colors.white, size: 18),
+          ],
+        ),
+      ),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          final phone = (student['fatherPhone'] ?? student['parentPhone'] ?? student['phone'] ?? '').toString().trim();
+          final text = controller.text.trim();
+          final msg = 'السلام علیکم، طالب علم $studentName کے آج کے سبق کا لائحہ عمل ($text) ہے۔';
+          if (phone.isNotEmpty) {
+            final Uri uri = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(msg)}');
+            if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+          return false;
+        } else if (direction == DismissDirection.endToStart) {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text('طالب علم ($studentName) کو حذف کریں؟'),
+              content: const Text('کیا آپ اس طالب علم کو فہرست سے ختم کرنا چاہتے ہیں؟'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('منسوخ')),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('حذف کریں'),
+                ),
+              ],
+            ),
+          );
+          if (confirm == true) {
+            setState(() {
+              _students.removeWhere((s) => _studentId(s) == id);
+            });
+          }
+          return false;
+        }
+        return false;
+      },
+      child: Container(
       margin: const EdgeInsets.fromLTRB(5, 2, 5, 2),
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
       decoration: BoxDecoration(
@@ -1970,6 +2041,7 @@ class _LessonScreenState extends State<LessonScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -2102,11 +2174,56 @@ class _LessonScreenState extends State<LessonScreen> {
                               textAlign: TextAlign.center,
                             ),
                           )
-                        : ListView.builder(
-                            padding: EdgeInsets.zero,
-                            itemCount: _lessonStudents.length,
-                            itemBuilder: (_, index) =>
-                                _studentCard(_lessonStudents[index], index),
+                        : Stack(
+                            children: [
+                              ListView.builder(
+                                controller: _scrollController,
+                                padding: EdgeInsets.zero,
+                                itemCount: _lessonStudents.length,
+                                itemBuilder: (_, index) =>
+                                    _studentCard(_lessonStudents[index], index),
+                              ),
+                              Positioned(
+                                bottom: 12,
+                                right: 12,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    FloatingActionButton.small(
+                                      heroTag: 'les_scroll_up',
+                                      backgroundColor: const Color(0xFF074E32),
+                                      foregroundColor: Colors.white,
+                                      onPressed: () {
+                                        if (_scrollController.hasClients) {
+                                          _scrollController.animateTo(
+                                            0,
+                                            duration: const Duration(milliseconds: 300),
+                                            curve: Curves.easeOut,
+                                          );
+                                        }
+                                      },
+                                      child: const Icon(Icons.arrow_upward_rounded, size: 18),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    FloatingActionButton.small(
+                                      heroTag: 'les_scroll_down',
+                                      backgroundColor: const Color(0xFF074E32),
+                                      foregroundColor: Colors.white,
+                                      onPressed: () {
+                                        if (_scrollController.hasClients) {
+                                          _scrollController.animateTo(
+                                            _scrollController.position.maxScrollExtent,
+                                            duration: const Duration(milliseconds: 300),
+                                            curve: Curves.easeOut,
+                                          );
+                                        }
+                                      },
+                                      child: const Icon(Icons.arrow_downward_rounded, size: 18),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                   ),
                 ],

@@ -118,6 +118,7 @@ class _FeeScreenState extends State<FeeScreen> {
   String _maktabAddress = 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش';
   String _teacherName = 'معلم/معلمہ کا نام';
   bool _headerExpanded = true;
+  final ScrollController _scrollController = ScrollController();
 
   void _showAddBatchDialog() {
     final ctrl = TextEditingController();
@@ -1875,12 +1876,57 @@ class _FeeScreenState extends State<FeeScreen> {
                         ? Center(
                             child: Text(loc.translate('no_students_found'),
                                 style: const TextStyle(color: Colors.grey)))
-                        : ListView.builder(
-                            itemCount: _filtered.length,
-                            itemBuilder: (ctx, i) {
-                              final entry = _filtered[i];
-                              return _buildStudentRow(entry, i + 1, loc);
-                            },
+                        : Stack(
+                            children: [
+                              ListView.builder(
+                                controller: _scrollController,
+                                itemCount: _filtered.length,
+                                itemBuilder: (ctx, i) {
+                                  final entry = _filtered[i];
+                                  return _buildStudentRow(entry, i + 1, loc);
+                                },
+                              ),
+                              Positioned(
+                                bottom: 12,
+                                right: 12,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    FloatingActionButton.small(
+                                      heroTag: 'fee_scroll_up',
+                                      backgroundColor: const Color(0xFF074E32),
+                                      foregroundColor: Colors.white,
+                                      onPressed: () {
+                                        if (_scrollController.hasClients) {
+                                          _scrollController.animateTo(
+                                            0,
+                                            duration: const Duration(milliseconds: 300),
+                                            curve: Curves.easeOut,
+                                          );
+                                        }
+                                      },
+                                      child: const Icon(Icons.arrow_upward_rounded, size: 18),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    FloatingActionButton.small(
+                                      heroTag: 'fee_scroll_down',
+                                      backgroundColor: const Color(0xFF074E32),
+                                      foregroundColor: Colors.white,
+                                      onPressed: () {
+                                        if (_scrollController.hasClients) {
+                                          _scrollController.animateTo(
+                                            _scrollController.position.maxScrollExtent,
+                                            duration: const Duration(milliseconds: 300),
+                                            curve: Curves.easeOut,
+                                          );
+                                        }
+                                      },
+                                      child: const Icon(Icons.arrow_downward_rounded, size: 18),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                   ),
                 ],
@@ -2736,7 +2782,75 @@ class _FeeScreenState extends State<FeeScreen> {
     final textColor = isDark ? Colors.white : _kNavy;
     final subColor = isDark ? Colors.white70 : Colors.grey.shade600;
 
-    return Container(
+    return Dismissible(
+      key: Key('fee_student_${s['id'] ?? globalIdx}_$globalIdx'),
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.green.shade600,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: const [
+            Icon(Icons.send_rounded, color: Colors.white, size: 20),
+            SizedBox(width: 6),
+            Text('میسج بھیجیں (Send Message)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+          ],
+        ),
+      ),
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.red.shade600,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: const [
+            Text('حذف کریں (Delete)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+            SizedBox(width: 6),
+            Icon(Icons.delete_forever_rounded, color: Colors.white, size: 20),
+          ],
+        ),
+      ),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          final msg = _feeMessage(s);
+          final phone = (s['fatherPhone'] ?? s['parentPhone'] ?? s['phone'] ?? '').toString().trim();
+          if (phone.isNotEmpty) {
+            if (isWhatsApp) {
+              await _openWhatsApp(phone, msg);
+            } else {
+              await _openSms(phone, msg);
+            }
+          }
+          return false;
+        } else if (direction == DismissDirection.endToStart) {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text('طالب علم (${s['name']}) کو فیس رجسٹر سے حذف کریں؟'),
+              content: const Text('کیا آپ اس طالب علم کو فہرست سے ختم کرنا چاہتے ہیں؟'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('منسوخ')),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('حذف کریں'),
+                ),
+              ],
+            ),
+          );
+          if (confirm == true) {
+            _deleteStudent(globalIdx);
+          }
+          return false;
+        }
+        return false;
+      },
+      child: Container(
       margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 3.5),
       decoration: BoxDecoration(
         color: isSelected ? selectedColor : cardBgColor,
@@ -3050,6 +3164,7 @@ class _FeeScreenState extends State<FeeScreen> {
         // ── TIMELINE EXPANSION ──
         if (isExpanded) _buildTimelineRow(globalIdx, s),
       ]),
+    ),
     );
   }
 

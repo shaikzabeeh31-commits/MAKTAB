@@ -166,6 +166,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool _teacherPresent = false;
   String _teacherAttendanceTime = '';
   String _holidayNotice = '';
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -1738,115 +1739,180 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final nameDirection = RegExp(r'[\u0600-\u06FF]').hasMatch(studentName)
         ? TextDirection.rtl
         : TextDirection.ltr;
-    return Container(
-      height: 56,
-      margin: const EdgeInsets.fromLTRB(7, 1, 7, 1),
-      decoration: BoxDecoration(
-        color: dark
-            ? (index.isEven
-                ? const Color(0xFF111C30)
-                : const Color(0xFF172238))
-            : (index.isEven ? Colors.white : const Color(0xFFF7FAF9)),
-        border: Border(
-          bottom: BorderSide(
-            color: dark ? const Color(0xFF334155) : Colors.black12,
-          ),
+    final String sId = student['id']?.toString() ?? student['admissionNo']?.toString() ?? '$index';
+    return Dismissible(
+      key: Key('att_student_${sId}_$index'),
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.green.shade600,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: const [
+            Icon(Icons.send_rounded, color: Colors.white, size: 18),
+            SizedBox(width: 4),
+            Text('پیغام (Send)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10.5)),
+          ],
         ),
       ),
-      child: Row(
-        textDirection: TextDirection.ltr,
-        children: [
-          SizedBox(
-            width: 32,
-            child: Center(
-              child: Transform.scale(
-                scale: .72,
-                child: Checkbox(
-                  value: selected,
-                  onChanged: (value) => _toggleMessageSelection(student, value),
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.red.shade600,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: const [
+            Text('حذف (Delete)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10.5)),
+            SizedBox(width: 4),
+            Icon(Icons.delete_forever_rounded, color: Colors.white, size: 18),
+          ],
+        ),
+      ),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          _sendReportByWhatsApp(student);
+          return false;
+        } else if (direction == DismissDirection.endToStart) {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text('طالب علم ($studentName) کو حذف کریں؟'),
+              content: const Text('کیا آپ اس طالب علم کو حاضری فہرست سے ختم کرنا چاہتے ہیں؟'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('منسوخ')),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('حذف کریں'),
+                ),
+              ],
+            ),
+          );
+          if (confirm == true) {
+            setState(() {
+              _students.remove(student);
+            });
+            await _saveAttendance(showConfirmation: false);
+          }
+          return false;
+        }
+        return false;
+      },
+      child: Container(
+        height: 56,
+        margin: const EdgeInsets.fromLTRB(7, 1, 7, 1),
+        decoration: BoxDecoration(
+          color: dark
+              ? (index.isEven
+                  ? const Color(0xFF111C30)
+                  : const Color(0xFF172238))
+              : (index.isEven ? Colors.white : const Color(0xFFF7FAF9)),
+          border: Border(
+            bottom: BorderSide(
+              color: dark ? const Color(0xFF334155) : Colors.black12,
+            ),
+          ),
+        ),
+        child: Row(
+          textDirection: TextDirection.ltr,
+          children: [
+            SizedBox(
+              width: 32,
+              child: Center(
+                child: Transform.scale(
+                  scale: .72,
+                  child: Checkbox(
+                    value: selected,
+                    onChanged: (value) => _toggleMessageSelection(student, value),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            flex: 11,
-            child: InkWell(
-              onTap: () => _toggleMessageSelection(student, !selected),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      studentName,
-                      maxLines: 1,
-                      softWrap: false,
-                      textAlign: TextAlign.left,
-                      textDirection: nameDirection,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: dark ? Colors.white : Colors.black87,
+            const SizedBox(width: 4),
+            Expanded(
+              flex: 11,
+              child: InkWell(
+                onTap: () => _toggleMessageSelection(student, !selected),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        studentName,
+                        maxLines: 1,
+                        softWrap: false,
+                        textAlign: TextAlign.left,
+                        textDirection: nameDirection,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: dark ? Colors.white : Colors.black87,
+                        ),
                       ),
-                    ),
-                    Text(
-                      [
-                        if (admissionNo.isNotEmpty) 'داخلہ نمبر: $admissionNo',
-                        if (fatherName.isNotEmpty) 'والد: $fatherName',
-                      ].join('  •  '),
-                      maxLines: 1,
-                      overflow: TextOverflow.fade,
-                      softWrap: false,
-                      textAlign: TextAlign.left,
-                      textDirection: TextDirection.rtl,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: dark ? Colors.white70 : const Color(0xFF047857),
+                      Text(
+                        [
+                          if (admissionNo.isNotEmpty) 'داخلہ نمبر: $admissionNo',
+                          if (fatherName.isNotEmpty) 'والد: $fatherName',
+                        ].join('  •  '),
+                        maxLines: 1,
+                        overflow: TextOverflow.fade,
+                        softWrap: false,
+                        textAlign: TextAlign.left,
+                        textDirection: TextDirection.rtl,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: dark ? Colors.white70 : const Color(0xFF047857),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            flex: 3,
-            child: _attendanceCycleButton(student),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            flex: 2,
-            child: Center(child: _itemButton(student, 'hasCap', null, 'ٹوپی')),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            flex: 2,
-            child: Center(child: _itemButton(student, 'hasUniform', Icons.checkroom, 'لباس')),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            flex: 2,
-            child: Center(child: _itemButton(student, 'hasBooks', Icons.menu_book_rounded, 'کتاب')),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            flex: 2,
-            child: IconButton(
-              onPressed: () => _callParent(student),
-              tooltip: 'کال',
-              icon: const Icon(Icons.call_rounded, color: Colors.blue, size: 20),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-              visualDensity: VisualDensity.compact,
+            const SizedBox(width: 4),
+            Expanded(
+              flex: 3,
+              child: _attendanceCycleButton(student),
             ),
-          ),
-        ],
+            const SizedBox(width: 4),
+            Expanded(
+              flex: 2,
+              child: Center(child: _itemButton(student, 'hasCap', null, 'ٹوپی')),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              flex: 2,
+              child: Center(child: _itemButton(student, 'hasUniform', Icons.checkroom, 'لباس')),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              flex: 2,
+              child: Center(child: _itemButton(student, 'hasBooks', Icons.menu_book_rounded, 'کتاب')),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              flex: 2,
+              child: IconButton(
+                onPressed: () => _callParent(student),
+                tooltip: 'کال',
+                icon: const Icon(Icons.call_rounded, color: Colors.blue, size: 20),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1966,10 +2032,55 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             child: Text(
                                 '${_selectedShift.name} کی شفٹ میں کوئی طالب علم موجود نہیں ہے۔'),
                           )
-                        : ListView.builder(
-                            itemCount: visible.length,
-                            itemBuilder: (_, index) =>
-                                _studentCard(visible[index], index),
+                        : Stack(
+                            children: [
+                              ListView.builder(
+                                controller: _scrollController,
+                                itemCount: visible.length,
+                                itemBuilder: (_, index) =>
+                                    _studentCard(visible[index], index),
+                              ),
+                              Positioned(
+                                bottom: 12,
+                                right: 12,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    FloatingActionButton.small(
+                                      heroTag: 'att_scroll_up',
+                                      backgroundColor: const Color(0xFF074E32),
+                                      foregroundColor: Colors.white,
+                                      onPressed: () {
+                                        if (_scrollController.hasClients) {
+                                          _scrollController.animateTo(
+                                            0,
+                                            duration: const Duration(milliseconds: 300),
+                                            curve: Curves.easeOut,
+                                          );
+                                        }
+                                      },
+                                      child: const Icon(Icons.arrow_upward_rounded, size: 18),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    FloatingActionButton.small(
+                                      heroTag: 'att_scroll_down',
+                                      backgroundColor: const Color(0xFF074E32),
+                                      foregroundColor: Colors.white,
+                                      onPressed: () {
+                                        if (_scrollController.hasClients) {
+                                          _scrollController.animateTo(
+                                            _scrollController.position.maxScrollExtent,
+                                            duration: const Duration(milliseconds: 300),
+                                            curve: Curves.easeOut,
+                                          );
+                                        }
+                                      },
+                                      child: const Icon(Icons.arrow_downward_rounded, size: 18),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                   ),
                 ],

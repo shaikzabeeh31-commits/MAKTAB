@@ -2669,12 +2669,14 @@ class _StudentListScreenState extends State<StudentListScreen> {
                                     ),
                                   ),
                                 )
-                              : Row(
+                              : Stack(
                                   children: [
-                                    Expanded(
-                                      child: ListView.builder(
-                                        controller: _scrollController,
-                                        padding: const EdgeInsets.all(12),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: ListView.builder(
+                                            controller: _scrollController,
+                                            padding: const EdgeInsets.all(12),
                                         itemCount: displayedStudents.length < _displayCount ? displayedStudents.length : _displayCount,
                                         itemBuilder: (context, index) {
                                           final student = displayedStudents[index];
@@ -2919,9 +2921,51 @@ class _StudentListScreenState extends State<StudentListScreen> {
                                             }).toList(),
                                           ),
                                         ),
-                                      ),
-                                  ],
-                                ),
+                                       ),
+                                   ],
+                                 ),
+                                 Positioned(
+                                   bottom: 12,
+                                   right: 28,
+                                   child: Column(
+                                     mainAxisSize: MainAxisSize.min,
+                                     children: [
+                                       FloatingActionButton.small(
+                                         heroTag: 'std_scroll_up',
+                                         backgroundColor: const Color(0xFF074E32),
+                                         foregroundColor: Colors.white,
+                                         onPressed: () {
+                                           if (_scrollController.hasClients) {
+                                             _scrollController.animateTo(
+                                               0,
+                                               duration: const Duration(milliseconds: 300),
+                                               curve: Curves.easeOut,
+                                             );
+                                           }
+                                         },
+                                         child: const Icon(Icons.arrow_upward_rounded, size: 18),
+                                       ),
+                                       const SizedBox(height: 6),
+                                       FloatingActionButton.small(
+                                         heroTag: 'std_scroll_down',
+                                         backgroundColor: const Color(0xFF074E32),
+                                         foregroundColor: Colors.white,
+                                         onPressed: () {
+                                           if (_scrollController.hasClients) {
+                                             _scrollController.animateTo(
+                                               _scrollController.position.maxScrollExtent,
+                                               duration: const Duration(milliseconds: 300),
+                                               curve: Curves.easeOut,
+                                             );
+                                           }
+                                         },
+                                         child: const Icon(Icons.arrow_downward_rounded, size: 18),
+                                       ),
+                                     ],
+                                   ),
+                                 ),
+                               ],
+                             ),
                   ),
                 ),
               ],
