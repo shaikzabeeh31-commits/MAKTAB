@@ -1885,194 +1885,281 @@ class _FeeScreenState extends State<FeeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: CustomPaint(
-        painter: _FeeArchPainter(dark: isDark),
-        child: Stack(
-          children: [
-            Positioned(
-              top: 2,
-              left: 4,
-              child: IconButton(
-                icon: const Icon(Icons.home_rounded, color: Colors.white, size: 20),
-                tooltip: isEn ? 'Home Dashboard' : 'ہوم ڈیش بورڈ (Return to Home)',
-                onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.popUntil(context, (route) => route.isFirst);
-                  }
-                },
+      margin: const EdgeInsets.fromLTRB(6, 4, 6, 6),
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF074E32), width: 2.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F074E32),
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Address Banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
+            alignment: Alignment.center,
+            child: Text(
+              isEn ? 'Maktab Al-Farooq, Madina Masjid, Khannapet' : 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xFF074E32),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-              child: Column(
-                children: [
-                  // Main Institution Title (Matching Attendance Arch)
-                  SizedBox(
-                    height: 28,
-                    child: Container(
-                      width: double.infinity,
-                      alignment: Alignment.center,
-                      child: Text(
-                        isEn ? 'Maktab Al-Farooq' : 'مکتب الفاروق',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : _kNavy,
-                        ),
-                      ),
-                    ),
+          ),
+          const SizedBox(height: 5),
+          // Row 1: Teacher & Department
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 34,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
                   ),
-                  const SizedBox(height: 2),
-                  // Address & ID Line (Matching Attendance Subtitle)
-                  SizedBox(
-                    height: 20,
-                    child: Container(
-                      width: double.infinity,
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text(
-                        isEn ? 'Madina Masjid, Khannapet (ID: MKT-001)' : 'مدینہ مسجد، خنّاپیٹ (آئی ڈی: MKT-001)',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white70 : const Color(0xFF334155),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Class & Teacher Mini Boxes (Matching Attendance Arch Mini Boxes)
-                  Row(
+                  child: Row(
                     children: [
+                      const Icon(Icons.fingerprint_rounded, size: 18, color: Color(0xFF074E32)),
+                      const SizedBox(width: 6),
                       Expanded(
-                        flex: 2,
-                        child: Container(
-                          height: 31,
-                          padding: const EdgeInsets.symmetric(horizontal: 6),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : Colors.white.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(9),
-                            border: Border.all(color: _kNavy.withValues(alpha: 0.4)),
-                          ),
-                          child: Center(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                '${isEn ? "Class" : "کلاس"}: $_selectedClass (${_selectedSession == 'subah' ? (isEn ? 'Morning' : 'صبح') : (isEn ? 'Evening' : 'شام')})',
-                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : _kNavy),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 3,
-                        child: Container(
-                          height: 31,
-                          padding: const EdgeInsets.symmetric(horizontal: 6),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : Colors.white.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(9),
-                            border: Border.all(color: _kNavy.withValues(alpha: 0.4)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Center(
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      isEn ? 'Teacher: Qari Mohammad Tariq' : 'استاد: قاری محمد طارق',
-                                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : _kNavy),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.verified_rounded, size: 16, color: Colors.green),
-                            ],
-                          ),
+                        child: Text(
+                          isEn ? 'Teacher Name' : 'معلم/معلمہ کا نام',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  // Period Selector Row (Matching Attendance Info Box bar style)
-                  Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : Colors.white.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _kNavy.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.chevron_left_rounded, size: 20, color: _kNavy),
-                          onPressed: () {
-                            setState(() {
-                              if (_selectedMonthIndex == 0) {
-                                _selectedMonthIndex = 11;
-                                _selectedYear--;
-                              } else {
-                                _selectedMonthIndex--;
-                              }
-                              _applyFilter();
-                            });
-                          },
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  height: 34,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.person_rounded, size: 18, color: Color(0xFF074E32)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '$_selectedClass (${_selectedSession == "subah" ? (isEn ? "Morning" : "صبح") : (isEn ? "Evening" : "شام")})',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
                         ),
-                        InkWell(
-                          onTap: _selectPeriod,
-                          child: Row(
-                            children: [
-                              const Icon(Icons.calendar_month_rounded, size: 15, color: _kNavy),
-                              const SizedBox(width: 5),
-                              Text(
-                                _selectedDateRange == null
-                                    ? '${kFeeMonths[_selectedMonthIndex]} $_selectedYear'
-                                    : '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? Colors.white : _kNavy),
-                              ),
-                            ],
-                          ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          // Row 2: Shift Dropdown & Month Picker
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 34,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.wb_sunny_outlined, size: 18, color: Color(0xFF074E32)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _selectedSession == "subah" ? (isEn ? "Morning" : "صبح") : (isEn ? "Evening" : "شام"),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.chevron_right_rounded, size: 20, color: _kNavy),
-                          onPressed: () {
-                            setState(() {
-                              if (_selectedMonthIndex == 11) {
-                                _selectedMonthIndex = 0;
-                                _selectedYear++;
-                              } else {
-                                _selectedMonthIndex++;
-                              }
-                              _applyFilter();
-                            });
-                          },
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
+                      ),
+                      const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF074E32)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  height: 34,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                  ),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            if (_selectedMonthIndex == 0) {
+                              _selectedMonthIndex = 11;
+                              _selectedYear--;
+                            } else {
+                              _selectedMonthIndex--;
+                            }
+                            _applyFilter();
+                          });
+                        },
+                        child: const Icon(Icons.chevron_left_rounded, size: 20, color: Color(0xFF074E32)),
+                      ),
+                      const Icon(Icons.calendar_month_rounded, size: 16, color: Color(0xFF074E32)),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          '${kFeeMonths[_selectedMonthIndex]} $_selectedYear',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
                         ),
-                      ],
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            if (_selectedMonthIndex == 11) {
+                              _selectedMonthIndex = 0;
+                              _selectedYear++;
+                            } else {
+                              _selectedMonthIndex++;
+                            }
+                            _applyFilter();
+                          });
+                        },
+                        child: const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF074E32)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          // Row 3: Wide Filter Dropdown
+          Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    isEn ? 'All Students, Paid, Due Fee Record' : 'داخل ، غیر حاضر ، حاضر ، کل طلبا',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF074E32),
                     ),
                   ),
-                ],
-              ),
+                ),
+                Icon(Icons.arrow_drop_down_rounded, color: isDark ? Colors.white70 : const Color(0xFF074E32)),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPeriodSelector() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _kNavy.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left_rounded, size: 20, color: _kNavy),
+            onPressed: () {
+              setState(() {
+                if (_selectedMonthIndex == 0) {
+                  _selectedMonthIndex = 11;
+                  _selectedYear--;
+                } else {
+                  _selectedMonthIndex--;
+                }
+                _applyFilter();
+              });
+            },
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+          InkWell(
+            onTap: _selectPeriod,
+            child: Row(
+              children: [
+                const Icon(Icons.calendar_month_rounded, size: 15, color: _kNavy),
+                const SizedBox(width: 5),
+                Text(
+                  _selectedDateRange == null
+                      ? '${kFeeMonths[_selectedMonthIndex]} $_selectedYear'
+                      : '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? Colors.white : _kNavy),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right_rounded, size: 20, color: _kNavy),
+            onPressed: () {
+              setState(() {
+                if (_selectedMonthIndex == 11) {
+                  _selectedMonthIndex = 0;
+                  _selectedYear++;
+                } else {
+                  _selectedMonthIndex++;
+                }
+                _applyFilter();
+              });
+            },
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
       ),
     );
   }
@@ -2423,13 +2510,16 @@ class _FeeScreenState extends State<FeeScreen> {
   // TABLE HEADER
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildTableHeader(AppLocalizations loc) {
-    final isDk = Theme.of(context).brightness == Brightness.dark;
-    final style = TextStyle(
-        fontSize: 11, fontWeight: FontWeight.bold, color: isDk ? Colors.white70 : _kNavy);
+    const style = TextStyle(
+        fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white);
     final isEn = widget.languageController.locale.languageCode == 'en';
     return Container(
-      color: isDk ? const Color(0xFF1E293B) : Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF074E32),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       child: Row(children: [
         const SizedBox(width: 44),
         const SizedBox(width: 4),

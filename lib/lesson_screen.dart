@@ -873,127 +873,191 @@ class _LessonScreenState extends State<LessonScreen> {
 
   Widget _identityArch() {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return SizedBox(
-      height: 108,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _LessonArchPainter(dark: dark),
-        child: Stack(
-          children: [
-            Positioned(
-              top: 2,
-              left: 4,
-              child: IconButton(
-                icon: const Icon(Icons.home_rounded, color: Colors.white, size: 20),
-                tooltip: 'ہوم ڈیش بورڈ (Return to Home)',
-                onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.popUntil(context, (route) => route.isFirst);
-                  }
-                },
+    return Container(
+      margin: const EdgeInsets.fromLTRB(6, 4, 6, 6),
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: dark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF074E32), width: 2.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F074E32),
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Address Banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
+            alignment: Alignment.center,
+            child: Text(
+              _maktabAddress.isNotEmpty
+                  ? _maktabAddress
+                  : 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: dark ? Colors.white : const Color(0xFF074E32),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(7, 8, 7, 4),
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: 28,
-                    child: InkWell(
-                      onTap: () => _editText(
-                        title: 'مکتب کا نام',
-                        current: _maktabName,
-                        storageKey: 'maktab_name',
-                        onSave: (value) => setState(() => _maktabName = value),
-                      ),
-                      child: Container(
-                        width: double.infinity,
-                        alignment: Alignment.center,
-                        child: Transform.translate(
-                          // Keep the arch itself fixed and move only the
-                          // institute title slightly down into its free space.
-                          offset: const Offset(0, 4),
-                          child: Text(
-                            _maktabName,
-                            maxLines: 1,
-                            overflow: TextOverflow.fade,
-                            softWrap: false,
-                            style: const TextStyle(
-                              color: _green,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+          ),
+          const SizedBox(height: 5),
+          // Row 1: Teacher & Department
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 34,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: dark ? const Color(0xFF0F172A) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
                   ),
-                  const SizedBox(height: 3),
-                  SizedBox(
-                    height: 21,
-                    child: InkWell(
-                      onTap: () => _editText(
-                        title: 'مسجد، محلہ، گاؤں یا شہر کی تفصیل',
-                        current: _maktabAddress,
-                        storageKey: 'maktab_address',
-                        onSave: (value) =>
-                            setState(() => _maktabAddress = value),
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        width: double.infinity,
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.fingerprint_rounded, size: 18, color: Color(0xFF074E32)),
+                      const SizedBox(width: 6),
+                      Expanded(
                         child: Text(
-                          _maktabAddress,
+                          _teacherName.isNotEmpty ? _teacherName : 'معلم/معلمہ کا نام',
                           maxLines: 1,
-                          overflow: TextOverflow.fade,
-                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Color(0xFF334155),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: dark ? Colors.white : const Color(0xFF074E32)),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Row(
-                      children: [
-                        _archBox(
-                          _teacherName,
-                          () => _editText(
-                            title: 'استاد کا نام',
-                            current: _teacherName,
-                            storageKey: 'lesson_teacher_name',
-                            onSave: (value) =>
-                                setState(() => _teacherName = value),
-                          ),
-                          flex: 4,
-                        ),
-                        const SizedBox(width: 4),
-                        _archBox(_dateKey, _pickDate,
-                            icon: Icons.calendar_month_rounded, flex: 3),
-                        const SizedBox(width: 4),
-                        _archBox(
-                            _holidayNotice.isEmpty
-                                ? _selectedShift.name
-                                : '${_selectedShift.name} • $_holidayNotice',
-                            _pickShift,
-                            holiday: _holidayNotice.isNotEmpty,
-                            icon: Icons.schedule_rounded, flex: 2),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  height: 34,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: dark ? const Color(0xFF0F172A) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.person_rounded, size: 18, color: Color(0xFF074E32)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _selectedGroupName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: dark ? Colors.white : const Color(0xFF074E32)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          // Row 2: Shift Dropdown & Date Picker
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 34,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: dark ? const Color(0xFF0F172A) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.wb_sunny_outlined, size: 18, color: Color(0xFF074E32)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _selectedShift.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: dark ? Colors.white : const Color(0xFF074E32)),
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF074E32)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  height: 34,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: dark ? const Color(0xFF0F172A) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today_rounded, size: 18, color: Color(0xFF074E32)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _dateKey,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: dark ? Colors.white : const Color(0xFF074E32)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          // Row 3: Wide Filter Dropdown
+          Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: dark ? const Color(0xFF0F172A) : Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF074E32), width: 1.2),
             ),
-          ],
-        ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    'داخل ، غیر حاضر ، حاضر ، کل طلبا',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: dark ? Colors.white : const Color(0xFF074E32),
+                    ),
+                  ),
+                ),
+                Icon(Icons.arrow_drop_down_rounded, color: dark ? Colors.white70 : const Color(0xFF074E32)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1944,21 +2008,9 @@ class _LessonScreenState extends State<LessonScreen> {
                     padding: EdgeInsets.only(
                       top: MediaQuery.paddingOf(context).top + 2,
                     ),
-                    child: SizedBox(
-                      height: 93,
-                      child: OverflowBox(
-                        alignment: Alignment.topCenter,
-                        minHeight: 108,
-                        maxHeight: 108,
-                        child: Transform.translate(
-                          offset: const Offset(0, -15),
-                          child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 7),
-                            child: _identityArch(),
-                          ),
-                        ),
-                      ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: _identityArch(),
                     ),
                   ),
                   _controlsToggle(),
