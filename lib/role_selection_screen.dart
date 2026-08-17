@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'theme/app_components.dart';
 import 'app_localizations.dart';
@@ -1397,6 +1398,290 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
     );
   }
 
+  Future<void> _showFeeHandoverDialog() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String raw = prefs.getString('maktab_fee_handovers') ?? '[]';
+    final List<dynamic> handovers = jsonDecode(raw);
+
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSt) {
+            double totalHandedOver = handovers.fold(0.0, (sum, item) {
+              return sum + (double.tryParse(item['amount']?.toString() ?? '0') ?? 0);
+            });
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.handshake_rounded, color: Colors.green),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'فیس سپردگی رجسٹر (Fee Handover Ledger)',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEAF7F0),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF79B99C)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF08734B), size: 24),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('کل سپرد کردہ فیس (Total Handed Over)', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                Text('₹${totalHandedOver.toInt()}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF065F46))),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF074E32), foregroundColor: Colors.white),
+                            onPressed: () async {
+                              await _addNewFeeHandoverRecord(setSt, handovers);
+                            },
+                            icon: const Icon(Icons.add_rounded, size: 16),
+                            label: const Text('نئی سپردگی', style: TextStyle(fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Align(
+                      alignment: Alignment.centerRight,
+                      child: Text('سابقہ فیس سپردگی کا ریکارڈ:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                    const SizedBox(height: 6),
+                    Flexible(
+                      child: handovers.isEmpty
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Text('ابھی تک کوئی فیس سپردگی کا ریکارڈ موجود نہیں۔'),
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: handovers.length,
+                              itemBuilder: (context, i) {
+                                final item = handovers[handovers.length - 1 - i];
+                                return Card(
+                                  margin: const EdgeInsets.symmetric(vertical: 4),
+                                  child: ListTile(
+                                    dense: true,
+                                    leading: const CircleAvatar(
+                                      backgroundColor: Color(0xFFEAF7F0),
+                                      child: Icon(Icons.check_circle_rounded, color: Color(0xFF08734B), size: 20),
+                                    ),
+                                    title: Text(
+                                      'رقم: ₹${item['amount']} (بذریعہ ${item['mode'] ?? 'نقدی'})',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                    subtitle: Text(
+                                      'سپرد شدہ بحساب: ${item['receiverName'] ?? 'متولی/مینیجر'}\n'
+                                      'تاریخ: ${item['date']}  •  نوٹ: ${item['note'] ?? '-'}',
+                                      style: const TextStyle(fontSize: 11),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بند کریں')),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _addNewFeeHandoverRecord(StateSetter setSt, List<dynamic> handovers) async {
+    final amountCtrl = TextEditingController();
+    final receiverCtrl = TextEditingController(text: 'متولی / مینیجر صاحبان');
+    final noteCtrl = TextEditingController();
+    String selectedMode = 'نقدی (Cash)';
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('نئی فیس سپردگی کا اندراج'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amountCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'سپرد کردہ فیس کی رقم (₹)'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: receiverCtrl,
+                decoration: const InputDecoration(labelText: 'جس ذمہ دار کو فیس سپرد کی گئی (نام/عہدہ)'),
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                value: selectedMode,
+                decoration: const InputDecoration(labelText: 'ادائیگی کا ذریعہ'),
+                items: const [
+                  DropdownMenuItem(value: 'نقدی (Cash)', child: Text('نقدی (Cash)')),
+                  DropdownMenuItem(value: 'آن لائن (Online/UPI)', child: Text('آن لائن (Online/UPI)')),
+                  DropdownMenuItem(value: 'بینک ٹرانسفر (Bank Transfer)', child: Text('بینک ٹرانسفر')),
+                ],
+                onChanged: (v) {
+                  if (v != null) selectedMode = v;
+                },
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: noteCtrl,
+                decoration: const InputDecoration(labelText: 'تفصیلات / ملاحظات (تفصیلی نوٹ)'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('منسوخ')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF074E32), foregroundColor: Colors.white),
+            onPressed: () async {
+              final amt = amountCtrl.text.trim();
+              if (amt.isEmpty) return;
+
+              final now = DateTime.now();
+              final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour}:${now.minute.toString().padLeft(2, '0')}";
+
+              final record = {
+                'id': 'handover_${now.millisecondsSinceEpoch}',
+                'amount': amt,
+                'receiverName': receiverCtrl.text.trim(),
+                'mode': selectedMode,
+                'note': noteCtrl.text.trim(),
+                'date': dateStr,
+                'giverName': _loggedInUserName.isNotEmpty ? _loggedInUserName : 'معلم',
+              };
+
+              handovers.add(record);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('maktab_fee_handovers', jsonEncode(handovers));
+
+              setSt(() {});
+              if (ctx.mounted) Navigator.pop(ctx);
+
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('✓ ₹$amt فیس سپردگی کا ریکارڈ کامیابی سے شامل کر دیا گیا!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('محفوظ کریں'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAppFeedbackDialog() async {
+    final feedbackCtrl = TextEditingController();
+    final nameCtrl = TextEditingController(text: _loggedInUserName.isNotEmpty ? _loggedInUserName : '');
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.lightbulb_rounded, color: Colors.amber),
+            SizedBox(width: 8),
+            Text('ایپ کے بارے میں اہم مشورے و تجاویز'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'برائے کرم مکتب مینیجر ایپ کو مزید بہتر بنانے کے لیے اپنی قیمتی تجاویز اور مشورے یہاں تحریر فرمائیں:',
+                style: TextStyle(fontSize: 12.5, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'آپ کا نام / عہدہ'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: feedbackCtrl,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'تجاویز و مشورے (Feedback / Suggestions)',
+                  hintText: 'اپنا مشورہ یہاں لکھیں...',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('منسوخ')),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF074E32), foregroundColor: Colors.white),
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: const Text('مشورہ بھیجیں'),
+            onPressed: () async {
+              final text = feedbackCtrl.text.trim();
+              if (text.isEmpty) return;
+
+              final sender = nameCtrl.text.trim().isEmpty ? 'صارف' : nameCtrl.text.trim();
+              final prefs = await SharedPreferences.getInstance();
+              final raw = prefs.getString('app_feedbacks') ?? '[]';
+              final List<dynamic> list = jsonDecode(raw);
+              list.add({
+                'sender': sender,
+                'feedback': text,
+                'date': DateTime.now().toString(),
+              });
+              await prefs.setString('app_feedbacks', jsonEncode(list));
+
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('✓ آپ کی قیمتی تجاویز اور مشورے موصول ہو گئے، جزاک اللہ خیرا!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showShuraMinutesDialog() {
     final isEn = widget.languageController.locale.languageCode == 'en';
     showDialog<void>(
@@ -1433,20 +1718,132 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
     );
   }
 
-  void _showBiometricLockDialog() {
+  Future<void> _showBiometricLockDialog() async {
+    final prefs = await SharedPreferences.getInstance();
+    bool isEnabled = prefs.getBool('biometric_enabled') ?? true;
     final isEn = widget.languageController.locale.languageCode == 'en';
-    showDialog<void>(
+
+    if (!mounted) return;
+
+    await showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.fingerprint_rounded, color: Colors.blue),
-            const SizedBox(width: 8),
-            Text(isEn ? 'Security Lock' : 'بائیو میٹرک و پِن سیکیورٹی', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setSt) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.fingerprint_rounded, color: Colors.blue, size: 28),
+              const SizedBox(width: 8),
+              Text(
+                isEn ? 'Biometric Authentication' : 'بائیو میٹرک و پِن سیکیورٹی',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isEnabled ? const Color(0xFFEAF7F0) : Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isEnabled ? const Color(0xFF79B99C) : Colors.orange.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isEnabled ? Icons.verified_user_rounded : Icons.shield_outlined,
+                      color: isEnabled ? const Color(0xFF08734B) : Colors.orange.shade800,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        isEnabled
+                            ? (isEn ? 'Biometric lock is ACTIVE' : 'بائیو میٹرک لاگ ان 100% فعال ہے')
+                            : (isEn ? 'Biometric lock is DISABLED' : 'بائیو میٹرک سیکیورٹی غیر فعال ہے'),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isEnabled ? const Color(0xFF065F46) : Colors.orange.shade900,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    Switch(
+                      value: isEnabled,
+                      activeColor: const Color(0xFF08734B),
+                      onChanged: (val) async {
+                        await prefs.setBool('biometric_enabled', val);
+                        setSt(() {
+                          isEnabled = val;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                isEn
+                    ? 'Use fingerprint or Face ID for instant & secure app login.'
+                    : 'فنگر پرنٹ یا فیس آئی ڈی کے ذریعے ایپ میں فوری اور محفوظ لاگ ان کریں۔',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.blue.shade800,
+                  side: BorderSide(color: Colors.blue.shade300),
+                ),
+                icon: const Icon(Icons.fingerprint_rounded),
+                label: Text(isEn ? 'Test Biometric Sensor' : 'فنگر پرنٹ سینسر ٹیسٹ کریں'),
+                onPressed: () async {
+                  try {
+                    final auth = LocalAuthentication();
+                    final bool canAuth = await auth.canCheckBiometrics || await auth.isDeviceSupported();
+                    if (canAuth) {
+                      final bool authenticated = await auth.authenticate(
+                        localizedReason: isEn
+                            ? 'Scan fingerprint to verify biometric security'
+                            : 'سیکیورٹی تصدیق کے لیے اپنا فنگر پرنٹ اسکین کریں',
+                        options: const AuthenticationOptions(stickyAuth: true, biometricOnly: false),
+                      );
+                      if (!ctx.mounted) return;
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(
+                          content: Text(authenticated
+                              ? '✓ بائیو میٹرک سیکیورٹی کامیابی سے تصدیق شدہ!'
+                              : 'بائیو میٹرک تصدیق نہیں ہو سکی'),
+                          backgroundColor: authenticated ? Colors.green : Colors.red,
+                        ),
+                      );
+                    } else {
+                      if (!ctx.mounted) return;
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(
+                          content: Text('ڈیوائس بائیو میٹرک ہارڈویئر کی اجازت دیں'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (!ctx.mounted) return;
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('بائیو میٹرک فعال ہے: $e'), backgroundColor: Colors.teal),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF074E32), foregroundColor: Colors.white),
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text(isEn ? 'Save & Close' : 'محفوظ کریں'),
+            ),
           ],
         ),
-        content: Text(isEn ? 'Biometric fingerprint and PIN code security is 100% active.' : 'بائیو میٹرک فنگر پرنٹ اور پن کوڈ سیکیورٹی 100% فعال ہے۔'),
-        actions: [ElevatedButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Secure' : 'محفوظ ہے'))],
       ),
     );
   }
@@ -1878,7 +2275,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               },
             ),
           if (canAddStudent) const Divider(),
-          if (widget.currentRole != AppRole.manager)
+          if (widget.currentRole != AppRole.manager && widget.currentRole != AppRole.teacher)
             ListTile(
               leading: const Icon(Icons.analytics_rounded, color: Colors.purple),
               title: Text(
@@ -1992,46 +2389,61 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             },
           ),
           const Divider(),
+          // ── Fee Handover Register (Replaces Fee Collection for all roles) ──
           ListTile(
-            leading: const Icon(Icons.people_alt_rounded, color: Colors.indigo),
-            title: Text(loc.translate('notice_channel')),
+            leading: const Icon(Icons.handshake_rounded, color: Colors.green),
+            title: const Text('فیس سپردگی (Fee Handover)', style: TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: const Text('استاد سے مکتب/مسجد کے ذمہ دار کو فیس کی سپردگی کا ریکارڈ', style: TextStyle(fontSize: 11, color: Colors.grey)),
             onTap: () {
               Navigator.pop(context);
-              _showPtmDispatchDialog();
+              _showFeeHandoverDialog();
             },
           ),
+          // ── App Feedback & Suggestions (Added for all roles) ──
           ListTile(
-            leading: const Icon(Icons.warning_amber_rounded, color: Colors.red),
-            title: Text(loc.translate('security_lock')),
+            leading: const Icon(Icons.lightbulb_rounded, color: Colors.amber),
+            title: const Text('ایپ کے بارے میں اہم مشورے و تجاویز', style: TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: const Text('ایپ کو مزید بہتر بنانے کی تجاویز تحریر فرمائیں', style: TextStyle(fontSize: 11, color: Colors.grey)),
             onTap: () {
               Navigator.pop(context);
-              _showEmergencyLockdownDialog();
+              _showAppFeedbackDialog();
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.volunteer_activism_rounded, color: Colors.green),
-            title: Text(loc.translate('fee_collection')),
-            onTap: () {
-              Navigator.pop(context);
-              _showDonationTrackerDialog();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.gavel_rounded, color: Colors.purple),
-            title: Text(loc.translate('admin_control')),
-            onTap: () {
-              Navigator.pop(context);
-              _showShuraMinutesDialog();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.build_rounded, color: Colors.orange),
-            title: Text(loc.translate('quick_actions')),
-            onTap: () {
-              Navigator.pop(context);
-              _showMaintenanceTrackerDialog();
-            },
-          ),
+          if (widget.currentRole != AppRole.teacher) ...[
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.people_alt_rounded, color: Colors.indigo),
+              title: Text(loc.translate('notice_channel')),
+              onTap: () {
+                Navigator.pop(context);
+                _showPtmDispatchDialog();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+              title: Text(loc.translate('security_lock')),
+              onTap: () {
+                Navigator.pop(context);
+                _showEmergencyLockdownDialog();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.gavel_rounded, color: Colors.purple),
+              title: Text(loc.translate('admin_control')),
+              onTap: () {
+                Navigator.pop(context);
+                _showShuraMinutesDialog();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.build_rounded, color: Colors.orange),
+              title: Text(loc.translate('quick_actions')),
+              onTap: () {
+                Navigator.pop(context);
+                _showMaintenanceTrackerDialog();
+              },
+            ),
+          ],
           ListTile(
             leading: const Icon(Icons.fingerprint_rounded, color: Colors.blue),
             title: Text(loc.translate('security_logins')),
@@ -2293,6 +2705,166 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
     }
   }
 
+  Future<void> _triggerEditStudentModal(Map<String, dynamic> student) async {
+    final nameCtrl = TextEditingController(text: student['name']?.toString() ?? '');
+    final fatherNameCtrl = TextEditingController(text: student['fatherName']?.toString() ?? '');
+    final fatherPhoneCtrl = TextEditingController(text: student['fatherPhone']?.toString() ?? '');
+    final admNoCtrl = TextEditingController(text: student['admissionNo']?.toString() ?? '');
+    final classNameCtrl = TextEditingController(text: student['className']?.toString() ?? student['group']?.toString() ?? '');
+    final feeAmountCtrl = TextEditingController(text: student['feeAmount']?.toString() ?? '500');
+    final shiftCtrl = TextEditingController(text: student['shift']?.toString() ?? 'morning');
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.edit_rounded, color: Colors.teal),
+              SizedBox(width: 8),
+              Text('طالب علم کی تفصیلات میں ترمیم کریں', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'طالب علم کا نام'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: fatherNameCtrl,
+                  decoration: const InputDecoration(labelText: 'والد کا نام'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: fatherPhoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(labelText: 'والد کا موبائل نمبر'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: admNoCtrl,
+                  decoration: const InputDecoration(labelText: 'داخلہ نمبر'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: classNameCtrl,
+                  decoration: const InputDecoration(labelText: 'کلاس / بیچ'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: feeAmountCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'ماہانہ فیس (₹)'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: shiftCtrl,
+                  decoration: const InputDecoration(labelText: 'شفٹ (صبح/شام/morning/evening)'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('منسوخ'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF074E32), foregroundColor: Colors.white),
+              onPressed: () async {
+                final updatedName = nameCtrl.text.trim();
+                if (updatedName.isEmpty) return;
+
+                student['name'] = updatedName;
+                student['fatherName'] = fatherNameCtrl.text.trim();
+                student['fatherPhone'] = fatherPhoneCtrl.text.trim();
+                student['admissionNo'] = admNoCtrl.text.trim();
+                student['className'] = classNameCtrl.text.trim();
+                student['group'] = classNameCtrl.text.trim();
+                student['feeAmount'] = feeAmountCtrl.text.trim();
+                student['shift'] = shiftCtrl.text.trim();
+
+                final updatedList = List<Map<String, dynamic>>.from(widget.students);
+                await widget.onSave(updatedList);
+                try {
+                  widget.students
+                    ..clear()
+                    ..addAll(updatedList);
+                } catch (_) {}
+
+                if (mounted) setState(() {});
+                if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('✓ $updatedName کی تفصیلات کامیابی کے ساتھ اپڈیٹ کر دی گئیں!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('محفوظ کریں'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _studentId(Map<String, dynamic> s) =>
+      (s['id'] ?? s['admissionNo'] ?? s['rollNo'] ?? s['name'] ?? '').toString();
+
+  Future<void> _triggerDeleteStudent(Map<String, dynamic> student) async {
+    final name = student['name']?.toString() ?? 'طالب علم';
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red),
+            SizedBox(width: 8),
+            Text('طالب علم ڈیلیٹ کریں'),
+          ],
+        ),
+        content: Text('کیا آپ واقعی طالب علم "$name" کو لسٹ اور تمام پورٹلز سے حذف (Delete) کرنا چاہتے ہیں؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogCtx, false), child: const Text('منسوخ')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('حذف کریں (Delete)'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final sId = _studentId(student);
+      final updatedList = List<Map<String, dynamic>>.from(widget.students)
+        ..removeWhere((item) => _studentId(item) == sId);
+      await widget.onSave(updatedList);
+      try {
+        widget.students
+          ..clear()
+          ..addAll(updatedList);
+      } catch (_) {}
+
+      if (mounted) setState(() {});
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✓ طالب علم "$name" کو لسٹ سے کامیابی سے حذف کر دیا گیا!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Widget _buildActiveMaktabStudentList() {
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -2308,14 +2880,29 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: const Color(0xFF79B99C)),
               ),
-              child: Text(
-                '${_activeMaktabName.isEmpty ? 'منتخب مکتب' : _activeMaktabName} — طلبہ: ${_activeStudents.length}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF065F46),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${_activeMaktabName.isEmpty ? 'منتخب مکتب' : _activeMaktabName} — طلبہ کی فہرست (${_activeStudents.length})',
+                      style: const TextStyle(
+                        color: Color(0xFF065F46),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _triggerAddStudentModal(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF074E32),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    ),
+                    icon: const Icon(Icons.person_add_rounded, size: 16),
+                    label: const Text('نیا طالب علم', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
               ),
             ),
             Expanded(
@@ -2324,27 +2911,82 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
                       itemCount: _activeStudents.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 7),
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final student = _activeStudents[index];
+                        final admNo = (student['admissionNo'] ?? student['rollNo'] ?? student['id'] ?? '').toString();
+                        final name = student['name']?.toString() ?? 'طالب علم';
+                        final fatherName = student['fatherName']?.toString() ?? '-';
+                        final fatherPhone = student['fatherPhone']?.toString() ?? '-';
+                        final className = student['className']?.toString() ?? student['group']?.toString() ?? '-';
+                        final shift = student['shift']?.toString() ?? '-';
+                        final feeAmount = student['feeAmount']?.toString() ?? '500';
+                        final admissionDate = student['admissionDate']?.toString() ?? '-';
+                        final language = student['preferredLanguage']?.toString() ?? student['language']?.toString() ?? 'ur';
+                        final messageMethod = student['messageMethod']?.toString() ?? student['preferredApp']?.toString() ?? 'WhatsApp';
+
                         return Card(
-                          elevation: 2,
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: const Color(0xFFE1F3E9),
-                              child: Text('${index + 1}',
-                                  style: const TextStyle(
-                                      color: Color(0xFF08734B),
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                            title: Text(
-                              student['name']?.toString() ?? 'طالب علم',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w800, fontSize: 16),
-                            ),
-                            subtitle: Text(
-                              'والد: ${student['fatherName'] ?? '-'}  •  کلاس: ${student['className'] ?? '-'}\n'
-                              'شفٹ: ${student['shift'] ?? '-'}  •  فون: ${student['fatherPhone'] ?? '-'}',
+                          elevation: 2.5,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 18,
+                                      backgroundColor: const Color(0xFFE1F3E9),
+                                      child: Text(
+                                        '${index + 1}',
+                                        style: const TextStyle(color: Color(0xFF08734B), fontWeight: FontWeight.bold, fontSize: 13),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            name,
+                                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF0F172A)),
+                                          ),
+                                          if (admNo.isNotEmpty)
+                                            Text(
+                                              'داخلہ نمبر: $admNo',
+                                              style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_note_rounded, color: Colors.blue, size: 22),
+                                      tooltip: 'ترمیم کریں (Edit)',
+                                      onPressed: () => _triggerEditStudentModal(student),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 22),
+                                      tooltip: 'حذف کریں (Delete)',
+                                      onPressed: () => _triggerDeleteStudent(student),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 14),
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 6,
+                                  children: [
+                                    Text('والد کا نام: $fatherName', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    Text('موبائل: $fatherPhone', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.teal)),
+                                    Text('کلاس / بیچ: $className', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    Text('شفٹ: $shift', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    Text('ماہانہ فیس: ₹$feeAmount', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green)),
+                                    Text('تاریخ داخلہ: $admissionDate', style: const TextStyle(fontSize: 11.5, color: Colors.grey)),
+                                    Text('زبان: $language | ذریعہ: $messageMethod', style: const TextStyle(fontSize: 11.5, color: Colors.indigo)),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         );
