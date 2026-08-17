@@ -1465,7 +1465,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             textDirection: TextDirection.ltr,
             children: [
               SizedBox(
-                width: 46,
+                width: 32,
                 child: Container(
                   height: 43,
                   decoration: BoxDecoration(
@@ -1495,7 +1495,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                 MaterialTapTargetSize.shrinkWrap,
                           ),
                         ),
-                        _fit(isEn ? 'All' : 'منتخب تمام', color: Colors.white, size: 7.2),
+                        _fit(isEn ? 'All' : 'منتخب', color: Colors.white, size: 7.2),
                       ],
                     ),
                   ),
@@ -1509,19 +1509,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               const SizedBox(width: 4),
               _header(_fit(isEn ? 'Attendance' : 'حاضری', color: Colors.white, size: 10.5), flex: 3),
               const SizedBox(width: 4),
-              _header(
-                Row(
-                  children: [
-                    Expanded(
-                        child: _fit(isEn ? 'Book' : 'کتاب', color: Colors.white, size: 9.5)),
-                    Expanded(
-                        child: _fit(isEn ? 'Uniform' : 'لباس', color: Colors.white, size: 9.5)),
-                    Expanded(
-                        child: _fit(isEn ? 'Cap' : 'ٹوپی', color: Colors.white, size: 9.5)),
-                  ],
-                ),
-                flex: 6,
-              ),
+              _header(_fit(isEn ? 'Cap' : 'ٹوپی', color: Colors.white, size: 9.5), flex: 2),
+              const SizedBox(width: 4),
+              _header(_fit(isEn ? 'Uniform' : 'لباس', color: Colors.white, size: 9.5), flex: 2),
+              const SizedBox(width: 4),
+              _header(_fit(isEn ? 'Book' : 'کتاب', color: Colors.white, size: 9.5), flex: 2),
               const SizedBox(width: 4),
               _header(_fit(isEn ? 'Call' : 'کال', color: Colors.white, size: 10.5), flex: 2),
             ],
@@ -1797,55 +1789,29 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
           const SizedBox(width: 4),
           Expanded(
-            flex: 10,
-            child: Container(
-              height: 38,
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              decoration: BoxDecoration(
-                color: dark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFCBD5E1), width: 1),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 6,
-                    child: Row(
-                      children: [
-                        Expanded(child: Center(child: _itemButton(
-                            student, 'hasBooks', Icons.menu_book_rounded, 'کتاب'))),
-                        Expanded(child: Center(child: _itemButton(
-                            student, 'hasUniform', Icons.checkroom, 'لباس'))),
-                        Expanded(child: Center(child: _itemButton(
-                            student, 'hasCap', null, 'ٹوپی'))),
-                      ],
-                    ),
-                  ),
-                  Container(width: 1, height: 20, color: Colors.grey.shade300),
-                  Expanded(
-                    flex: 2,
-                    child: IconButton(
-                      onPressed: () => _callParent(student),
-                      tooltip: 'کال',
-                      icon: const Icon(Icons.call_rounded, color: Colors.blue, size: 20),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: IconButton(
-                      onPressed: () => _deleteStudent(student),
-                      tooltip: 'حذف',
-                      icon: const Icon(Icons.delete_rounded, color: Colors.red, size: 19),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                ],
-              ),
+            flex: 2,
+            child: Center(child: _itemButton(student, 'hasCap', null, 'ٹوپی')),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            flex: 2,
+            child: Center(child: _itemButton(student, 'hasUniform', Icons.checkroom, 'لباس')),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            flex: 2,
+            child: Center(child: _itemButton(student, 'hasBooks', Icons.menu_book_rounded, 'کتاب')),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            flex: 2,
+            child: IconButton(
+              onPressed: () => _callParent(student),
+              tooltip: 'کال',
+              icon: const Icon(Icons.call_rounded, color: Colors.blue, size: 20),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+              visualDensity: VisualDensity.compact,
             ),
           ),
         ],
@@ -2035,149 +2001,5 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  Widget _oldBuild(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('طلبہ کی حاضری',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          centerTitle: true,
-          backgroundColor: Colors.green.shade700,
-          foregroundColor: Colors.white,
-          actions: <Widget>[
-            IconButton(
-              onPressed: _isLoading ? null : _loadStudentsAndAttendance,
-              tooltip: 'فہرست تازہ کریں',
-              icon: const Icon(Icons.refresh),
-            ),
-          ],
-        ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-                    child: InkWell(
-                      onTap: _pickDate,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(13),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          border: Border.all(color: Colors.green.shade600),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            Icon(Icons.calendar_month,
-                                color: Colors.green.shade700),
-                            const SizedBox(width: 9),
-                            Text('تاریخ: $_dateKey',
-                                style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      children: _shifts.map(_shiftButton).toList(),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      children: <Widget>[
-                        _summaryBox('کل طلبہ', _visibleStudents.length,
-                            Colors.blue, Icons.groups),
-                        _summaryBox('حاضر', _presentCount, Colors.green,
-                            Icons.how_to_reg),
-                        _summaryBox('غیر حاضر', _absentCount, Colors.red,
-                            Icons.person_off),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _markAllPresent,
-                            icon: const Icon(Icons.done_all),
-                            label: const Text('سب کو حاضر کریں'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _isWorking ? null : _sharePdf,
-                            icon: _isWorking
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
-                                  )
-                                : const Icon(Icons.picture_as_pdf),
-                            label: const Text('PDF بھیجیں'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 12),
-                  Expanded(
-                    child: _visibleStudents.isEmpty
-                        ? Center(
-                            child: Text(
-                              '${_selectedShift.name} کی شفٹ میں کوئی طالب علم موجود نہیں ہے۔',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-                            itemCount: _visibleStudents.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              return _studentCard(_visibleStudents[index], index);
-                            },
-                          ),
-                  ),
-                ],
-              ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _isLoading ? null : _saveAttendance,
-                    icon: const Icon(Icons.save),
-                    label: const Text('حاضری محفوظ کریں'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _isLoading ? null : _openMessageSheet,
-                    icon: const Icon(Icons.send),
-                    label: Text('میسج بھیجیں (${_selectedAbsentees.length})'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+
 }

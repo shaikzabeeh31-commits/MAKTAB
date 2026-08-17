@@ -114,6 +114,7 @@ class _FeeScreenState extends State<FeeScreen> {
   final List<String> _batchesList = ['All', 'Class 7 (A)', 'Class 6 (B)', 'Morning Hifz Batch', 'Nazira Batch A'];
   int _selectedYear = DateTime.now().year;
   int _selectedMonthIndex = DateTime.now().month - 1; // 0-based
+  String _selectedStatus = 'ALL';
 
   void _showAddBatchDialog() {
     final ctrl = TextEditingController();
@@ -318,8 +319,11 @@ class _FeeScreenState extends State<FeeScreen> {
         final fatherName = (s['fatherName'] ?? s['parentName'] ?? '').toString().toLowerCase();
         final rollNo = (s['rollNo'] ?? s['id'] ?? '').toString().toLowerCase();
         final searchOk = query.isEmpty || name.contains(query) || fatherName.contains(query) || rollNo.contains(query);
+        final statusOk = _selectedStatus == 'ALL' ||
+            (_selectedStatus == 'PAID' && _feeStatus(s) == 'paid') ||
+            (_selectedStatus == 'DUE' && _feeStatus(s) != 'paid');
 
-        return shiftOk && classOk && searchOk;
+        return shiftOk && classOk && searchOk && statusOk;
       }).toList();
 
       if (matches.isEmpty && _students.isNotEmpty && query.isEmpty) {
@@ -1924,55 +1928,101 @@ class _FeeScreenState extends State<FeeScreen> {
           Row(
             children: [
               Expanded(
-                child: Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.fingerprint_rounded, size: 18, color: Color(0xFF074E32)),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          isEn ? 'Teacher Name' : 'معلم/معلمہ کا نام',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
+                child: InkWell(
+                  onTap: () async {
+                    final String? val = await showDialog<String>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: Text(isEn ? 'Teacher Name' : 'معلم/معلمہ کا نام'),
+                        content: TextField(
+                          autofocus: true,
+                          decoration: InputDecoration(hintText: isEn ? 'Enter teacher name...' : 'معلم کا نام درج کریں...'),
+                          onSubmitted: (v) => Navigator.pop(ctx, v),
                         ),
                       ),
-                    ],
+                    );
+                    if (val != null && val.trim().isNotEmpty) {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString('fee_teacher_heading', val.trim());
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.fingerprint_rounded, size: 18, color: Color(0xFF074E32)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            isEn ? 'Teacher Name' : 'معلم/معلمہ کا نام',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.person_rounded, size: 18, color: Color(0xFF074E32)),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          '$_selectedClass (${_selectedSession == "subah" ? (isEn ? "Morning" : "صبح") : (isEn ? "Evening" : "شام")})',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
+                child: InkWell(
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (ctx) => SafeArea(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: ['ALL', 'Hifz Group A', 'Nazira Group B', 'Tajweed Group C', 'Primary Group D']
+                              .map((c) => ListTile(
+                                    title: Text(c),
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedClass = c;
+                                        _applyFilter();
+                                      });
+                                      Navigator.pop(ctx);
+                                    },
+                                  ))
+                              .toList(),
                         ),
                       ),
-                    ],
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person_rounded, size: 18, color: Color(0xFF074E32)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '$_selectedClass (${_selectedSession == "subah" ? (isEn ? "Morning" : "صبح") : (isEn ? "Evening" : "شام")})',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
+                          ),
+                        ),
+                        const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF074E32)),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1983,29 +2033,38 @@ class _FeeScreenState extends State<FeeScreen> {
           Row(
             children: [
               Expanded(
-                child: Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.wb_sunny_outlined, size: 18, color: Color(0xFF074E32)),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          _selectedSession == "subah" ? (isEn ? "Morning" : "صبح") : (isEn ? "Evening" : "شام"),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedSession = _selectedSession == "subah" ? "evening" : "subah";
+                      _applyFilter();
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.wb_sunny_outlined, size: 18, color: Color(0xFF074E32)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _selectedSession == "subah" ? (isEn ? "Morning" : "صبح") : (isEn ? "Evening" : "شام"),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
+                          ),
                         ),
-                      ),
-                      const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF074E32)),
-                    ],
+                        const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF074E32)),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -2068,30 +2127,77 @@ class _FeeScreenState extends State<FeeScreen> {
           ),
           const SizedBox(height: 5),
           // Row 3: Wide Filter Dropdown
-          Container(
-            height: 34,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0F172A) : Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    isEn ? 'All Students, Paid, Due Fee Record' : 'داخل ، غیر حاضر ، حاضر ، کل طلبا',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF074E32),
-                    ),
+          InkWell(
+            onTap: () {
+              showModalBottomSheet(
+                context: context,
+                builder: (ctx) => SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        title: Text(isEn ? 'All Students' : 'کل طلبہ'),
+                        onTap: () {
+                          setState(() {
+                            _selectedStatus = 'ALL';
+                            _applyFilter();
+                          });
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                      ListTile(
+                        title: Text(isEn ? 'Paid Students' : 'مکمل ادا شد'),
+                        onTap: () {
+                          setState(() {
+                            _selectedStatus = 'PAID';
+                            _applyFilter();
+                          });
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                      ListTile(
+                        title: Text(isEn ? 'Due Fee Defaulters' : 'واجب الادا / بقایاجات'),
+                        onTap: () {
+                          setState(() {
+                            _selectedStatus = 'DUE';
+                            _applyFilter();
+                          });
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                Icon(Icons.arrow_drop_down_rounded, color: isDark ? Colors.white70 : const Color(0xFF074E32)),
-              ],
+              );
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      _selectedStatus == 'ALL'
+                          ? (isEn ? 'All Students, Paid, Due Fee Record' : 'داخل ، غیر حاضر ، حاضر ، کل طلبا')
+                          : (_selectedStatus == 'PAID' ? (isEn ? 'Paid Students' : 'مکمل ادا شد') : (isEn ? 'Due Defaulters' : 'واجب الادا')),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF074E32),
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.arrow_drop_down_rounded, color: isDark ? Colors.white70 : const Color(0xFF074E32)),
+                ],
+              ),
             ),
           ),
         ],
@@ -2099,70 +2205,7 @@ class _FeeScreenState extends State<FeeScreen> {
     );
   }
 
-  Widget _buildPeriodSelector() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _kNavy.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left_rounded, size: 20, color: _kNavy),
-            onPressed: () {
-              setState(() {
-                if (_selectedMonthIndex == 0) {
-                  _selectedMonthIndex = 11;
-                  _selectedYear--;
-                } else {
-                  _selectedMonthIndex--;
-                }
-                _applyFilter();
-              });
-            },
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-          InkWell(
-            onTap: _selectPeriod,
-            child: Row(
-              children: [
-                const Icon(Icons.calendar_month_rounded, size: 15, color: _kNavy),
-                const SizedBox(width: 5),
-                Text(
-                  _selectedDateRange == null
-                      ? '${kFeeMonths[_selectedMonthIndex]} $_selectedYear'
-                      : '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? Colors.white : _kNavy),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right_rounded, size: 20, color: _kNavy),
-            onPressed: () {
-              setState(() {
-                if (_selectedMonthIndex == 11) {
-                  _selectedMonthIndex = 0;
-                  _selectedYear++;
-                } else {
-                  _selectedMonthIndex++;
-                }
-                _applyFilter();
-              });
-            },
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildFilterBar() {
     final isDark = Theme.of(context).brightness == Brightness.dark;

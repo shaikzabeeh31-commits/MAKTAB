@@ -892,21 +892,30 @@ class _LessonScreenState extends State<LessonScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Address Banner
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
-            alignment: Alignment.center,
-            child: Text(
-              _maktabAddress.isNotEmpty
-                  ? _maktabAddress
-                  : 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: dark ? Colors.white : const Color(0xFF074E32),
+          InkWell(
+            onTap: () => _editText(
+              title: 'مسجد، محلہ، گاؤں یا شہر کی تفصیل',
+              current: _maktabAddress,
+              storageKey: 'maktab_address',
+              onSave: (value) => setState(() => _maktabAddress = value),
+            ),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
+              alignment: Alignment.center,
+              child: Text(
+                _maktabAddress.isNotEmpty
+                    ? _maktabAddress
+                    : 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: dark ? Colors.white : const Color(0xFF074E32),
+                ),
               ),
             ),
           ),
@@ -915,55 +924,69 @@ class _LessonScreenState extends State<LessonScreen> {
           Row(
             children: [
               Expanded(
-                child: Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: dark ? const Color(0xFF0F172A) : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                child: InkWell(
+                  onTap: () => _editText(
+                    title: 'استاد کا نام',
+                    current: _teacherName,
+                    storageKey: 'lesson_teacher_name',
+                    onSave: (value) => setState(() => _teacherName = value),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.fingerprint_rounded, size: 18, color: Color(0xFF074E32)),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          _teacherName.isNotEmpty ? _teacherName : 'معلم/معلمہ کا نام',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: dark ? Colors.white : const Color(0xFF074E32)),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: dark ? const Color(0xFF0F172A) : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.fingerprint_rounded, size: 18, color: Color(0xFF074E32)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _teacherName.isNotEmpty ? _teacherName : 'معلم/معلمہ کا نام',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: dark ? Colors.white : const Color(0xFF074E32)),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: dark ? const Color(0xFF0F172A) : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.person_rounded, size: 18, color: Color(0xFF074E32)),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          _selectedGroupName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: dark ? Colors.white : const Color(0xFF074E32)),
+                child: InkWell(
+                  onTap: _showGroupSelector,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: dark ? const Color(0xFF0F172A) : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person_rounded, size: 18, color: Color(0xFF074E32)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _selectedGroupName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: dark ? Colors.white : const Color(0xFF074E32)),
+                          ),
                         ),
-                      ),
-                    ],
+                        const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF074E32)),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -974,56 +997,64 @@ class _LessonScreenState extends State<LessonScreen> {
           Row(
             children: [
               Expanded(
-                child: Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: dark ? const Color(0xFF0F172A) : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.wb_sunny_outlined, size: 18, color: Color(0xFF074E32)),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          _selectedShift.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: dark ? Colors.white : const Color(0xFF074E32)),
+                child: InkWell(
+                  onTap: _pickShift,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: dark ? const Color(0xFF0F172A) : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.wb_sunny_outlined, size: 18, color: Color(0xFF074E32)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _selectedShift.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: dark ? Colors.white : const Color(0xFF074E32)),
+                          ),
                         ),
-                      ),
-                      const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF074E32)),
-                    ],
+                        const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF074E32)),
+                      ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: dark ? const Color(0xFF0F172A) : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_today_rounded, size: 18, color: Color(0xFF074E32)),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          _dateKey,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: dark ? Colors.white : const Color(0xFF074E32)),
+                child: InkWell(
+                  onTap: _pickDate,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: dark ? const Color(0xFF0F172A) : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_today_rounded, size: 18, color: Color(0xFF074E32)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _dateKey,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: dark ? Colors.white : const Color(0xFF074E32)),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1031,30 +1062,34 @@ class _LessonScreenState extends State<LessonScreen> {
           ),
           const SizedBox(height: 5),
           // Row 3: Wide Filter Dropdown
-          Container(
-            height: 34,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: dark ? const Color(0xFF0F172A) : Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    'داخل ، غیر حاضر ، حاضر ، کل طلبا',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: dark ? Colors.white : const Color(0xFF074E32),
+          InkWell(
+            onTap: _showGroupMenu,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: dark ? const Color(0xFF0F172A) : Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'داخل ، غیر حاضر ، حاضر ، کل طلبا',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: dark ? Colors.white : const Color(0xFF074E32),
+                      ),
                     ),
                   ),
-                ),
-                Icon(Icons.arrow_drop_down_rounded, color: dark ? Colors.white70 : const Color(0xFF074E32)),
-              ],
+                  Icon(Icons.arrow_drop_down_rounded, color: dark ? Colors.white70 : const Color(0xFF074E32)),
+                ],
+              ),
             ),
           ),
         ],
