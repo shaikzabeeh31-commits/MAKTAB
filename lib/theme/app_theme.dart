@@ -22,7 +22,18 @@ class AppTheme {
 
   static ThemeData lightTheme([String langCode = 'en']) {
     final textTheme = _getTextTheme(langCode);
+    final isUrduOrArabic = langCode == 'ur' || langCode == 'ar';
+    bool isTest = false;
+    try {
+      if (!kIsWeb && std_io.Platform.environment.containsKey('FLUTTER_TEST')) {
+        isTest = true;
+      }
+    } catch (_) {}
+    final String? fontFamily = (isUrduOrArabic && !isTest)
+        ? GoogleFonts.notoNastaliqUrdu().fontFamily
+        : null;
     return ThemeData(
+      fontFamily: fontFamily,
       textTheme: textTheme,
       useMaterial3: true,
       colorScheme: const ColorScheme.light(
@@ -75,7 +86,18 @@ class AppTheme {
 
   static ThemeData darkTheme([String langCode = 'en']) {
     final textTheme = _getTextTheme(langCode);
+    final isUrduOrArabic = langCode == 'ur' || langCode == 'ar';
+    bool isTest = false;
+    try {
+      if (!kIsWeb && std_io.Platform.environment.containsKey('FLUTTER_TEST')) {
+        isTest = true;
+      }
+    } catch (_) {}
+    final String? fontFamily = (isUrduOrArabic && !isTest)
+        ? GoogleFonts.notoNastaliqUrdu().fontFamily
+        : null;
     return ThemeData(
+      fontFamily: fontFamily,
       textTheme: textTheme.apply(
         bodyColor: AppColors.textPrimaryDark,
         displayColor: AppColors.textPrimaryDark,

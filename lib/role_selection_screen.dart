@@ -288,7 +288,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
-                fontFamily: 'Roboto',
               ),
             ),
             const SizedBox(height: 8),
