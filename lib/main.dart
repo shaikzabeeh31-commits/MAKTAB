@@ -587,7 +587,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
     );
   }
 
-  String _loggedInTeacherName = 'محمد عمران';
+  String _loggedInTeacherName = 'معلم/معلمہ کا نام';
 
   @override
   void initState() {
@@ -610,7 +610,16 @@ class _StudentListScreenState extends State<StudentListScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        _loggedInTeacherName = prefs.getString('cred_teacher_name') ?? 'محمد عمران';
+        final String? loggedTeacher = prefs.getString('logged_in_user_name') ??
+            prefs.getString('cred_user_name') ??
+            prefs.getString('user_full_name') ??
+            prefs.getString('teacher_name') ??
+            prefs.getString('cred_teacher_name');
+        if (loggedTeacher != null && loggedTeacher.trim().isNotEmpty) {
+          _loggedInTeacherName = loggedTeacher.trim();
+        } else {
+          _loggedInTeacherName = 'معلم/معلمہ کا نام';
+        }
       });
     }
   }

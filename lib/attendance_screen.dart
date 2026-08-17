@@ -162,6 +162,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool _isLoading = true;
   bool _isWorking = false;
   bool _detailsExpanded = false;
+  bool _headerExpanded = true;
   bool _teacherPresent = false;
   String _teacherAttendanceTime = '';
   String _holidayNotice = '';
@@ -368,10 +369,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       } else {
         _classHeading = 'مکتب اطفال';
       }
-      _teacherHeading =
-          prefs.getString(_teacherHeadingStorageKey)?.trim().isNotEmpty == true
-              ? prefs.getString(_teacherHeadingStorageKey)!.trim()
-              : 'معلم/معلمہ کا نام';
+      final String? loggedTeacher = prefs.getString('logged_in_user_name') ??
+          prefs.getString('cred_user_name') ??
+          prefs.getString('user_full_name') ??
+          prefs.getString('teacher_name') ??
+          prefs.getString(_teacherHeadingStorageKey);
+      if (loggedTeacher != null && loggedTeacher.trim().isNotEmpty) {
+        _teacherHeading = loggedTeacher.trim();
+      } else {
+        _teacherHeading = 'معلم/معلمہ کا نام';
+      }
       _teacherPresent =
           prefs.getBool(_teacherAttendanceStorageKey) ?? false;
       _teacherAttendanceTime = prefs.getString('${_teacherAttendanceStorageKey}_time') ??
@@ -1183,6 +1190,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _identityArch(bool dark) {
+    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
     return Container(
       margin: const EdgeInsets.fromLTRB(6, 4, 6, 6),
       padding: const EdgeInsets.all(6),
@@ -1201,116 +1209,140 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Top Institution Address Banner
-          InkWell(
-            onTap: _editInstitutionAddress,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
-              alignment: Alignment.center,
-              child: Text(
-                _institutionAddress.isNotEmpty
-                    ? _institutionAddress
-                    : 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: dark ? Colors.white : const Color(0xFF074E32),
-                ),
+          // Header Collapse / Expand Arrow Button
+          GestureDetector(
+            onTap: () => setState(() => _headerExpanded = !_headerExpanded),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _headerExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    color: const Color(0xFF074E32),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _headerExpanded ? (isEn ? 'Hide Header' : 'ہیڈر تفصیلات چھپائیں') : (isEn ? 'Show Header' : 'ہیڈر تفصیلات دکھائیں'),
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF074E32)),
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 5),
-          // Row 1: Teacher Name & Maktab Department
-          Row(
-            children: [
-              Expanded(
-                child: _archMiniBox(
-                  text: _teacherHeading.isNotEmpty ? _teacherHeading : 'معلم/معلمہ کا نام',
-                  icon: Icons.fingerprint_rounded,
-                  onTap: _editTeacherHeading,
-                  dark: dark,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _archMiniBox(
-                  text: _classHeading.isNotEmpty ? _classHeading : 'مکتب اطفال',
-                  icon: Icons.person_rounded,
-                  onTap: _editClassHeading,
-                  dark: dark,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          // Row 2: Shift Dropdown & Date Picker
-          Row(
-            children: [
-              Expanded(
-                child: _archMiniBox(
-                  text: _selectedShiftId == 'shabina' ? 'شبینہ' : 'صبح',
-                  icon: Icons.wb_sunny_outlined,
-                  hasDropdown: true,
-                  onTap: () {
-                    setState(() {
-                      _selectedShiftId = _selectedShiftId == 'subah' ? 'shabina' : 'subah';
-                    });
-                  },
-                  dark: dark,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _archMiniBox(
-                  text: '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
-                  icon: Icons.calendar_today_rounded,
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: _selectedDate,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2030),
-                    );
-                    if (picked != null) setState(() => _selectedDate = picked);
-                  },
-                  dark: dark,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          // Row 3: Wide Filter Selector
-          Container(
-            height: 34,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: dark ? const Color(0xFF0F172A) : Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    'داخل ، غیر حاضر ، حاضر ، کل طلبا',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: dark ? Colors.white : const Color(0xFF074E32),
-                    ),
+          if (_headerExpanded) ...[
+            // Top Institution Address Banner
+            InkWell(
+              onTap: _editInstitutionAddress,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
+                alignment: Alignment.center,
+                child: Text(
+                  _institutionAddress.isNotEmpty
+                      ? _institutionAddress
+                      : 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: dark ? Colors.white : const Color(0xFF074E32),
                   ),
                 ),
-                Icon(Icons.arrow_drop_down_rounded, color: dark ? Colors.white70 : const Color(0xFF074E32)),
+              ),
+            ),
+            const SizedBox(height: 5),
+            // Row 1: Teacher Name & Maktab Department
+            Row(
+              children: [
+                Expanded(
+                  child: _archMiniBox(
+                    text: _teacherHeading.isNotEmpty ? _teacherHeading : 'معلم/معلمہ کا نام',
+                    icon: Icons.fingerprint_rounded,
+                    onTap: _editTeacherHeading,
+                    dark: dark,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _archMiniBox(
+                    text: _classHeading.isNotEmpty ? _classHeading : 'مکتب اطفال',
+                    icon: Icons.person_rounded,
+                    onTap: _editClassHeading,
+                    dark: dark,
+                  ),
+                ),
               ],
             ),
-          ),
+            const SizedBox(height: 5),
+            // Row 2: Shift Dropdown & Date Picker
+            Row(
+              children: [
+                Expanded(
+                  child: _archMiniBox(
+                    text: _selectedShiftId == 'shabina' ? 'شبینہ' : 'صبح',
+                    icon: Icons.wb_sunny_outlined,
+                    hasDropdown: true,
+                    onTap: () {
+                      setState(() {
+                        _selectedShiftId = _selectedShiftId == 'subah' ? 'shabina' : 'subah';
+                      });
+                    },
+                    dark: dark,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _archMiniBox(
+                    text: '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+                    icon: Icons.calendar_today_rounded,
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2030),
+                      );
+                      if (picked != null) setState(() => _selectedDate = picked);
+                    },
+                    dark: dark,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            // Row 3: Wide Filter Selector
+            Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: dark ? const Color(0xFF0F172A) : Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'داخل ، غیر حاضر ، حاضر ، کل طلبا',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: dark ? Colors.white : const Color(0xFF074E32),
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.arrow_drop_down_rounded, color: dark ? Colors.white70 : const Color(0xFF074E32)),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -224,8 +224,13 @@ class _LoginScreenState extends State<LoginScreen> {
         await prefs.setString('cred_${widget.role.name}_name', displayName);
         await prefs.setString('cred_${widget.role.name}_phone', phone);
       }
-      await prefs.setString('cred_${widget.role.name}_pin', pin);
       await prefs.setString('current_user_name', displayName);
+      await prefs.setString('logged_in_user_name', displayName);
+      await prefs.setString('cred_user_name', displayName);
+      await prefs.setString('teacher_name', displayName);
+      await prefs.setString('attendance_teacher_heading', displayName);
+      await prefs.setString('fee_teacher_heading', displayName);
+      await prefs.setString('lesson_teacher_name', displayName);
       await prefs.setString('last_login_timestamp_${widget.role.name}', timeStr);
 
       widget.onLoginSuccess();

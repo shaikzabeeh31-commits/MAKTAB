@@ -117,6 +117,7 @@ class _FeeScreenState extends State<FeeScreen> {
   String _selectedStatus = 'ALL';
   String _maktabAddress = 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش';
   String _teacherName = 'معلم/معلمہ کا نام';
+  bool _headerExpanded = true;
 
   void _showAddBatchDialog() {
     final ctrl = TextEditingController();
@@ -1861,7 +1862,6 @@ class _FeeScreenState extends State<FeeScreen> {
       ),
       body: Column(children: [
         _buildIslamicFeeHeader(),
-        _buildFilterBar(),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -1869,7 +1869,6 @@ class _FeeScreenState extends State<FeeScreen> {
               width: 580,
               child: Column(
                 children: [
-                  _buildSelectAllRow(loc),
                   _buildTableHeader(loc),
                   Expanded(
                     child: _filtered.isEmpty
@@ -1920,334 +1919,358 @@ class _FeeScreenState extends State<FeeScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Address Banner
-          InkWell(
-            onTap: () async {
-              final String? val = await showDialog<String>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: Text(isEn ? 'Maktab Address' : 'مسجد، محلہ، یا مکتب کا پتہ'),
-                  content: TextField(
-                    autofocus: true,
-                    controller: TextEditingController(text: _maktabAddress),
-                    decoration: InputDecoration(hintText: isEn ? 'Enter Maktab address...' : 'پتہ درج کریں...'),
-                    onSubmitted: (v) => Navigator.pop(ctx, v),
-                  ),
-                ),
-              );
-              if (val != null && val.trim().isNotEmpty) {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setString('maktab_address', val.trim());
-                await prefs.setString('cred_maktab_address', val.trim());
-                setState(() {
-                  _maktabAddress = val.trim();
-                });
-              }
-            },
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
-              alignment: Alignment.center,
-              child: Text(
-                _maktabAddress.isNotEmpty
-                    ? _maktabAddress
-                    : (isEn ? 'Maktab Al-Farooq, Madina Masjid, Khannapet' : 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : const Color(0xFF074E32),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 5),
-          // Row 1: Teacher & Department
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: () async {
-                    final String? val = await showDialog<String>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: Text(isEn ? 'Teacher Name' : 'معلم/معلمہ کا نام'),
-                        content: TextField(
-                          autofocus: true,
-                          controller: TextEditingController(text: _teacherName),
-                          decoration: InputDecoration(hintText: isEn ? 'Enter teacher name...' : 'معلم کا نام درج کریں...'),
-                          onSubmitted: (v) => Navigator.pop(ctx, v),
-                        ),
-                      ),
-                    );
-                    if (val != null && val.trim().isNotEmpty) {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('fee_teacher_heading', val.trim());
-                      await prefs.setString('teacher_name', val.trim());
-                      await prefs.setString('attendance_teacher_heading', val.trim());
-                      await prefs.setString('lesson_teacher_name', val.trim());
-                      setState(() {
-                        _teacherName = val.trim();
-                      });
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    height: 34,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.fingerprint_rounded, size: 18, color: Color(0xFF074E32)),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            _teacherName.isNotEmpty ? _teacherName : (isEn ? 'Teacher Name' : 'معلم/معلمہ کا نام'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: InkWell(
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (ctx) => SafeArea(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: ['ALL', 'Hifz Group A', 'Nazira Group B', 'Tajweed Group C', 'Primary Group D']
-                              .map((c) => ListTile(
-                                    title: Text(c),
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedClass = c;
-                                        _applyFilter();
-                                      });
-                                      Navigator.pop(ctx);
-                                    },
-                                  ))
-                              .toList(),
-                        ),
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    height: 34,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.person_rounded, size: 18, color: Color(0xFF074E32)),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '$_selectedClass (${_selectedSession == "subah" ? (isEn ? "Morning" : "صبح") : (isEn ? "Evening" : "شام")})',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
-                          ),
-                        ),
-                        const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF074E32)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          // Row 2: Shift Dropdown & Month Picker
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: () {
-                    setState(() {
-                      _selectedSession = _selectedSession == "subah" ? "evening" : "subah";
-                      _applyFilter();
-                    });
-                  },
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    height: 34,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.wb_sunny_outlined, size: 18, color: Color(0xFF074E32)),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            _selectedSession == "subah" ? (isEn ? "Morning" : "صبح") : (isEn ? "Evening" : "شام"),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
-                          ),
-                        ),
-                        const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF074E32)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-                  ),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            if (_selectedMonthIndex == 0) {
-                              _selectedMonthIndex = 11;
-                              _selectedYear--;
-                            } else {
-                              _selectedMonthIndex--;
-                            }
-                            _applyFilter();
-                          });
-                        },
-                        child: const Icon(Icons.chevron_left_rounded, size: 20, color: Color(0xFF074E32)),
-                      ),
-                      const Icon(Icons.calendar_month_rounded, size: 16, color: Color(0xFF074E32)),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          '${kFeeMonths[_selectedMonthIndex]} $_selectedYear',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            if (_selectedMonthIndex == 11) {
-                              _selectedMonthIndex = 0;
-                              _selectedYear++;
-                            } else {
-                              _selectedMonthIndex++;
-                            }
-                            _applyFilter();
-                          });
-                        },
-                        child: const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF074E32)),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          // Row 3: Wide Filter Dropdown
-          InkWell(
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                builder: (ctx) => SafeArea(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ListTile(
-                        title: Text(isEn ? 'All Students' : 'کل طلبہ'),
-                        onTap: () {
-                          setState(() {
-                            _selectedStatus = 'ALL';
-                            _applyFilter();
-                          });
-                          Navigator.pop(ctx);
-                        },
-                      ),
-                      ListTile(
-                        title: Text(isEn ? 'Paid Students' : 'مکمل ادا شد'),
-                        onTap: () {
-                          setState(() {
-                            _selectedStatus = 'PAID';
-                            _applyFilter();
-                          });
-                          Navigator.pop(ctx);
-                        },
-                      ),
-                      ListTile(
-                        title: Text(isEn ? 'Due Fee Defaulters' : 'واجب الادا / بقایاجات'),
-                        onTap: () {
-                          setState(() {
-                            _selectedStatus = 'DUE';
-                            _applyFilter();
-                          });
-                          Navigator.pop(ctx);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF074E32), width: 1.2),
-              ),
+          // Header Collapse / Expand Arrow Button
+          GestureDetector(
+            onTap: () => setState(() => _headerExpanded = !_headerExpanded),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 2),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: Text(
-                      _selectedStatus == 'ALL'
-                          ? (isEn ? 'All Students, Paid, Due Fee Record' : 'داخل ، غیر حاضر ، حاضر ، کل طلبا')
-                          : (_selectedStatus == 'PAID' ? (isEn ? 'Paid Students' : 'مکمل ادا شد') : (isEn ? 'Due Defaulters' : 'واجب الادا')),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF074E32),
-                      ),
-                    ),
+                  Icon(
+                    _headerExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    color: const Color(0xFF074E32),
+                    size: 20,
                   ),
-                  Icon(Icons.arrow_drop_down_rounded, color: isDark ? Colors.white70 : const Color(0xFF074E32)),
+                  const SizedBox(width: 4),
+                  Text(
+                    _headerExpanded ? (isEn ? 'Hide Header' : 'ہیڈر تفصیلات چھپائیں') : (isEn ? 'Show Header' : 'ہیڈر تفصیلات دکھائیں'),
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF074E32)),
+                  ),
                 ],
               ),
             ),
           ),
+          if (_headerExpanded) ...[
+            // Address Banner
+            InkWell(
+              onTap: () async {
+                final String? val = await showDialog<String>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(isEn ? 'Maktab Address' : 'مسجد، محلہ، یا مکتب کا پتہ'),
+                    content: TextField(
+                      autofocus: true,
+                      controller: TextEditingController(text: _maktabAddress),
+                      decoration: InputDecoration(hintText: isEn ? 'Enter Maktab address...' : 'پتہ درج کریں...'),
+                      onSubmitted: (v) => Navigator.pop(ctx, v),
+                    ),
+                  ),
+                );
+                if (val != null && val.trim().isNotEmpty) {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('maktab_address', val.trim());
+                  await prefs.setString('cred_maktab_address', val.trim());
+                  setState(() {
+                    _maktabAddress = val.trim();
+                  });
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
+                alignment: Alignment.center,
+                child: Text(
+                  _maktabAddress.isNotEmpty
+                      ? _maktabAddress
+                      : (isEn ? 'Maktab Al-Farooq, Madina Masjid, Khannapet' : 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF074E32),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 5),
+            // Row 1: Teacher & Department
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final String? val = await showDialog<String>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: Text(isEn ? 'Teacher Name' : 'معلم/معلمہ کا نام'),
+                          content: TextField(
+                            autofocus: true,
+                            controller: TextEditingController(text: _teacherName),
+                            decoration: InputDecoration(hintText: isEn ? 'Enter teacher name...' : 'معلم کا نام درج کریں...'),
+                            onSubmitted: (v) => Navigator.pop(ctx, v),
+                          ),
+                        ),
+                      );
+                      if (val != null && val.trim().isNotEmpty) {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setString('fee_teacher_heading', val.trim());
+                        await prefs.setString('teacher_name', val.trim());
+                        await prefs.setString('attendance_teacher_heading', val.trim());
+                        await prefs.setString('lesson_teacher_name', val.trim());
+                        setState(() {
+                          _teacherName = val.trim();
+                        });
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      height: 34,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.fingerprint_rounded, size: 18, color: Color(0xFF074E32)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _teacherName.isNotEmpty ? _teacherName : (isEn ? 'Teacher Name' : 'معلم/معلمہ کا نام'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        builder: (ctx) => SafeArea(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: ['ALL', 'Hifz Group A', 'Nazira Group B', 'Tajweed Group C', 'Primary Group D']
+                                .map((c) => ListTile(
+                                      title: Text(c),
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedClass = c;
+                                          _applyFilter();
+                                        });
+                                        Navigator.pop(ctx);
+                                      },
+                                    ))
+                                .toList(),
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      height: 34,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.person_rounded, size: 18, color: Color(0xFF074E32)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '$_selectedClass (${_selectedSession == "subah" ? (isEn ? "Morning" : "صبح") : (isEn ? "Evening" : "شام")})',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
+                            ),
+                          ),
+                          const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF074E32)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            // Row 2: Shift Dropdown & Month Picker
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _selectedSession = _selectedSession == "subah" ? "evening" : "subah";
+                        _applyFilter();
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      height: 34,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.wb_sunny_outlined, size: 18, color: Color(0xFF074E32)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _selectedSession == "subah" ? (isEn ? "Morning" : "صبح") : (isEn ? "Evening" : "شام"),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
+                            ),
+                          ),
+                          const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF074E32)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (_selectedMonthIndex == 0) {
+                                _selectedMonthIndex = 11;
+                                _selectedYear--;
+                              } else {
+                                _selectedMonthIndex--;
+                              }
+                              _applyFilter();
+                            });
+                          },
+                          child: const Icon(Icons.chevron_left_rounded, size: 20, color: Color(0xFF074E32)),
+                        ),
+                        const Icon(Icons.calendar_month_rounded, size: 16, color: Color(0xFF074E32)),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '${kFeeMonths[_selectedMonthIndex]} $_selectedYear',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF074E32)),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (_selectedMonthIndex == 11) {
+                                _selectedMonthIndex = 0;
+                                _selectedYear++;
+                              } else {
+                                _selectedMonthIndex++;
+                              }
+                              _applyFilter();
+                            });
+                          },
+                          child: const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF074E32)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            // Row 3: Wide Filter Dropdown
+            InkWell(
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (ctx) => SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          title: Text(isEn ? 'All Students' : 'کل طلبہ'),
+                          onTap: () {
+                            setState(() {
+                              _selectedStatus = 'ALL';
+                              _applyFilter();
+                            });
+                            Navigator.pop(ctx);
+                          },
+                        ),
+                        ListTile(
+                          title: Text(isEn ? 'Paid Students' : 'مکمل ادا شد'),
+                          onTap: () {
+                            setState(() {
+                              _selectedStatus = 'PAID';
+                              _applyFilter();
+                            });
+                            Navigator.pop(ctx);
+                          },
+                        ),
+                        ListTile(
+                          title: Text(isEn ? 'Due Fee Defaulters' : 'واجب الادا / بقایاجات'),
+                          onTap: () {
+                            setState(() {
+                              _selectedStatus = 'DUE';
+                              _applyFilter();
+                            });
+                            Navigator.pop(ctx);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                height: 34,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _selectedStatus == 'ALL'
+                            ? (isEn ? 'All Students, Paid, Due Fee Record' : 'داخل ، غیر حاضر ، حاضر ، کل طلبا')
+                            : (_selectedStatus == 'PAID' ? (isEn ? 'Paid Students' : 'مکمل ادا شد') : (isEn ? 'Due Defaulters' : 'واجب الادا')),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF074E32),
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.arrow_drop_down_rounded, color: isDark ? Colors.white70 : const Color(0xFF074E32)),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
