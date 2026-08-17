@@ -44,6 +44,8 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
     AppRole.mutawalli: true,
   };
 
+  String _teacherAttendanceTime = '';
+
   List<AppRole> get _manageableRoles {
     if (widget.currentUserRole == AppRole.manager) {
       // Manager can ONLY create/manage Teacher & Mutawalli accounts
@@ -67,6 +69,7 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
   Future<void> _loadSavedCredentials() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
+      _teacherAttendanceTime = prefs.getString('last_teacher_attendance_timestamp') ?? '';
       for (final role in _manageableRoles) {
         final savedPhone = prefs.getString('cred_${role.name}_phone');
         final savedPin = prefs.getString('cred_${role.name}_pin');
@@ -549,6 +552,28 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
                   titleUrdu,
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                 ),
+                if (role == AppRole.teacher && _teacherAttendanceTime.isNotEmpty) ...[
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEAF7F0),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF08734B)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.verified_rounded, color: Color(0xFF08734B), size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          isEn ? 'Attendance: $_teacherAttendanceTime' : 'حاضری: $_teacherAttendanceTime',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF08734B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
             const Divider(height: 20),

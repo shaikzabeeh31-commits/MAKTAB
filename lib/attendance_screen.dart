@@ -163,6 +163,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool _isWorking = false;
   bool _detailsExpanded = false;
   bool _teacherPresent = false;
+  String _teacherAttendanceTime = '';
   String _holidayNotice = '';
 
   @override
@@ -358,16 +359,23 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       final String? rawStudents = prefs.getString(_studentsStorageKey);
       final String? rawAttendance = prefs.getString(_attendanceStorageKey) ??
           prefs.getString(_legacyAttendanceStorageKey);
-      _classHeading =
-          prefs.getString(_classHeadingStorageKey)?.trim().isNotEmpty == true
-              ? prefs.getString(_classHeadingStorageKey)!.trim()
-              : 'مکتب اطفال';
+      final String? academicYear = prefs.getString('academic_year_${widget.maktabId}') ??
+          prefs.getString('academic_year');
+      if (academicYear != null && academicYear.trim().isNotEmpty) {
+        _classHeading = academicYear.trim();
+      } else if (prefs.getString(_classHeadingStorageKey)?.trim().isNotEmpty == true) {
+        _classHeading = prefs.getString(_classHeadingStorageKey)!.trim();
+      } else {
+        _classHeading = 'مکتب اطفال';
+      }
       _teacherHeading =
           prefs.getString(_teacherHeadingStorageKey)?.trim().isNotEmpty == true
               ? prefs.getString(_teacherHeadingStorageKey)!.trim()
               : 'معلم/معلمہ کا نام';
       _teacherPresent =
           prefs.getBool(_teacherAttendanceStorageKey) ?? false;
+      _teacherAttendanceTime = prefs.getString('${_teacherAttendanceStorageKey}_time') ??
+          prefs.getString('last_teacher_attendance_timestamp') ?? '';
       final String? savedInstitution = prefs.getString('cred_maktab_name') ??
           prefs.getString('maktab_name') ??
           prefs.getString('mosque_name');
@@ -509,6 +517,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final bool value = !_teacherPresent;
     await prefs.setBool(_teacherAttendanceStorageKey, value);
+    if (value) {
+      final now = DateTime.now();
+      final timeStr = '${now.day}/${now.month}/${now.year} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+      await prefs.setString('${_teacherAttendanceStorageKey}_time', timeStr);
+      await prefs.setString('last_teacher_attendance_timestamp', timeStr);
+      await prefs.setString('last_teacher_attendance_name', _teacherHeading);
+      if (mounted) setState(() => _teacherAttendanceTime = timeStr);
+    } else {
+      await prefs.remove('${_teacherAttendanceStorageKey}_time');
+      await prefs.remove('last_teacher_attendance_timestamp');
+      if (mounted) setState(() => _teacherAttendanceTime = '');
+    }
     if (!mounted) return;
     setState(() => _teacherPresent = value);
     _showMessage(value
@@ -1256,7 +1276,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   Expanded(
                     flex: 3,
                     child: _archMiniBox(
-                      text: _teacherHeading,
+                      text: _teacherPresent && _teacherAttendanceTime.isNotEmpty
+                          ? '$_teacherHeading  •  $_teacherAttendanceTime'
+                          : _teacherHeading,
                       onTap: _editTeacherHeading,
                       dark: dark,
                       action: SizedBox(
@@ -1555,7 +1577,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           onLongPress: () => _chooseAttendance(student),
           borderRadius: BorderRadius.circular(9),
           child: Container(
-            height: 31,
+            height: 34,
             padding: const EdgeInsets.symmetric(horizontal: 3),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(9),
@@ -1565,7 +1587,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               textDirection: TextDirection.rtl,
               children: [
-                Icon(visual.icon, size: 13, color: visual.color),
+                Icon(visual.icon, size: 16, color: visual.color),
                 const SizedBox(width: 2),
                 Flexible(
                   child: FittedBox(
@@ -1575,7 +1597,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       maxLines: 1,
                       style: TextStyle(
                         color: visual.color,
-                        fontSize: 10.5,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1595,6 +1617,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     IconData? icon,
     String tooltip,
   ) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final ok = student[key] as bool? ?? true;
     final color = ok ? Colors.green : Colors.red;
     return Tooltip(
@@ -1604,22 +1627,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           student[key] = !ok;
           student['selectedForMessage'] = _hasParentMessageIssue(student);
         }),
-        borderRadius: BorderRadius.circular(20),
-        child: SizedBox(
-          width: 28,
-          height: 34,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: .11),
-                shape: BoxShape.circle,
-                border: Border.all(color: color.withValues(alpha: .35)),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              icon == null
+                  ? _IslamicCapIcon(color: color, size: 20)
+                  : Icon(icon, size: 20, color: color),
+              Text(
+                tooltip,
+                style: TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.bold,
+                  color: dark ? Colors.white : Colors.black,
+                ),
               ),
-              child: icon == null
-                  ? _IslamicCapIcon(color: color, size: 18)
-                  : Icon(icon, size: 17, color: color),
-            ),
+            ],
           ),
         ),
       ),

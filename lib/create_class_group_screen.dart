@@ -33,6 +33,7 @@ class _CreateClassGroupScreenState extends State<CreateClassGroupScreen> {
 
   final _maktabName = TextEditingController();
   final _maktabSectionName = TextEditingController();
+  final _academicYear = TextEditingController();
   final _teacherName = TextEditingController();
   final _holidayReason = TextEditingController();
   final _search = TextEditingController();
@@ -517,6 +518,8 @@ class _CreateClassGroupScreenState extends State<CreateClassGroupScreen> {
     await prefs.setString('maktab_name', _maktabName.text.trim());
     await prefs.setString(
         'maktab_section_name', _maktabSectionName.text.trim());
+    await prefs.setString('academic_year_${widget.maktabId}', _academicYear.text.trim());
+    await prefs.setString('academic_year', _academicYear.text.trim());
     await prefs.setString('shared_teacher_name', _teacherName.text.trim());
     await prefs.setString('lesson_teacher_name', _teacherName.text.trim());
     for (final shift in _shifts) {
@@ -635,6 +638,12 @@ class _CreateClassGroupScreenState extends State<CreateClassGroupScreen> {
                   controller: _maktabSectionName,
                   decoration: _input('مکتب کا نام، مثلاً مکتب اطفال',
                       Icons.menu_book_rounded),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _academicYear,
+                  decoration: _input('تعلیمی سال (مثلاً 2026-2027 یا سال 2026)',
+                      Icons.calendar_today_rounded),
                 ),
               ]),
             ),
