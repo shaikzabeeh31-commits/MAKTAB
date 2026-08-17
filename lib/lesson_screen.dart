@@ -711,26 +711,56 @@ class _LessonScreenState extends State<LessonScreen> {
         theme: pw.ThemeData.withFont(base: regular, bold: bold),
         margin: const pw.EdgeInsets.all(28),
         build: (_) => <pw.Widget>[
-          pw.Text('سبق کی رپورٹ',
-              style: pw.TextStyle(font: bold, fontSize: 22)),
-          pw.Text(
-            '$_maktabName | استاد: $_teacherName | شفٹ: ${_selectedShift.name} | تاریخ: $_dateKey | مضمون: $_selectedSubject',
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.teal800,
+              borderRadius: pw.BorderRadius.circular(6),
+            ),
+            child: pw.Column(
+              children: [
+                pw.Text(_maktabName,
+                    style: pw.TextStyle(font: bold, fontSize: 18, color: PdfColors.white)),
+                pw.SizedBox(height: 3),
+                pw.Text('روزانہ اسباق و تلاوت رپورٹ',
+                    style: pw.TextStyle(font: bold, fontSize: 14, color: PdfColors.amber200)),
+              ],
+            ),
           ),
-          pw.SizedBox(height: 14),
+          pw.SizedBox(height: 10),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text('معلم: $_teacherName', style: pw.TextStyle(font: regular, fontSize: 10)),
+              pw.Text('شفٹ: ${_selectedShift.name}', style: pw.TextStyle(font: regular, fontSize: 10)),
+              pw.Text('مضمون: $_selectedSubject', style: pw.TextStyle(font: regular, fontSize: 10)),
+              pw.Text('تاریخ: $_dateKey', style: pw.TextStyle(font: regular, fontSize: 10)),
+            ],
+          ),
+          pw.SizedBox(height: 12),
           pw.TableHelper.fromTextArray(
-            headers: const ['طالب علم', 'درسگاہ', 'سبق', 'حالت'],
-            data: _lessonStudents.map((student) {
+            headers: const ['نمبر', 'طالب علم کا نام', 'داخلہ / والد', 'سبق / تلاوت', 'کیفیت'],
+            data: List<List<String>>.generate(_lessonStudents.length, (index) {
+              final student = _lessonStudents[index];
               final id = _studentId(student);
+              final isAbsent = _absentStudentIds.contains(id);
+              final admNo = (student['admissionNo'] ?? student['rollNo'] ?? student['id'] ?? '').toString().trim();
+              final fatherName = (student['fatherName'] ?? student['parentName'] ?? '').toString().trim();
+              final info = [if (admNo.isNotEmpty) 'داخلہ: $admNo', if (fatherName.isNotEmpty) 'والد: $fatherName'].join('  •  ');
+              final lesson = isAbsent ? 'غیر حاضر' : (_controllerFor(student).text.trim().isEmpty ? 'درج نہیں' : _controllerFor(student).text.trim());
+              final status = isAbsent ? 'غیر حاضر' : _statusLabel(_statuses[id] ?? '');
               return <String>[
-                student['name']?.toString() ?? '-',
-                _studentClass(student),
-                _controllerFor(student).text.trim(),
-                _statusLabel(_statuses[id] ?? ''),
+                '${index + 1}',
+                student['name']?.toString() ?? 'طالب علم',
+                info.isEmpty ? '-' : info,
+                lesson,
+                status,
               ];
-            }).toList(),
-            headerDecoration:
-                const pw.BoxDecoration(color: PdfColors.green700),
-            headerStyle: pw.TextStyle(font: bold, color: PdfColors.white),
+            }),
+            headerDecoration: const pw.BoxDecoration(color: PdfColors.teal700),
+            headerStyle: pw.TextStyle(font: bold, color: PdfColors.white, fontSize: 10),
+            cellStyle: pw.TextStyle(font: regular, fontSize: 9.5),
             cellAlignment: pw.Alignment.centerRight,
           ),
         ],
@@ -747,16 +777,15 @@ class _LessonScreenState extends State<LessonScreen> {
 
   Future<void> _shareReport() async {
     await _saveLesson(showMessage: false);
-    final lines = <String>[
-      'سبق کی رپورٹ — $_maktabName',
-      'تاریخ: $_dateKey | شفٹ: ${_selectedShift.name} | مضمون: $_selectedSubject',
-      ..._lessonStudents.map((student) {
-        final id = _studentId(student);
-        return '${student['name']}: ${_controllerFor(student).text.trim()} — ${_statusLabel(_statuses[id] ?? '')}';
-      }),
-    ];
-    await Clipboard.setData(ClipboardData(text: lines.join('\n')));
-    _notice('رپورٹ Copy ہوگئی؛ WhatsApp یا دوسری App میں Paste کریں۔');
+    try {
+      final bytes = await _createPdf();
+      await Printing.sharePdf(
+        bytes: bytes,
+        filename: 'daily_lessons_${_selectedShift.name}_$_dateKey.pdf',
+      );
+    } catch (e) {
+      _notice('PDF شیئر کرنے میں مسئلہ آیا: $e');
+    }
   }
 
   BoxDecoration _box({double radius = 12}) => BoxDecoration(
@@ -1577,25 +1606,88 @@ class _LessonScreenState extends State<LessonScreen> {
     final currentStatus = _statuses[_studentId(student)];
     final selected = currentStatus == value ||
         (currentStatus == 'repeat' && value == 'notRemembered');
+
+    final baseColor = color;
+    final darkShadow = selected
+        ? HSLColor.fromColor(color)
+            .withLightness((HSLColor.fromColor(color).lightness - 0.22).clamp(0.0, 1.0))
+            .toColor()
+        : const Color(0xFFC0C7D0);
+
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 1.5),
-        child: SizedBox(
-          height: 24,
-          child: OutlinedButton.icon(
-            onPressed: () => _setStatus(student, value),
-            icon: Icon(icon, size: 9),
-            label: Text(label, maxLines: 1),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 1.5),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-              foregroundColor: selected ? Colors.white : color,
-              backgroundColor: selected ? color : color.withValues(alpha: .06),
-              side: BorderSide(color: color.withValues(alpha: .55)),
-              textStyle:
-                  const TextStyle(fontSize: 7.5, fontWeight: FontWeight.bold),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          height: 27,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(7),
+            gradient: selected
+                ? LinearGradient(
+                    colors: [
+                      baseColor,
+                      HSLColor.fromColor(baseColor)
+                          .withLightness((HSLColor.fromColor(baseColor).lightness - 0.1).clamp(0.0, 1.0))
+                          .toColor(),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  )
+                : const LinearGradient(
+                    colors: [Color(0xFFFFFFFF), Color(0xFFF1F5F9)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+            boxShadow: [
+              BoxShadow(
+                color: darkShadow,
+                offset: const Offset(0, 2.5),
+                blurRadius: 0,
+              ),
+              if (selected)
+                BoxShadow(
+                  color: baseColor.withValues(alpha: 0.35),
+                  offset: const Offset(0, 4),
+                  blurRadius: 4,
+                ),
+            ],
+            border: Border.all(
+              color: selected ? darkShadow : const Color(0xFFCBD5E1),
+              width: 1,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _setStatus(student, value),
+              borderRadius: BorderRadius.circular(7),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 10,
+                      color: selected ? Colors.white : baseColor,
+                    ),
+                    const SizedBox(width: 2),
+                    Flexible(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.fade,
+                        softWrap: false,
+                        style: TextStyle(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.bold,
+                          color: selected ? Colors.white : const Color(0xFF1E293B),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
