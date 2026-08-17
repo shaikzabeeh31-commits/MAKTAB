@@ -1183,157 +1183,177 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _identityArch(bool dark) {
-    return SizedBox(
-      height: 108,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _AttendanceArchPainter(dark: dark),
-        child: Stack(
-          children: [
-            Positioned(
-              top: 2,
-              left: 4,
-              child: IconButton(
-                icon: const Icon(Icons.home_rounded, color: Colors.white, size: 20),
-                tooltip: 'ہوم ڈیش بورڈ (Return to Home)',
-                onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.popUntil(context, (route) => route.isFirst);
-                  }
-                },
+    return Container(
+      margin: const EdgeInsets.fromLTRB(6, 4, 6, 6),
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: dark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF074E32), width: 2.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F074E32),
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Top Institution Address Banner
+          InkWell(
+            onTap: _editInstitutionAddress,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
+              alignment: Alignment.center,
+              child: Text(
+                _institutionAddress.isNotEmpty
+                    ? _institutionAddress
+                    : 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: dark ? Colors.white : const Color(0xFF074E32),
+                ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 7, 18, 4),
-              child: Column(
+          ),
+          const SizedBox(height: 5),
+          // Row 1: Teacher Name & Maktab Department
+          Row(
             children: [
-              SizedBox(
-                height: 28,
-                child: InkWell(
-                  onTap: _editInstitutionName,
-                  borderRadius: BorderRadius.circular(9),
-                  child: Container(
-                    width: double.infinity,
-                    alignment: Alignment.center,
-                    child: Transform.translate(
-                      // Move only the title into the free space below the
-                      // arch peak; the arch and its other fields stay fixed.
-                      // Match the Lesson Target title-to-address spacing.
-                      offset: const Offset(0, 4),
-                      child: Text(
-                        _institutionName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color:
-                              dark ? Colors.white : const Color(0xFF065F46),
-                        ),
-                      ),
-                    ),
-                  ),
+              Expanded(
+                child: _archMiniBox(
+                  text: _teacherHeading.isNotEmpty ? _teacherHeading : 'معلم/معلمہ کا نام',
+                  icon: Icons.fingerprint_rounded,
+                  onTap: _editTeacherHeading,
+                  dark: dark,
                 ),
               ),
-              const SizedBox(height: 3),
-              SizedBox(
-                height: 21,
-                child: InkWell(
-                  onTap: _editInstitutionAddress,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    width: double.infinity,
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
-                      _institutionAddress,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color:
-                            dark ? Colors.white70 : const Color(0xFF334155),
-                      ),
-                    ),
-                  ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _archMiniBox(
+                  text: _classHeading.isNotEmpty ? _classHeading : 'مکتب اطفال',
+                  icon: Icons.person_rounded,
+                  onTap: _editClassHeading,
+                  dark: dark,
                 ),
-              ),
-              const SizedBox(height: 3),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: _archMiniBox(
-                      text: _classHeading,
-                      onTap: _editClassHeading,
-                      dark: dark,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 3,
-                    child: _archMiniBox(
-                      text: _teacherPresent && _teacherAttendanceTime.isNotEmpty
-                          ? '$_teacherHeading  •  $_teacherAttendanceTime'
-                          : _teacherHeading,
-                      onTap: _editTeacherHeading,
-                      dark: dark,
-                      action: SizedBox(
-                        width: 27,
-                        height: 27,
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          tooltip: 'استاد کی حاضری',
-                          onPressed: _toggleTeacherAttendance,
-                          icon: Icon(
-                            _teacherPresent
-                                ? Icons.verified_rounded
-                                : Icons.fingerprint_rounded,
-                            size: 18,
-                            color: _teacherPresent
-                                ? Colors.green
-                                : const Color(0xFF64748B),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
-        ),
-      ],
-    ),
-  ),
-);
+          const SizedBox(height: 5),
+          // Row 2: Shift Dropdown & Date Picker
+          Row(
+            children: [
+              Expanded(
+                child: _archMiniBox(
+                  text: _selectedShiftId == 'shabina' ? 'شبینہ' : 'صبح',
+                  icon: Icons.wb_sunny_outlined,
+                  hasDropdown: true,
+                  onTap: () {
+                    setState(() {
+                      _selectedShiftId = _selectedShiftId == 'subah' ? 'shabina' : 'subah';
+                    });
+                  },
+                  dark: dark,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _archMiniBox(
+                  text: '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+                  icon: Icons.calendar_today_rounded,
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _selectedDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (picked != null) setState(() => _selectedDate = picked);
+                  },
+                  dark: dark,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          // Row 3: Wide Filter Selector
+          Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: dark ? const Color(0xFF0F172A) : Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF074E32), width: 1.2),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    'داخل ، غیر حاضر ، حاضر ، کل طلبا',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: dark ? Colors.white : const Color(0xFF074E32),
+                    ),
+                  ),
+                ),
+                Icon(Icons.arrow_drop_down_rounded, color: dark ? Colors.white70 : const Color(0xFF074E32)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _archMiniBox({
     required String text,
+    required IconData icon,
     required VoidCallback onTap,
     required bool dark,
-    Widget? action,
+    bool hasDropdown = false,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(9),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
-        height: 31,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: dark ? const Color(0xFF1E293B) : Colors.white70,
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: const Color(0xFF68AD91)),
+          color: dark ? const Color(0xFF0F172A) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF074E32), width: 1.2),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(child: Center(child: _fit(text, size: 11.5))),
-            if (action != null) action,
+            Icon(icon, size: 18, color: dark ? Colors.white70 : const Color(0xFF074E32)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  color: dark ? Colors.white : const Color(0xFF074E32),
+                ),
+              ),
+            ),
+            if (hasDropdown)
+              Icon(Icons.arrow_drop_down_rounded, color: dark ? Colors.white70 : const Color(0xFF074E32)),
           ],
         ),
       ),
@@ -1346,7 +1366,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       child: Container(
         height: 43,
         padding: const EdgeInsets.symmetric(horizontal: 3),
-        decoration: _threeD(radius: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF074E32),
+          borderRadius: BorderRadius.circular(10),
+        ),
         child: Center(child: child),
       ),
     );
@@ -1377,7 +1400,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             child: Container(
               height: 25,
               width: double.infinity,
-              decoration: _threeD(radius: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAF7F0),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF074E32)),
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -1386,7 +1413,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         ? Icons.keyboard_arrow_up
                         : Icons.keyboard_arrow_down,
                     size: 16,
-                    color: const Color(0xFF047857),
+                    color: const Color(0xFF074E32),
                   ),
                   const SizedBox(width: 3),
                   _fit(
@@ -1394,7 +1421,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         ? (isEn ? 'Hide Details' : 'تفصیل چھپائیں')
                         : (isEn ? 'Show Details' : 'تفصیل دکھائیں'),
                     size: 10.5,
-                    color: const Color(0xFF047857),
+                    color: const Color(0xFF074E32),
                   ),
                 ],
               ),
@@ -1438,10 +1465,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             textDirection: TextDirection.ltr,
             children: [
               SizedBox(
-                width: 42,
+                width: 46,
                 child: Container(
-                  height: 46,
-                  decoration: _threeD(radius: 10),
+                  height: 43,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF074E32),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Column(
@@ -1451,6 +1481,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           scale: .58,
                           child: Checkbox(
                             value: allSelected,
+                            fillColor: WidgetStateProperty.all(Colors.white),
+                            checkColor: const Color(0xFF074E32),
                             onChanged: (value) {
                               setState(() {
                                 for (final student in messageCandidates) {
@@ -1463,7 +1495,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                 MaterialTapTargetSize.shrinkWrap,
                           ),
                         ),
-                        _fit(isEn ? 'All' : 'منتخب تمام', size: 6.8),
+                        _fit(isEn ? 'All' : 'منتخب تمام', color: Colors.white, size: 7.2),
                       ],
                     ),
                   ),
@@ -1471,27 +1503,27 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
               const SizedBox(width: 4),
               _header(
-                _fit(isEn ? 'Student Name' : 'نام طالب علم / درسگاہ', size: 10.5),
+                _fit(isEn ? 'Student Name / Class' : 'نام طالب علم / درجہ', color: Colors.white, size: 10.5),
                 flex: 11,
               ),
               const SizedBox(width: 4),
-              _header(_fit(isEn ? 'Attendance' : 'حاضری', size: 10.5), flex: 3),
+              _header(_fit(isEn ? 'Attendance' : 'حاضری', color: Colors.white, size: 10.5), flex: 3),
               const SizedBox(width: 4),
               _header(
                 Row(
                   children: [
                     Expanded(
-                        child: _fit(isEn ? 'Book' : 'کتاب', color: Colors.green, size: 9.5)),
+                        child: _fit(isEn ? 'Book' : 'کتاب', color: Colors.white, size: 9.5)),
                     Expanded(
-                        child: _fit(isEn ? 'Uniform' : 'لباس', color: Colors.green, size: 9.5)),
+                        child: _fit(isEn ? 'Uniform' : 'لباس', color: Colors.white, size: 9.5)),
                     Expanded(
-                        child: _fit(isEn ? 'Cap' : 'ٹوپی', color: Colors.green, size: 9.5)),
+                        child: _fit(isEn ? 'Cap' : 'ٹوپی', color: Colors.white, size: 9.5)),
                   ],
                 ),
                 flex: 6,
               ),
               const SizedBox(width: 4),
-              _header(_fit(isEn ? 'Call' : 'کال', size: 10.5), flex: 2),
+              _header(_fit(isEn ? 'Call' : 'کال', color: Colors.white, size: 10.5), flex: 2),
             ],
           ),
         ],
@@ -1858,20 +1890,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     padding: EdgeInsets.only(
                       top: MediaQuery.paddingOf(context).top + 2,
                     ),
-                    child: SizedBox(
-                      height: 93,
-                      child: OverflowBox(
-                        alignment: Alignment.topCenter,
-                        minHeight: 108,
-                        maxHeight: 108,
-                        child: Transform.translate(
-                          offset: const Offset(0, -15),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 7),
-                            child: _identityArch(dark),
-                          ),
-                        ),
-                      ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: _identityArch(dark),
                     ),
                   ),
                   Padding(
@@ -1955,65 +1976,59 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   ),
                 ],
               ),
-        bottomNavigationBar: SizedBox(
-          height: 42,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(3, 1, 3, 2),
-            child: Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _isLoading ? null : _openMessageSheet,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F172A),
-                      minimumSize: const Size(0, 36),
-                      maximumSize: const Size(double.infinity, 36),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      visualDensity: VisualDensity.compact,
-                      textStyle: const TextStyle(
-                          fontSize: 10.5, fontWeight: FontWeight.bold),
+        bottomNavigationBar: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 4,
+                offset: Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _openMessageSheet,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF047857),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 40),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    icon: const Icon(Icons.send_rounded, size: 14),
-                    label: Text('میسج (${_selectedAbsentees.length})',
-                        maxLines: 1),
+                  ),
+                  icon: const Icon(Icons.send_rounded, size: 16),
+                  label: Text(
+                    'پیغام (${_selectedAbsentees.length})',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                 ),
-                const SizedBox(width: 3),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _isLoading ? null : _sharePdf,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF0284C7),
-                      minimumSize: const Size(0, 36),
-                      maximumSize: const Size(double.infinity, 36),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      visualDensity: VisualDensity.compact,
-                      textStyle: const TextStyle(
-                          fontSize: 10.5, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _saveAttendance,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF074E32),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 40),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    icon: const Icon(Icons.share_rounded, size: 14),
-                    label: const Text('شیئر رپورٹ', maxLines: 1),
+                  ),
+                  icon: const Icon(Icons.save_rounded, size: 16),
+                  label: const Text(
+                    'حاضری محفوظ کریں',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                 ),
-                const SizedBox(width: 3),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _isLoading ? null : _saveAttendance,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF08734B),
-                      minimumSize: const Size(0, 36),
-                      maximumSize: const Size(double.infinity, 36),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      visualDensity: VisualDensity.compact,
-                      textStyle: const TextStyle(
-                          fontSize: 10.5, fontWeight: FontWeight.bold),
-                    ),
-                    icon: const Icon(Icons.save_rounded, size: 14),
-                    label: const Text('حاضری محفوظ کریں', maxLines: 1),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
