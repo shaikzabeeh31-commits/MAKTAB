@@ -2678,9 +2678,10 @@ class _FeeScreenState extends State<FeeScreen> {
                     },
                   ),
                   const Spacer(),
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert_rounded, size: 20),
-                    padding: EdgeInsets.zero,
+                  if (widget.currentRole != AppRole.mutawalli)
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert_rounded, size: 20),
+                      padding: EdgeInsets.zero,
                     onSelected: (value) async {
                       if (value == 'edit') {
                         _showEditFeeDialog(globalIdx);

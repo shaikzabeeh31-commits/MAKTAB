@@ -2068,7 +2068,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 await _openMaktabSetup();
               },
             ),
-          if (widget.currentRole != AppRole.parent)
+          if (widget.currentRole != AppRole.parent && widget.currentRole != AppRole.mutawalli)
             ExpansionTile(
               leading: const Icon(Icons.mosque_rounded, color: Color(0xFF08734B)),
               title: Text(
@@ -2119,30 +2119,31 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               );
             }).toList(),
           ),
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: const BoxDecoration(
-                color: Color(0xFFEAF7F0),
-                shape: BoxShape.circle,
+          if (widget.currentRole != AppRole.mutawalli)
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEAF7F0),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF08734B), size: 20),
               ),
-              child: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF08734B), size: 20),
+              title: Text(
+                isEn ? 'Add New Student' : 'طالب علم کا نیا داخلہ (Add Student)',
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF065F46), fontSize: 14),
+              ),
+              subtitle: Text(
+                isEn ? 'Simplest admission form' : 'سادہ داخلہ فارم',
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _triggerAddStudentModal(maktabId: _activeMaktabId);
+              },
             ),
-            title: Text(
-              isEn ? 'Add New Student' : 'طالب علم کا نیا داخلہ (Add Student)',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF065F46), fontSize: 14),
-            ),
-            subtitle: Text(
-              isEn ? 'Simplest admission form' : 'سادہ داخلہ فارم',
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              _triggerAddStudentModal(maktabId: _activeMaktabId);
-            },
-          ),
           const Divider(),
-          if (_activeMaktabId != null && _activeMaktabName.isNotEmpty)
+          if (_activeMaktabId != null && _activeMaktabName.isNotEmpty && widget.currentRole != AppRole.mutawalli)
             Container(
               margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
               decoration: BoxDecoration(
@@ -2253,7 +2254,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 );
               },
             ),
-          if (canAddStudent)
+          if (canAddStudent && widget.currentRole != AppRole.mutawalli)
             ListTile(
               leading: const Icon(Icons.family_restroom_rounded, color: Colors.indigo),
               title: Text(
@@ -2274,8 +2275,8 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 );
               },
             ),
-          if (canAddStudent) const Divider(),
-          if (widget.currentRole != AppRole.manager && widget.currentRole != AppRole.teacher)
+          if (canAddStudent && widget.currentRole != AppRole.mutawalli) const Divider(),
+          if (widget.currentRole != AppRole.manager && widget.currentRole != AppRole.teacher && widget.currentRole != AppRole.mutawalli)
             ListTile(
               leading: const Icon(Icons.analytics_rounded, color: Colors.purple),
               title: Text(
@@ -2296,7 +2297,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 );
               },
             ),
-          if (!canAddStudent)
+          if (!canAddStudent && widget.currentRole != AppRole.mutawalli)
             ListTile(
             leading: const Icon(Icons.people_rounded, color: Color(0xFF074E32)),
             title: Text(loc.translate('students_list')),
@@ -2305,7 +2306,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               _openStudentListFromMenu();
             },
           ),
-          if (!canAddStudent)
+          if (!canAddStudent && widget.currentRole != AppRole.mutawalli)
             ListTile(
             leading: const Icon(Icons.how_to_reg_rounded, color: Color(0xFF074E32)),
             title: Text(loc.translate('attendance')),
@@ -2314,7 +2315,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               _openAttendanceFromMenu();
             },
           ),
-          if (!canAddStudent)
+          if (!canAddStudent && widget.currentRole != AppRole.mutawalli)
             ListTile(
             leading: const Icon(Icons.menu_book_rounded, color: Color(0xFF074E32)),
             title: Text(loc.translate('sabaq_lessons')),
@@ -2330,7 +2331,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               );
             },
           ),
-          if (!canAddStudent)
+          if (!canAddStudent && widget.currentRole != AppRole.mutawalli)
             ListTile(
             leading: const Icon(Icons.currency_rupee_rounded, color: Color(0xFF074E32)),
             title: Text(loc.translate('fee_record')),
@@ -2409,7 +2410,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               _showAppFeedbackDialog();
             },
           ),
-          if (widget.currentRole != AppRole.teacher) ...[
+          if (widget.currentRole != AppRole.teacher && widget.currentRole != AppRole.mutawalli) ...[
             const Divider(),
             ListTile(
               leading: const Icon(Icons.people_alt_rounded, color: Colors.indigo),
@@ -2444,14 +2445,15 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               },
             ),
           ],
-          ListTile(
-            leading: const Icon(Icons.fingerprint_rounded, color: Colors.blue),
-            title: Text(loc.translate('security_logins')),
-            onTap: () {
-              Navigator.pop(context);
-              _showBiometricLockDialog();
-            },
-          ),
+          if (widget.currentRole != AppRole.mutawalli)
+            ListTile(
+              leading: const Icon(Icons.fingerprint_rounded, color: Colors.blue),
+              title: Text(loc.translate('security_logins')),
+              onTap: () {
+                Navigator.pop(context);
+                _showBiometricLockDialog();
+              },
+            ),
           ListTile(
             leading: const Icon(Icons.system_update_rounded, color: Color(0xFF074E32)),
             title: Text(loc.translate('overview')),
@@ -3803,6 +3805,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                           languageController: widget.languageController,
                           onSave: _saveActiveStudents,
                           maktabId: _activeMaktabId,
+                          currentRole: widget.currentRole,
                           onMaktabChanged:
                               _activateMaktabKeepingCurrentScreen,
                         ),
@@ -3826,6 +3829,21 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                     );
                   },
                 ),
+              _ActionTile(
+                title: isEn ? 'Daily Sabaq & Lessons' : 'سبق تلاوت (روزانہ کا سبق)',
+                icon: Icons.menu_book_rounded,
+                color: const Color(0xFF08734B),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => LessonScreen(
+                        languageController: widget.languageController,
+                      ),
+                    ),
+                  );
+                },
+              ),
               _ActionTile(
                 title: isEn ? 'Community Chat' : 'کمیونٹی چیٹ',
                 icon: Icons.chat_rounded,

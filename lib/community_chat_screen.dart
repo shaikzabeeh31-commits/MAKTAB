@@ -739,7 +739,10 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
 
   // ── Left Sidebar Conversations ──
   Widget _buildConversationsSidebar() {
-    final list = _getSampleConversations();
+    var list = _getSampleConversations();
+    if (widget.currentRole == AppRole.mutawalli) {
+      list = list.where((c) => c.id == 'c_teacher' || c.id == 'c_manager' || c.id == 'c_admin').toList();
+    }
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       color: isDark ? const Color(0xFF1E293B) : Colors.white,

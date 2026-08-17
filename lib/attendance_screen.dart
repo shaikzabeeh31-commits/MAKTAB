@@ -1573,8 +1573,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         color: visual.color.withValues(alpha: .13),
         borderRadius: BorderRadius.circular(9),
         child: InkWell(
-          onTap: () => _cycleAttendance(student),
-          onLongPress: () => _chooseAttendance(student),
+          onTap: () {
+            if (widget.currentRole == AppRole.mutawalli) return;
+            _cycleAttendance(student);
+          },
+          onLongPress: () {
+            if (widget.currentRole == AppRole.mutawalli) return;
+            _chooseAttendance(student);
+          },
           borderRadius: BorderRadius.circular(9),
           child: Container(
             height: 34,
@@ -1623,10 +1629,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return Tooltip(
       message: tooltip,
       child: InkWell(
-        onTap: () => setState(() {
-          student[key] = !ok;
-          student['selectedForMessage'] = _hasParentMessageIssue(student);
-        }),
+        onTap: () {
+          if (widget.currentRole == AppRole.mutawalli) return;
+          setState(() {
+            student[key] = !ok;
+            student['selectedForMessage'] = _hasParentMessageIssue(student);
+          });
+        },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
