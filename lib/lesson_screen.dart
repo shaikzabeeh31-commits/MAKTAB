@@ -493,28 +493,81 @@ class _LessonScreenState extends State<LessonScreen> {
       }
       return;
     }
-    final available = await _speech.initialize();
-    if (!available || !mounted) return;
-    setState(() {
-      _listeningCommon = studentId == null;
-      _listeningStudentId = studentId;
-    });
-    await _speech.listen(
-      localeId: 'ur-IN',
-      onResult: (result) {
-        if (!result.finalResult || !mounted) return;
-        final words = result.recognizedWords.trim();
-        if (words.isNotEmpty) {
-          controller
-            ..text = words
-            ..selection = TextSelection.collapsed(offset: words.length);
+    try {
+      final available = await _speech.initialize(
+        onStatus: (status) {
+          if ((status == 'done' || status == 'notListening') && mounted) {
+            setState(() {
+              _listeningCommon = false;
+              _listeningStudentId = null;
+            });
+          }
+        },
+        onError: (errorNotification) {
+          if (mounted) {
+            setState(() {
+              _listeningCommon = false;
+              _listeningStudentId = null;
+            });
+            _notice('مائیک کا مسئلہ: ${errorNotification.errorMsg}۔ براہِ کرم فون کی Microphone permission آن کریں۔');
+          }
+        },
+      );
+
+      if (!available) {
+        if (mounted) {
+          _notice('مائیک شروع نہیں ہو سکا۔ فون کی سیٹنگز سے مائیک کی پرمیشن (Microphone Permission) آن کریں۔');
         }
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _listeningCommon = studentId == null;
+        _listeningStudentId = studentId;
+      });
+
+      _notice('مائیک چالو ہو گیا ہے، بولنا شروع کریں...');
+
+      String selectedLocale = 'ur_PK';
+      try {
+        final systemLocales = await _speech.locales();
+        for (final loc in systemLocales) {
+          if (loc.localeId.toLowerCase().startsWith('ur')) {
+            selectedLocale = loc.localeId;
+            break;
+          }
+        }
+      } catch (_) {}
+
+      await _speech.listen(
+        localeId: selectedLocale,
+        partialResults: true,
+        onResult: (result) {
+          if (!mounted) return;
+          final words = result.recognizedWords.trim();
+          if (words.isNotEmpty) {
+            controller
+              ..text = words
+              ..selection = TextSelection.collapsed(offset: words.length);
+          }
+          if (result.finalResult) {
+            setState(() {
+              _listeningCommon = false;
+              _listeningStudentId = null;
+            });
+          }
+        },
+      );
+    } catch (e) {
+      if (mounted) {
         setState(() {
           _listeningCommon = false;
           _listeningStudentId = null;
         });
-      },
-    );
+        _notice('مائیک پرمیشن ایرر: براہِ کرم فون سیٹنگز سے ایپ کو مائیک (Microphone) کی اجازت دیں۔');
+      }
+    }
   }
 
   Future<void> _applyCommonLesson() async {

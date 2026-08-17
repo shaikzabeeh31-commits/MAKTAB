@@ -1502,23 +1502,23 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   ({String label, IconData icon, Color color}) _attendanceVisual(
     String status,
   ) {
-    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
+    final loc = AppLocalizations.of(context);
     if (status == 'absent') {
       return (
-        label: isEn ? 'Absent' : 'غیر حاضر',
+        label: loc.translate('absent'),
         icon: Icons.cancel_rounded,
         color: Colors.red,
       );
     }
     if (status == 'late') {
       return (
-        label: isEn ? 'Late' : 'دیر حاضر',
+        label: loc.translate('late'),
         icon: Icons.schedule_rounded,
         color: Colors.orange,
       );
     }
     return (
-      label: isEn ? 'Present' : 'حاضر',
+      label: loc.translate('present'),
       icon: Icons.check_circle_rounded,
       color: Colors.green,
     );
@@ -1871,23 +1871,23 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       children: [
                         Expanded(
                           child: _infoBox(
-                            height: 43,
+                            height: 34,
                             onTap: _pickDate,
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 const Icon(Icons.calendar_month_rounded,
-                                    size: 16, color: Color(0xFF047857)),
-                                const SizedBox(width: 5),
-                                Flexible(child: _fit(_dateKey, size: 11.5)),
+                                    size: 15, color: Color(0xFF047857)),
+                                const SizedBox(width: 4),
+                                Flexible(child: _fit(_dateKey, size: 11)),
                               ],
                             ),
                           ),
                         ),
-                        const SizedBox(width: 7),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: _infoBox(
-                            height: 43,
+                            height: 34,
                             holiday: _holidayNotice.isNotEmpty,
                             onTap: _pickShift,
                             child: Row(
@@ -1947,41 +1947,60 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 ],
               ),
         bottomNavigationBar: SizedBox(
-          height: 40,
+          height: 42,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(3, 1, 3, 1),
+            padding: const EdgeInsets.fromLTRB(3, 1, 3, 2),
             child: Row(
               children: [
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: _isLoading ? null : _saveAttendance,
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, 36),
-                      maximumSize: const Size(double.infinity, 36),
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                      visualDensity: VisualDensity.compact,
-                      textStyle: const TextStyle(
-                          fontSize: 11, fontWeight: FontWeight.w700),
-                    ),
-                    icon: const Icon(Icons.save, size: 16),
-                    label: const Text('حاضری محفوظ کریں', maxLines: 1),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: FilledButton.icon(
                     onPressed: _isLoading ? null : _openMessageSheet,
                     style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
                       minimumSize: const Size(0, 36),
                       maximumSize: const Size(double.infinity, 36),
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       visualDensity: VisualDensity.compact,
                       textStyle: const TextStyle(
-                          fontSize: 11, fontWeight: FontWeight.w700),
+                          fontSize: 10.5, fontWeight: FontWeight.bold),
                     ),
-                    icon: const Icon(Icons.send, size: 16),
+                    icon: const Icon(Icons.send_rounded, size: 14),
                     label: Text('میسج (${_selectedAbsentees.length})',
                         maxLines: 1),
+                  ),
+                ),
+                const SizedBox(width: 3),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _isLoading ? null : _sharePdf,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF0284C7),
+                      minimumSize: const Size(0, 36),
+                      maximumSize: const Size(double.infinity, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      visualDensity: VisualDensity.compact,
+                      textStyle: const TextStyle(
+                          fontSize: 10.5, fontWeight: FontWeight.bold),
+                    ),
+                    icon: const Icon(Icons.share_rounded, size: 14),
+                    label: const Text('شیئر رپورٹ', maxLines: 1),
+                  ),
+                ),
+                const SizedBox(width: 3),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _isLoading ? null : _saveAttendance,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF08734B),
+                      minimumSize: const Size(0, 36),
+                      maximumSize: const Size(double.infinity, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      visualDensity: VisualDensity.compact,
+                      textStyle: const TextStyle(
+                          fontSize: 10.5, fontWeight: FontWeight.bold),
+                    ),
+                    icon: const Icon(Icons.save_rounded, size: 14),
+                    label: const Text('حاضری محفوظ کریں', maxLines: 1),
                   ),
                 ),
               ],
