@@ -1163,7 +1163,17 @@ class _FeeScreenState extends State<FeeScreen> {
                         ],
                       ),
                       subtitle: Text(
-                        'والد: ${s['fatherName'] ?? '-'} | ${s['className'] ?? s['grade'] ?? '-'}',
+                        () {
+                          final admNo = (s['admissionNo'] ?? s['rollNo'] ?? s['id'] ?? '').toString().trim();
+                          final fatherName = (s['fatherName'] ?? s['parentName'] ?? '').toString().trim();
+                          final maktabName = (s['maktabName'] ?? s['maktab_name'] ?? '').toString().trim();
+                          final isAdminOrManager = widget.currentRole == AppRole.admin || widget.currentRole == AppRole.manager;
+                          final parts = <String>[];
+                          if (admNo.isNotEmpty) parts.add('داخلہ نمبر: $admNo');
+                          if (fatherName.isNotEmpty) parts.add('والد: $fatherName');
+                          if (isAdminOrManager && maktabName.isNotEmpty) parts.add('مکتب: $maktabName');
+                          return parts.isNotEmpty ? parts.join('  •  ') : 'تفصیلات دستیاب نہیں';
+                        }(),
                         style: TextStyle(fontSize: 11, color: subColor),
                       ),
                       trailing: Column(

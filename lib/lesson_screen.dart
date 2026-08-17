@@ -1607,7 +1607,6 @@ class _LessonScreenState extends State<LessonScreen> {
     final id = _studentId(student);
     final controller = _controllerFor(student);
     final repeat = _repeatQueue[id];
-    final hasLessonImage = (_lessonImagePaths[id] ?? '').isNotEmpty;
     final isAbsent = _absentStudentIds.contains(id);
     return Container(
       margin: const EdgeInsets.fromLTRB(5, 2, 5, 2),
@@ -1645,16 +1644,19 @@ class _LessonScreenState extends State<LessonScreen> {
                     textDirection: _textDirectionFor(
                         student['name']?.toString() ?? ''),
                     style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
+                        fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    _studentClass(student).isEmpty
-                        ? 'درسگاہ: مقرر نہیں'
-                        : 'درسگاہ: ${_studentClass(student)}',
+                    [
+                      if ((student['admissionNo'] ?? student['rollNo'] ?? student['id'] ?? '').toString().trim().isNotEmpty)
+                        'داخلہ نمبر: ${(student['admissionNo'] ?? student['rollNo'] ?? student['id']).toString().trim()}',
+                      if ((student['fatherName'] ?? student['parentName'] ?? '').toString().trim().isNotEmpty)
+                        'والد: ${(student['fatherName'] ?? student['parentName']).toString().trim()}',
+                    ].join('  •  '),
                     maxLines: 1,
                     overflow: TextOverflow.fade,
                     textAlign: TextAlign.left,
-                    style: const TextStyle(fontSize: 9, color: _green),
+                    style: const TextStyle(fontSize: 9.5, color: _green, fontWeight: FontWeight.w600),
                   ),
                   if (repeat != null && _statuses[id] == 'repeat')
                     const Text('اعادہ: گزشتہ سبق',
@@ -1672,94 +1674,39 @@ class _LessonScreenState extends State<LessonScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 38,
-                            child: TextField(
-                              controller: controller,
-                              enabled: !isAbsent,
-                              textDirection: TextDirection.rtl,
-                              style: const TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700),
-                              onChanged: (_) =>
-                                  _saveLesson(showMessage: false),
-                              decoration: InputDecoration(
-                                hintText: isAbsent
-                                    ? 'غیر حاضر'
-                                    : 'پارہ، صفحہ، سبق',
-                                hintStyle: TextStyle(
-                                  fontSize: isAbsent ? 12 : 10.5,
-                                  color: isAbsent ? Colors.red : null,
-                                  fontWeight: isAbsent
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
-                                filled: isAbsent,
-                                fillColor: isAbsent
-                                    ? Colors.red.withValues(alpha: .06)
-                                    : null,
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 7, vertical: 9),
-                                border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8)),
-                              ),
-                            ),
+                    SizedBox(
+                      height: 38,
+                      child: TextField(
+                        controller: controller,
+                        enabled: !isAbsent,
+                        textDirection: TextDirection.rtl,
+                        style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700),
+                        onChanged: (_) =>
+                            _saveLesson(showMessage: false),
+                        decoration: InputDecoration(
+                          hintText: isAbsent
+                              ? 'غیر حاضر'
+                              : 'پارہ، صفحہ، سبق',
+                          hintStyle: TextStyle(
+                            fontSize: isAbsent ? 12 : 10.5,
+                            color: isAbsent ? Colors.red : null,
+                            fontWeight: isAbsent
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
+                          filled: isAbsent,
+                          fillColor: isAbsent
+                              ? Colors.red.withValues(alpha: .06)
+                              : null,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 9),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8)),
                         ),
-                        SizedBox(
-                          width: 34,
-                          height: 40,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 25,
-                                height: 20,
-                                child: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  tooltip: 'طالب علم کا مائیک',
-                                  onPressed: isAbsent
-                                      ? null
-                                      : () => _listenInto(controller,
-                                          studentId: id),
-                                  icon: Icon(
-                                    _listeningStudentId == id
-                                        ? Icons.stop_circle_rounded
-                                        : Icons.mic_rounded,
-                                    size: 17,
-                                    color: _listeningStudentId == id
-                                        ? Colors.red
-                                        : _green,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 25,
-                                height: 20,
-                                child: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  tooltip: 'سبق کی تصویر',
-                                  onPressed: isAbsent
-                                      ? null
-                                      : () => _captureLessonImage(student),
-                                  icon: Icon(
-                                      hasLessonImage
-                                          ? Icons.camera_alt_rounded
-                                          : Icons.add_a_photo_rounded,
-                                      size: 16.5,
-                                      color: hasLessonImage
-                                          ? Colors.blue
-                                          : _green),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                     const SizedBox(height: 3),
                     if (isAbsent)
