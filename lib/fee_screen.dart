@@ -115,6 +115,8 @@ class _FeeScreenState extends State<FeeScreen> {
   int _selectedYear = DateTime.now().year;
   int _selectedMonthIndex = DateTime.now().month - 1; // 0-based
   String _selectedStatus = 'ALL';
+  String _maktabAddress = 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش';
+  String _teacherName = 'معلم/معلمہ کا نام';
 
   void _showAddBatchDialog() {
     final ctrl = TextEditingController();
@@ -255,6 +257,18 @@ class _FeeScreenState extends State<FeeScreen> {
 
   Future<void> _loadSavedBatches() async {
     final prefs = await SharedPreferences.getInstance();
+    final address = prefs.getString('maktab_address')?.trim() ??
+        prefs.getString('cred_maktab_address')?.trim();
+    if (address != null && address.isNotEmpty) {
+      _maktabAddress = address;
+    }
+    final tName = prefs.getString('fee_teacher_heading')?.trim() ??
+        prefs.getString('teacher_name')?.trim() ??
+        prefs.getString('attendance_teacher_heading')?.trim() ??
+        prefs.getString('lesson_teacher_name')?.trim();
+    if (tName != null && tName.isNotEmpty) {
+      _teacherName = tName;
+    }
     final saved = prefs.getStringList('maktab_group_names') ?? [];
     for (final b in saved) {
       if (!_batchesList.contains(b)) {
@@ -1907,19 +1921,46 @@ class _FeeScreenState extends State<FeeScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Address Banner
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
-            alignment: Alignment.center,
-            child: Text(
-              isEn ? 'Maktab Al-Farooq, Madina Masjid, Khannapet' : 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : const Color(0xFF074E32),
+          InkWell(
+            onTap: () async {
+              final String? val = await showDialog<String>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text(isEn ? 'Maktab Address' : 'مسجد، محلہ، یا مکتب کا پتہ'),
+                  content: TextField(
+                    autofocus: true,
+                    controller: TextEditingController(text: _maktabAddress),
+                    decoration: InputDecoration(hintText: isEn ? 'Enter Maktab address...' : 'پتہ درج کریں...'),
+                    onSubmitted: (v) => Navigator.pop(ctx, v),
+                  ),
+                ),
+              );
+              if (val != null && val.trim().isNotEmpty) {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setString('maktab_address', val.trim());
+                await prefs.setString('cred_maktab_address', val.trim());
+                setState(() {
+                  _maktabAddress = val.trim();
+                });
+              }
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
+              alignment: Alignment.center,
+              child: Text(
+                _maktabAddress.isNotEmpty
+                    ? _maktabAddress
+                    : (isEn ? 'Maktab Al-Farooq, Madina Masjid, Khannapet' : 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF074E32),
+                ),
               ),
             ),
           ),
@@ -1936,6 +1977,7 @@ class _FeeScreenState extends State<FeeScreen> {
                         title: Text(isEn ? 'Teacher Name' : 'معلم/معلمہ کا نام'),
                         content: TextField(
                           autofocus: true,
+                          controller: TextEditingController(text: _teacherName),
                           decoration: InputDecoration(hintText: isEn ? 'Enter teacher name...' : 'معلم کا نام درج کریں...'),
                           onSubmitted: (v) => Navigator.pop(ctx, v),
                         ),
@@ -1944,6 +1986,12 @@ class _FeeScreenState extends State<FeeScreen> {
                     if (val != null && val.trim().isNotEmpty) {
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.setString('fee_teacher_heading', val.trim());
+                      await prefs.setString('teacher_name', val.trim());
+                      await prefs.setString('attendance_teacher_heading', val.trim());
+                      await prefs.setString('lesson_teacher_name', val.trim());
+                      setState(() {
+                        _teacherName = val.trim();
+                      });
                     }
                   },
                   borderRadius: BorderRadius.circular(10),
@@ -1961,7 +2009,7 @@ class _FeeScreenState extends State<FeeScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            isEn ? 'Teacher Name' : 'معلم/معلمہ کا نام',
+                            _teacherName.isNotEmpty ? _teacherName : (isEn ? 'Teacher Name' : 'معلم/معلمہ کا نام'),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
@@ -2554,49 +2602,86 @@ class _FeeScreenState extends State<FeeScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildTableHeader(AppLocalizations loc) {
     const style = TextStyle(
-        fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white);
+        fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white);
     final isEn = widget.languageController.locale.languageCode == 'en';
+    final allSelected = _filtered.isNotEmpty && _selectedIndices.length == _filtered.length;
+
     return Container(
+      height: 43,
       decoration: BoxDecoration(
         color: const Color(0xFF074E32),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      child: Row(children: [
-        const SizedBox(width: 44),
-        const SizedBox(width: 4),
-        SizedBox(
-          width: 140,
-          child: Text(
-            isEn ? 'Student / Father Name' : 'طالب علم / والد کا نام',
-            style: style,
-            overflow: TextOverflow.ellipsis,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 44,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                children: [
+                  Transform.scale(
+                    scale: 0.7,
+                    child: Checkbox(
+                      value: allSelected,
+                      fillColor: WidgetStateProperty.all(Colors.white),
+                      checkColor: const Color(0xFF074E32),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      onChanged: (v) {
+                        setState(() {
+                          if (v == true) {
+                            _selectedIndices.addAll(_filtered.map((e) => e.key));
+                          } else {
+                            _selectedIndices.clear();
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                  Text(
+                    isEn ? 'All' : 'کل',
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-        const SizedBox(width: 4),
-        SizedBox(
-          width: 105,
-          child: Center(
+          const SizedBox(width: 4),
+          SizedBox(
+            width: 140,
             child: Text(
-              isEn ? 'Fee Status' : 'فیس کی حالت',
+              isEn ? 'Student / Father Name' : 'طالب علم / والد کا نام',
               style: style,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-        ),
-        const Spacer(),
-        SizedBox(
-          width: 80,
-          child: Center(
-            child: Text(
-              isEn ? 'Actions' : 'پیغام و کارروائی',
-              style: style,
-              overflow: TextOverflow.ellipsis,
+          const SizedBox(width: 4),
+          SizedBox(
+            width: 105,
+            child: Center(
+              child: Text(
+                isEn ? 'Fee Status' : 'فیس کی حالت',
+                style: style,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
-        ),
-      ]),
+          const Spacer(),
+          SizedBox(
+            width: 80,
+            child: Center(
+              child: Text(
+                isEn ? 'Actions' : 'پیغام و عمل',
+                style: style,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
