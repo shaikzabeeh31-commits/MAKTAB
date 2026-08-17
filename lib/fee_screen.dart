@@ -1702,10 +1702,12 @@ class _FeeScreenState extends State<FeeScreen> {
       appBar: AppBar(
         backgroundColor: _kNavy,
         foregroundColor: Colors.white,
-        title: Text(
-          isEn ? 'Fee Collection Portal' : 'مکتب فیس وصولی پورٹل',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        title: widget.currentRole == AppRole.teacher
+            ? null
+            : Text(
+                isEn ? 'Fee Collection Portal' : 'مکتب فیس وصولی پورٹل',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
         centerTitle: true,
         actions: [
           IconButton(
