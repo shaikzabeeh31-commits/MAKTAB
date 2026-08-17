@@ -1640,13 +1640,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final selected = student['selectedForMessage'] == true;
     final studentName =
         student['name']?.toString().trim() ?? 'بے نام طالب علم';
-    final studentClass = _studentClass(student).isEmpty
-        ? 'مقرر نہیں'
-        : _studentClass(student);
+    final admissionNo = student['admissionNo']?.toString().trim() ?? '';
     final fatherName = (student['fatherName'] ?? student['parentName'] ?? '')
         .toString()
         .trim();
-    final admissionNo = student['admissionNo']?.toString().trim() ?? '';
     final nameDirection = RegExp(r'[\u0600-\u06FF]').hasMatch(studentName)
         ? TextDirection.rtl
         : TextDirection.ltr;
@@ -1708,7 +1705,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     Text(
                       [
                         if (admissionNo.isNotEmpty) 'داخلہ نمبر: $admissionNo',
-                        'درسگاہ: $studentClass',
                         if (fatherName.isNotEmpty) 'والد: $fatherName',
                       ].join('  •  '),
                       maxLines: 1,
@@ -1734,39 +1730,55 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
           const SizedBox(width: 4),
           Expanded(
-            flex: 6,
-            child: Row(
-              children: [
-                Expanded(child: Center(child: _itemButton(
-                    student, 'hasBooks', Icons.menu_book_rounded, 'کتاب'))),
-                Expanded(child: Center(child: _itemButton(
-                    student, 'hasUniform', Icons.checkroom, 'لباس'))),
-                Expanded(child: Center(child: _itemButton(
-                    student, 'hasCap', null, 'ٹوپی'))),
-              ],
-            ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            flex: 2,
-            child: IconButton(
-              onPressed: () => _callParent(student),
-              tooltip: 'کال',
-              icon: const Icon(Icons.call_rounded, color: Colors.blue, size: 25),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              visualDensity: VisualDensity.compact,
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: IconButton(
-              onPressed: () => _deleteStudent(student),
-              tooltip: 'حذف',
-              icon: const Icon(Icons.delete_rounded, color: Colors.red, size: 22),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              visualDensity: VisualDensity.compact,
+            flex: 10,
+            child: Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              decoration: BoxDecoration(
+                color: dark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFCBD5E1), width: 1),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 6,
+                    child: Row(
+                      children: [
+                        Expanded(child: Center(child: _itemButton(
+                            student, 'hasBooks', Icons.menu_book_rounded, 'کتاب'))),
+                        Expanded(child: Center(child: _itemButton(
+                            student, 'hasUniform', Icons.checkroom, 'لباس'))),
+                        Expanded(child: Center(child: _itemButton(
+                            student, 'hasCap', null, 'ٹوپی'))),
+                      ],
+                    ),
+                  ),
+                  Container(width: 1, height: 20, color: Colors.grey.shade300),
+                  Expanded(
+                    flex: 2,
+                    child: IconButton(
+                      onPressed: () => _callParent(student),
+                      tooltip: 'کال',
+                      icon: const Icon(Icons.call_rounded, color: Colors.blue, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: IconButton(
+                      onPressed: () => _deleteStudent(student),
+                      tooltip: 'حذف',
+                      icon: const Icon(Icons.delete_rounded, color: Colors.red, size: 19),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

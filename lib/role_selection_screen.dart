@@ -1672,12 +1672,13 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                 await _openMaktabSetup();
               },
             ),
-          ExpansionTile(
-            leading: const Icon(Icons.mosque_rounded, color: Color(0xFF08734B)),
-            title: Text(
-              isEn ? 'Maktabs List & Switcher' : 'تمام مکاتب کی فہرست (Maktabs List)',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF065F46)),
-            ),
+          if (widget.currentRole != AppRole.parent)
+            ExpansionTile(
+              leading: const Icon(Icons.mosque_rounded, color: Color(0xFF08734B)),
+              title: Text(
+                isEn ? 'Maktabs List & Switcher' : 'تمام مکاتب کی فہرست (Maktabs List)',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF065F46)),
+              ),
             initiallyExpanded: true,
             children: (widget.currentRole == AppRole.teacher
                     ? _maktabProfiles.where((p) => p['id']?.toString() == _activeMaktabId || _activeMaktabId == null).toList()
