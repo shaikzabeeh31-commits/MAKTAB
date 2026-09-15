@@ -60,6 +60,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /android/.gradle/
+/android/build/
 /android/local.properties
 /android/app/src/main/res/drawable-*/
 *.apk
