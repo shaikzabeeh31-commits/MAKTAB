@@ -191,6 +191,7 @@ class ContactPickerHelper {
     final customPhoneCtrl = TextEditingController();
     List<Map<String, String>> filtered = List.from(actualContacts);
 
+    if (!context.mounted) return null;
     return showDialog<Map<String, String>>(
       context: context,
       builder: (ctx) => StatefulBuilder(

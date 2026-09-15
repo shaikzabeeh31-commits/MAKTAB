@@ -547,7 +547,7 @@ class _CreateClassGroupScreenState extends State<CreateClassGroupScreen> {
       }),
     );
     await widget.onSave(updated);
-    if (context.mounted) {
+    if (mounted) {
       _message('$className محفوظ ہوگئی؛ طلبہ: ${_selectedIds.length}');
       Navigator.of(context).pop(true);
     }
@@ -774,7 +774,7 @@ class _CreateClassGroupScreenState extends State<CreateClassGroupScreen> {
               child: Column(children: [
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
-                  activeColor: _green,
+                  activeTrackColor: _green,
                   value: _holidayEnabled,
                   onChanged: (value) =>
                       setState(() => _holidayEnabled = value),

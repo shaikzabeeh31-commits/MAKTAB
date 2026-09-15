@@ -691,7 +691,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
     final contacts = _getFilteredContacts();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
+    return Material(
       color: isDark ? const Color(0xFF0F172A) : Colors.white,
       child: ListView.builder(
         itemCount: contacts.length,
@@ -744,7 +744,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
       list = list.where((c) => c.id == 'c_teacher' || c.id == 'c_manager' || c.id == 'c_admin').toList();
     }
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
+    return Material(
       color: isDark ? const Color(0xFF1E293B) : Colors.white,
       child: Column(
         children: [

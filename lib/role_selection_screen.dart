@@ -705,34 +705,6 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
     ]);
   }
 
-  Future<void> _selectMaktab() async {
-    if (_maktabProfiles.length < 2) return;
-    final selected = await showDialog<String>(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: SimpleDialog(
-          title: const Text('مکتب منتخب کریں'),
-          children: _maktabProfiles.map((profile) {
-            final id = profile['id']?.toString() ?? '';
-            final selected = id == _activeMaktabId;
-            return ListTile(
-              leading: Icon(
-                selected ? Icons.check_circle : Icons.account_balance_rounded,
-                color: const Color(0xFF08734B),
-              ),
-              title: Text(profile['name']?.toString() ?? 'مکتب'),
-              subtitle: Text(profile['sectionName']?.toString() ?? ''),
-              onTap: () => Navigator.pop(ctx, id),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-    if (selected == null || selected == _activeMaktabId) return;
-    await _activateMaktab(selected);
-  }
-
   Future<void> _activateMaktab(String selected) async {
     final profile = _maktabProfiles.firstWhere(
       (item) => item['id']?.toString() == selected,
@@ -780,6 +752,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
         // Reusing pending_maktab_id was mixing students from different Maktabs.
         : 'maktab_${DateTime.now().microsecondsSinceEpoch}';
     await prefs.setString('pending_maktab_id', maktabId);
+    if (!mounted) return;
     final saved = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
@@ -1371,33 +1344,6 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
     );
   }
 
-  void _showDonationTrackerDialog() {
-    final isEn = widget.languageController.locale.languageCode == 'en';
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.volunteer_activism_rounded, color: Colors.green),
-            const SizedBox(width: 8),
-            Text(isEn ? 'Donations Tracker' : 'عطیات و صدقات کھاتہ', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              dense: true,
-              title: Text(isEn ? 'Donation: Haji Abdul Sattar (₹10,000)' : 'عطیہ: حاجی عبدالسّتار صاحب (₹10,000)'),
-              subtitle: Text(isEn ? 'Purpose: Solar Lighting & Library' : 'مد: مکتب کی سولر لائٹنگ لائبریری'),
-            ),
-          ],
-        ),
-        actions: [ElevatedButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Close' : 'بند کریں'))],
-      ),
-    );
-  }
-
   Future<void> _showFeeHandoverDialog() async {
     final prefs = await SharedPreferences.getInstance();
     final String raw = prefs.getString('maktab_fee_handovers') ?? '[]';
@@ -1544,7 +1490,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
-                value: selectedMode,
+                initialValue: selectedMode,
                 decoration: const InputDecoration(labelText: 'ادائیگی کا ذریعہ'),
                 items: const [
                   DropdownMenuItem(value: 'نقدی (Cash)', child: Text('نقدی (Cash)')),
@@ -1771,7 +1717,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                     ),
                     Switch(
                       value: isEnabled,
-                      activeColor: const Color(0xFF08734B),
+                      activeThumbColor: const Color(0xFF08734B),
                       onChanged: (val) async {
                         await prefs.setBool('biometric_enabled', val);
                         setSt(() {
@@ -1883,7 +1829,6 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
     return ListenableBuilder(
       listenable: widget.languageController,
       builder: (context, _) {
-        final isEn = widget.languageController.locale.languageCode == 'en';
         return Scaffold(
           drawer: _buildSideDrawer(context, info),
         extendBodyBehindAppBar: compactWorkScreen,

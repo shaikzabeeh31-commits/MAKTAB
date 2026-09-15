@@ -275,7 +275,7 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: selectedMaktabId,
+                  initialValue: selectedMaktabId,
                   isExpanded: true,
                   decoration: InputDecoration(
                     labelText: isEn ? 'Assign Maktab' : 'مکتب منتخب کریں (Select Maktab)',
@@ -294,7 +294,7 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: selectedBatch,
+                  initialValue: selectedBatch,
                   isExpanded: true,
                   decoration: InputDecoration(
                     labelText: isEn ? 'Assign Batch / Shift' : 'بیچ / شفٹ منتخب کریں (Select Batch)',
@@ -313,7 +313,7 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: selectedClass,
+                  initialValue: selectedClass,
                   isExpanded: true,
                   decoration: InputDecoration(
                     labelText: isEn ? 'Assign Class / Darja' : 'کلاس / درجہ منتخب کریں (Select Class)',
@@ -411,7 +411,7 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
                 });
 
                 if (mounted) {
-                  Navigator.pop(ctx);
+                  if (ctx.mounted) Navigator.pop(ctx);
                   _showShareCredentialsDialog(AppRole.teacher, phone, pin);
                 }
               },

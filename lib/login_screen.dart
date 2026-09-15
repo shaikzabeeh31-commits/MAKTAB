@@ -301,6 +301,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     final savedPhone = prefs.getString('cred_${widget.role.name}_phone') ?? '';
     final savedPin = prefs.getString('cred_${widget.role.name}_pin') ?? '';
+    if (!mounted) return;
     final loc = AppLocalizations.of(context);
     final isEn = loc.locale.languageCode == 'en';
 

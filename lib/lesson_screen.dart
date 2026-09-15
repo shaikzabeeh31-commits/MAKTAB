@@ -1,9 +1,7 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -28,65 +26,6 @@ class LessonScreen extends StatefulWidget {
 
   @override
   State<LessonScreen> createState() => _LessonScreenState();
-}
-
-class _LessonArchPainter extends CustomPainter {
-  final bool dark;
-  const _LessonArchPainter({required this.dark});
-
-  Path _path(Size size) {
-    final double w = size.width;
-    final double h = size.height;
-    return Path()
-      ..moveTo(3, h - 3)
-      ..lineTo(3, h * .45)
-      ..quadraticBezierTo(3, h * .27, w * .15, h * .27)
-      ..quadraticBezierTo(w * .20, h * .11, w * .36, h * .11)
-      ..quadraticBezierTo(w * .44, h * .10, w * .50, 3)
-      ..quadraticBezierTo(w * .56, h * .10, w * .64, h * .11)
-      ..quadraticBezierTo(w * .80, h * .11, w * .85, h * .27)
-      ..quadraticBezierTo(w - 3, h * .27, w - 3, h * .45)
-      ..lineTo(w - 3, h - 3)
-      ..close();
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Path path = _path(size);
-    canvas.drawShadow(path, const Color(0x44065F46), 6, false);
-    canvas.drawPath(
-      path,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark
-              ? const [Color(0xFF334155), Color(0xFF172033)]
-              : const [Colors.white, Color(0xFFF1FAF5), Color(0xFFE2F3EA)],
-        ).createShader(Offset.zero & size),
-    );
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.2
-        ..color = const Color(0xFF08734B),
-    );
-    canvas.save();
-    canvas.translate(0, 3);
-    canvas.drawPath(
-      Path.from(path),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = .8
-        ..color = const Color(0xFF68AD91),
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _LessonArchPainter oldDelegate) =>
-      oldDelegate.dark != dark;
 }
 
 class _LessonScreenState extends State<LessonScreen> {
@@ -120,7 +59,6 @@ class _LessonScreenState extends State<LessonScreen> {
   final Set<String> _absentStudentIds = <String>{};
   final Map<String, String> _lessonImagePaths = {};
   final Map<String, Map<String, dynamic>> _repeatQueue = {};
-  final ImagePicker _imagePicker = ImagePicker();
   List<Map<String, dynamic>> _groups = <Map<String, dynamic>>[];
   String? _selectedGroupId;
 
@@ -129,13 +67,11 @@ class _LessonScreenState extends State<LessonScreen> {
   String _selectedSubject = 'ناظرہ قرآن';
   String _maktabName = 'مکتب الفاروق';
   String _maktabAddress = 'مدینہ مسجد، محلہ، گاؤں/شہر';
-  String _holidayNotice = '';
   String _teacherName = 'معلم/معلمہ کا نام';
   bool _loading = true;
   bool _listeningCommon = false;
   bool _controlsExpanded = true;
   final ScrollController _scrollController = ScrollController();
-  String? _listeningStudentId;
 
   String get _dateKey =>
       '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
@@ -241,20 +177,6 @@ class _LessonScreenState extends State<LessonScreen> {
     if (loggedTeacher != null && loggedTeacher.trim().isNotEmpty) {
       _teacherName = loggedTeacher.trim();
     }
-    _holidayNotice = '';
-    final holidayRaw = prefs.getString('maktab_holiday_v1');
-    if (holidayRaw != null) {
-      try {
-        final holiday =
-            Map<String, dynamic>.from(jsonDecode(holidayRaw) as Map);
-        final weeklyDay = holiday['weeklyDay'] as int?;
-        if (holiday['enabled'] == true || weeklyDay == _selectedDate.weekday) {
-          final reason = holiday['reason']?.toString().trim() ?? '';
-          _holidayNotice = reason.isEmpty ? 'چھٹی' : 'چھٹی: $reason';
-        }
-      } catch (_) {}
-    }
-
     try {
       final rawStudents = prefs.getString(_studentsKey);
       if (_students.isEmpty && rawStudents != null) {
@@ -463,27 +385,6 @@ class _LessonScreenState extends State<LessonScreen> {
     }
   }
 
-  Future<void> _captureLessonImage(Map<String, dynamic> student) async {
-    final id = _studentId(student);
-    if (_absentStudentIds.contains(id)) {
-      _notice('غیر حاضر طالب علم کے لیے سبق کی تصویر شامل نہیں ہوسکتی۔');
-      return;
-    }
-    try {
-      final image = await _imagePicker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 82,
-        maxWidth: 1600,
-      );
-      if (image == null || !mounted) return;
-      setState(() => _lessonImagePaths[id] = image.path);
-      await _saveLesson(showMessage: false);
-      _notice('سبق کی تصویر محفوظ ہوگئی۔');
-    } catch (_) {
-      _notice('کیمرہ نہیں کھل سکا۔ موبائل کی Camera permission چیک کریں۔');
-    }
-  }
-
   Future<void> _listenInto(
     TextEditingController controller, {
     String? studentId,
@@ -497,8 +398,7 @@ class _LessonScreenState extends State<LessonScreen> {
       if (mounted) {
         setState(() {
           _listeningCommon = false;
-          _listeningStudentId = null;
-        });
+            });
       }
       return;
     }
@@ -508,16 +408,14 @@ class _LessonScreenState extends State<LessonScreen> {
           if ((status == 'done' || status == 'notListening') && mounted) {
             setState(() {
               _listeningCommon = false;
-              _listeningStudentId = null;
-            });
+                    });
           }
         },
         onError: (errorNotification) {
           if (mounted) {
             setState(() {
               _listeningCommon = false;
-              _listeningStudentId = null;
-            });
+                    });
             _notice('مائیک کا مسئلہ: ${errorNotification.errorMsg}۔ براہِ کرم فون کی Microphone permission آن کریں۔');
           }
         },
@@ -533,8 +431,7 @@ class _LessonScreenState extends State<LessonScreen> {
       if (!mounted) return;
       setState(() {
         _listeningCommon = studentId == null;
-        _listeningStudentId = studentId;
-      });
+        });
 
       _notice('مائیک چالو ہو گیا ہے، بولنا شروع کریں...');
 
@@ -549,8 +446,11 @@ class _LessonScreenState extends State<LessonScreen> {
         }
       } catch (_) {}
 
+      // ignore: deprecated_member_use
       await _speech.listen(
+        // ignore: deprecated_member_use
         localeId: selectedLocale,
+        // ignore: deprecated_member_use
         partialResults: true,
         onResult: (result) {
           if (!mounted) return;
@@ -563,8 +463,7 @@ class _LessonScreenState extends State<LessonScreen> {
           if (result.finalResult) {
             setState(() {
               _listeningCommon = false;
-              _listeningStudentId = null;
-            });
+                    });
           }
         },
       );
@@ -572,8 +471,7 @@ class _LessonScreenState extends State<LessonScreen> {
       if (mounted) {
         setState(() {
           _listeningCommon = false;
-          _listeningStudentId = null;
-        });
+            });
         _notice('مائیک پرمیشن ایرر: براہِ کرم فون سیٹنگز سے ایپ کو مائیک (Microphone) کی اجازت دیں۔');
       }
     }
@@ -810,74 +708,6 @@ class _LessonScreenState extends State<LessonScreen> {
             offset: Offset(0, 2),
           ),
         ],
-      );
-
-  Widget _archBox(
-    String text,
-    VoidCallback onTap, {
-    IconData? icon,
-    Widget? action,
-    int flex = 1,
-    bool holiday = false,
-  }) => Expanded(
-        flex: flex,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(9),
-          child: Container(
-            height: 31,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            decoration: BoxDecoration(
-              color: holiday ? const Color(0xFFFFE4E6) : Colors.white70,
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(
-                color: holiday
-                    ? const Color(0xFFD32F2F)
-                    : const Color(0xFF68AD91),
-                width: holiday ? 1.5 : 1,
-              ),
-              boxShadow: holiday
-                  ? const [
-                      BoxShadow(
-                        color: Color(0x44D32F2F),
-                        blurRadius: 6,
-                        offset: Offset(0, 3),
-                      ),
-                    ]
-                  : null,
-            ),
-            alignment: Alignment.center,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (icon != null) ...[
-                  Icon(icon,
-                      size: 14,
-                      color: holiday ? const Color(0xFFD32F2F) : _green),
-                  const SizedBox(width: 4),
-                ],
-                Flexible(
-                  child: Text(
-                    text,
-                    maxLines: 1,
-                    overflow: TextOverflow.fade,
-                    softWrap: false,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: holiday ? const Color(0xFFD32F2F) : null,
-                    ),
-                  ),
-                ),
-                if (action != null) ...[
-                  const SizedBox(width: 3),
-                  action,
-                ],
-              ],
-            ),
-          ),
-        ),
       );
 
   Widget _identityArch() {

@@ -1,10 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -33,67 +29,6 @@ class AttendanceScreen extends StatefulWidget {
 
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
-}
-
-class _AttendanceArchPainter extends CustomPainter {
-  final bool dark;
-
-  const _AttendanceArchPainter({required this.dark});
-
-  Path _path(Size size) {
-    final double w = size.width;
-    final double h = size.height;
-    return Path()
-      ..moveTo(3, h - 3)
-      ..lineTo(3, h * .45)
-      ..quadraticBezierTo(3, h * .27, w * .15, h * .27)
-      ..quadraticBezierTo(w * .20, h * .11, w * .36, h * .11)
-      ..quadraticBezierTo(w * .44, h * .10, w * .50, 3)
-      ..quadraticBezierTo(w * .56, h * .10, w * .64, h * .11)
-      ..quadraticBezierTo(w * .80, h * .11, w * .85, h * .27)
-      ..quadraticBezierTo(w - 3, h * .27, w - 3, h * .45)
-      ..lineTo(w - 3, h - 3)
-      ..close();
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Path arch = _path(size);
-    canvas.drawShadow(arch, const Color(0x44065F46), 6, false);
-    canvas.drawPath(
-      arch,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark
-              ? const [Color(0xFF334155), Color(0xFF172033)]
-              : const [Colors.white, Color(0xFFF1FAF5), Color(0xFFE2F3EA)],
-        ).createShader(Offset.zero & size),
-    );
-    canvas.drawPath(
-      arch,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.2
-        ..color = const Color(0xFF08734B),
-    );
-    final Path inner = Path.from(arch);
-    canvas.save();
-    canvas.translate(0, 3);
-    canvas.drawPath(
-      inner,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = .8
-        ..color = const Color(0xFF68AD91),
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _AttendanceArchPainter oldDelegate) =>
-      oldDelegate.dark != dark;
 }
 
 class _IslamicCapIcon extends StatelessWidget {
@@ -157,14 +92,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   String _selectedShiftId = 'morning';
   String _classHeading = 'مکتب اطفال';
   String _teacherHeading = 'معلم/معلمہ کا نام';
-  String _institutionName = 'مکتب الفاروق';
   String _institutionAddress = 'مدینہ مسجد، خنّاپیٹ، ڈون';
   bool _isLoading = true;
-  bool _isWorking = false;
   bool _detailsExpanded = false;
   bool _headerExpanded = true;
-  bool _teacherPresent = false;
-  String _teacherAttendanceTime = '';
   String _holidayNotice = '';
   final ScrollController _scrollController = ScrollController();
 
@@ -204,9 +135,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   String get _teacherHeadingStorageKey =>
       'attendance_teacher_heading_${widget.maktabId ?? 'legacy'}_$_selectedShiftId';
-
-  String get _teacherAttendanceStorageKey =>
-      'teacher_attendance_${widget.maktabId ?? 'legacy'}_${_dateKey}_$_selectedShiftId';
 
   MaktabShift get _selectedShift => _shifts.firstWhere(
         (shift) => shift.id == _selectedShiftId,
@@ -320,18 +248,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       .where((student) => _attendanceStatus(student) == 'late')
       .length;
 
-  String _studentClass(Map<String, dynamic> student) {
-    return (student['className'] ??
-            student['class'] ??
-            student['selectedClass'] ??
-            student['grade'] ??
-            // Legacy records used group as the class field.
-            student['group'])
-            ?.toString()
-            .trim() ??
-        '';
-  }
-
   String _attendanceStatus(Map<String, dynamic> student) {
     final String? status = student['attendanceStatus']?.toString();
     if (status == 'present' || status == 'absent' || status == 'late') {
@@ -380,16 +296,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       } else {
         _teacherHeading = 'معلم/معلمہ کا نام';
       }
-      _teacherPresent =
-          prefs.getBool(_teacherAttendanceStorageKey) ?? false;
-      _teacherAttendanceTime = prefs.getString('${_teacherAttendanceStorageKey}_time') ??
-          prefs.getString('last_teacher_attendance_timestamp') ?? '';
-      final String? savedInstitution = prefs.getString('cred_maktab_name') ??
-          prefs.getString('maktab_name') ??
-          prefs.getString('mosque_name');
-      if (savedInstitution != null && savedInstitution.trim().isNotEmpty) {
-        _institutionName = savedInstitution.trim();
-      }
+
       _institutionAddress =
           prefs.getString('maktab_address')?.trim().isNotEmpty == true
               ? prefs.getString('maktab_address')!.trim()
@@ -501,49 +408,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
   }
 
-  Future<void> _toggleTeacherAttendance() async {
-    if (_teacherPresent) {
-      final bool? remove = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('استاد کی حاضری'),
-          content: const Text('کیا اس تاریخ اور شفٹ کی حاضری ہٹانی ہے؟'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('نہیں'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('ہاں، ہٹائیں'),
-            ),
-          ],
-        ),
-      );
-      if (remove != true) return;
-    }
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final bool value = !_teacherPresent;
-    await prefs.setBool(_teacherAttendanceStorageKey, value);
-    if (value) {
-      final now = DateTime.now();
-      final timeStr = '${now.day}/${now.month}/${now.year} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-      await prefs.setString('${_teacherAttendanceStorageKey}_time', timeStr);
-      await prefs.setString('last_teacher_attendance_timestamp', timeStr);
-      await prefs.setString('last_teacher_attendance_name', _teacherHeading);
-      if (mounted) setState(() => _teacherAttendanceTime = timeStr);
-    } else {
-      await prefs.remove('${_teacherAttendanceStorageKey}_time');
-      await prefs.remove('last_teacher_attendance_timestamp');
-      if (mounted) setState(() => _teacherAttendanceTime = '');
-    }
-    if (!mounted) return;
-    setState(() => _teacherPresent = value);
-    _showMessage(value
-        ? 'استاد کی حاضری محفوظ ہوگئی۔'
-        : 'استاد کی حاضری ہٹا دی گئی۔');
-  }
-
   Future<void> _pickDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -577,16 +441,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       return;
     }
     setState(() => student['selectedForMessage'] = selected ?? false);
-  }
-
-  void _markAllPresent() {
-    setState(() {
-      for (final Map<String, dynamic> student in _visibleStudents) {
-        student['isPresent'] = true;
-        student['attendanceStatus'] = 'present';
-        student['selectedForMessage'] = _hasParentMessageIssue(student);
-      }
-    });
   }
 
   Future<void> _openMessageSheet() async {
@@ -690,90 +544,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  Future<Uint8List> _createAttendancePdf() async {
-    final pw.Document document = pw.Document();
-    final pw.Font regularFont = await PdfGoogleFonts.notoSansArabicRegular();
-    final pw.Font boldFont = await PdfGoogleFonts.notoSansArabicBold();
-    final List<Map<String, dynamic>> students = _visibleStudents;
-
-    document.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        theme: pw.ThemeData.withFont(base: regularFont, bold: boldFont),
-        textDirection: pw.TextDirection.rtl,
-        margin: const pw.EdgeInsets.all(28),
-        build: (pw.Context context) => <pw.Widget>[
-          pw.Text(
-            'طلبہ کی حاضری',
-            style: pw.TextStyle(font: boldFont, fontSize: 22),
-          ),
-          pw.SizedBox(height: 6),
-          pw.Text(
-            '$_institutionName\n$_institutionAddress\nمکتب: $_classHeading   |   معلم/معلمہ: $_teacherHeading   |   تاریخ: $_dateKey   |   شفٹ: ${_selectedShift.name}',
-          ),
-          pw.SizedBox(height: 4),
-          pw.Text(
-            'کل طلبہ: ${students.length} | حاضر: $_presentCount | غیر حاضر: $_absentCount | تاخیر: $_lateCount',
-          ),
-          pw.SizedBox(height: 16),
-          pw.TableHelper.fromTextArray(
-            context: context,
-            headerStyle: pw.TextStyle(font: boldFont, color: PdfColors.white),
-            headerDecoration: const pw.BoxDecoration(color: PdfColors.green700),
-            cellAlignment: pw.Alignment.centerRight,
-            headers: <String>[
-              'نمبر',
-              'طالب علم',
-              'کلاس',
-              'والد کا نام',
-              'حاضری',
-            ],
-            data: List<List<String>>.generate(students.length, (int index) {
-              final Map<String, dynamic> student = students[index];
-              return <String>[
-                '${index + 1}',
-                student['name']?.toString() ?? '-',
-                _studentClass(student).isEmpty
-                    ? 'مقرر نہیں'
-                    : _studentClass(student),
-                student['fatherName']?.toString() ?? '-',
-                _attendanceStatus(student) == 'absent'
-                    ? 'غیر حاضر'
-                    : _attendanceStatus(student) == 'late'
-                        ? 'تاخیر'
-                        : 'حاضر',
-              ];
-            }),
-          ),
-        ],
-      ),
-    );
-
-    return document.save();
-  }
-
-  Future<void> _sharePdf() async {
-    if (_visibleStudents.isEmpty) {
-      _showMessage('اس شفٹ میں PDF بنانے کے لیے کوئی طالب علم نہیں ہے۔',
-          isError: true);
-      return;
-    }
-
-    setState(() => _isWorking = true);
-    try {
-      await _saveAttendance(showConfirmation: false);
-      final Uint8List pdf = await _createAttendancePdf();
-      await Printing.sharePdf(
-        bytes: pdf,
-        filename: 'attendance_${_selectedShift.name}_$_dateKey.pdf',
-      );
-    } catch (error) {
-      _showMessage('PDF تیار نہیں ہوسکی: $error', isError: true);
-    } finally {
-      if (mounted) setState(() => _isWorking = false);
-    }
-  }
-
   void _showMessage(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -829,42 +599,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       setState(() => _selectedShiftId = value);
       await _loadStudentsAndAttendance();
     }
-  }
-
-  Future<void> _editInstitutionName() async {
-    final controller = TextEditingController(text: _institutionName);
-    final value = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('مکتب کا نام'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textDirection: TextDirection.rtl,
-          maxLines: 1,
-          maxLength: 50,
-          decoration: const InputDecoration(
-            labelText: 'مثلاً: مکتب الفاروق',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('منسوخ'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
-            child: const Text('محفوظ کریں'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (value == null || value.isEmpty || !mounted) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('maktab_name', value);
-    if (mounted) setState(() => _institutionName = value);
   }
 
   Future<void> _editInstitutionAddress() async {
@@ -983,69 +717,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     if (mounted) setState(() => _teacherHeading = value);
   }
 
-  Future<void> _openAttendanceSettings() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (BuildContext sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const ListTile(
-              title: Text('مکتب اور حاضری کی ترتیب',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.mosque_rounded),
-              title: const Text('مکتب کا نام'),
-              subtitle: Text(_institutionName),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _editInstitutionName();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.location_on_rounded),
-              title: const Text('مسجد اور پتہ'),
-              subtitle: Text(_institutionAddress),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _editInstitutionAddress();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.school_rounded),
-              title: const Text('مکتب کی قسم'),
-              subtitle: Text(_classHeading),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _editClassHeading();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.person_rounded),
-              title: const Text('معلم یا معلمہ'),
-              subtitle: Text(_teacherHeading),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _editTeacherHeading();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit_calendar_rounded),
-              title: const Text('شفٹیں بنائیں یا تبدیل کریں'),
-              onTap: () async {
-                Navigator.pop(sheetContext);
-                await showShiftManager(context);
-                await _loadStudentsAndAttendance();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   Future<void> _callParent(Map<String, dynamic> student) async {
     final phone = (student['fatherPhone'] ??
@@ -1060,46 +732,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
     final uri = Uri(scheme: 'tel', path: phone);
     if (await canLaunchUrl(uri)) await launchUrl(uri);
-  }
-
-  Future<void> _deleteStudent(Map<String, dynamic> student) async {
-    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
-    final name = student['name']?.toString() ?? (isEn ? 'Student' : 'طالب علم');
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(isEn ? 'Delete Student' : 'طالب علم کو حذف کریں'),
-        content: Text(isEn
-            ? 'Are you sure you want to delete "$name"? This action cannot be undone.'
-            : 'کیا آپ واقعی "$name" کو حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہوسکتا۔'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(isEn ? 'Cancel' : 'منسوخ'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(isEn ? 'Delete' : 'حذف کریں'),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true || !mounted) return;
-    setState(() {
-      _students.remove(student);
-    });
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('students_data', jsonEncode(_students));
-    widget.onSave?.call(_students);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isEn ? '"$name" has been deleted.' : '"$name" حذف ہوگیا۔'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
-    }
   }
 
   BoxDecoration _threeD({double radius = 14}) {
@@ -1140,21 +772,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  Widget _topBox(Widget child, VoidCallback onTap, {int flex = 1}) {
-    return Expanded(
-      flex: flex,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          height: 54,
-          padding: const EdgeInsets.symmetric(horizontal: 5),
-          decoration: _threeD(),
-          child: Center(child: child),
-        ),
-      ),
-    );
-  }
+
 
   Widget _infoBox({
     required Widget child,
@@ -1913,19 +1531,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _shiftButton(MaktabShift shift) {
-    return Expanded(
-      child: OutlinedButton(
-        onPressed: () async {
-          if (shift.id == _selectedShiftId) return;
-          setState(() => _selectedShiftId = shift.id);
-          await _loadStudentsAndAttendance();
-        },
-        child: Text(shift.name),
       ),
     );
   }

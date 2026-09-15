@@ -12,61 +12,7 @@ import 'role_selection_screen.dart';
 const Color _kNavy = Color(0xFF0A1F5C);
 const Color _kGreen = Color(0xFF1DB954);
 const Color _kOrange = Color(0xFFFF6D00);
-const Color _kWhatsApp = Color(0xFF25D366);
 const Color _kRed = Color(0xFFD32F2F);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ISLAMIC ARCH PAINTER (FEE SCREEN)
-// ─────────────────────────────────────────────────────────────────────────────
-class _FeeArchPainter extends CustomPainter {
-  final bool dark;
-
-  const _FeeArchPainter({required this.dark});
-
-  Path _path(Size size) {
-    final double w = size.width;
-    final double h = size.height;
-    return Path()
-      ..moveTo(3, h - 3)
-      ..lineTo(3, h * .45)
-      ..quadraticBezierTo(3, h * .27, w * .15, h * .27)
-      ..quadraticBezierTo(w * .20, h * .11, w * .36, h * .11)
-      ..quadraticBezierTo(w * .44, h * .10, w * .50, 3)
-      ..quadraticBezierTo(w * .56, h * .10, w * .64, h * .11)
-      ..quadraticBezierTo(w * .80, h * .11, w * .85, h * .27)
-      ..quadraticBezierTo(w - 3, h * .27, w - 3, h * .45)
-      ..lineTo(w - 3, h - 3)
-      ..close();
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Path arch = _path(size);
-    canvas.drawShadow(arch, const Color(0x440A1F5C), 6, false);
-    canvas.drawPath(
-      arch,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark
-              ? const [Color(0xFF334155), Color(0xFF1E293B)]
-              : const [Colors.white, Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
-        ).createShader(Offset.zero & size),
-    );
-    canvas.drawPath(
-      arch,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.2
-        ..color = const Color(0xFF0A1F5C),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _FeeArchPainter oldDelegate) =>
-      oldDelegate.dark != dark;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -109,8 +55,6 @@ class _FeeScreenState extends State<FeeScreen> {
   // ── filters ──
   String _selectedSession = 'subah';
   String _selectedClass = 'All';
-  String _searchQuery = '';
-  final TextEditingController _searchController = TextEditingController();
   final List<String> _batchesList = ['All', 'Class 7 (A)', 'Class 6 (B)', 'Morning Hifz Batch', 'Nazira Batch A'];
   int _selectedYear = DateTime.now().year;
   int _selectedMonthIndex = DateTime.now().month - 1; // 0-based
@@ -120,70 +64,9 @@ class _FeeScreenState extends State<FeeScreen> {
   bool _headerExpanded = true;
   final ScrollController _scrollController = ScrollController();
 
-  void _showAddBatchDialog() {
-    final ctrl = TextEditingController();
-    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-        title: Row(
-          children: [
-            const Icon(Icons.group_add_rounded, color: Colors.blue),
-            const SizedBox(width: 8),
-            Text(
-              isEn ? 'Add New Batch / Class' : 'نیا بیچ یا کلاس شامل کریں',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
-            ),
-          ],
-        ),
-        content: TextField(
-          controller: ctrl,
-          decoration: InputDecoration(
-            labelText: isEn ? 'Batch Name (e.g. Hifz Batch A)' : 'بیچ کا نام (مثلاً حفظ بیچ A)',
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(isEn ? 'Cancel' : 'منسوخ')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.blue),
-            onPressed: () {
-              final name = ctrl.text.trim();
-              if (name.isNotEmpty) {
-                setState(() {
-                  if (!_batchesList.contains(name)) {
-                    _batchesList.add(name);
-                  }
-                  _selectedClass = name;
-                  _applyFilter();
-                });
-                Navigator.pop(ctx);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(isEn ? 'New batch "$name" added successfully!' : 'نیا بیچ "$name" کامیابی سے شامل کر دیا گیا!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              }
-            },
-            child: Text(isEn ? 'Add Batch' : 'بیچ شامل کریں'),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ── selection ──
   final Set<int> _selectedIndices = {};
-  DateTimeRange? _selectedDateRange;
-  bool _selectAll = false;
 
   // ── expand timeline rows ──
   final Set<int> _expandedRows = {};
@@ -290,30 +173,9 @@ class _FeeScreenState extends State<FeeScreen> {
   String get _selectedMonthLabel =>
       '${_kMonths[_selectedMonthIndex]} $_selectedYear';
 
-  // ── filter ──
-  Future<void> _selectPeriod() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2025),
-      lastDate: DateTime(2030),
-      initialDateRange: _selectedDateRange ?? DateTimeRange(
-        start: DateTime(_selectedYear, _selectedMonthIndex + 1, 1),
-        end: DateTime(_selectedYear, _selectedMonthIndex + 1, 30),
-      ),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedDateRange = picked;
-        _selectedMonthIndex = picked.start.month - 1;
-        _selectedYear = picked.start.year;
-      });
-      _applyFilter();
-    }
-  }
-
   void _applyFilter() {
     final currentMaktab = widget.maktabId ?? '';
-    final query = _searchQuery.trim().toLowerCase();
+    const query = '';
 
     setState(() {
       var matches = _students.asMap().entries.where((e) {
@@ -359,16 +221,6 @@ class _FeeScreenState extends State<FeeScreen> {
           return rank(statusA).compareTo(rank(statusB));
         });
     });
-  }
-
-  List<String> get _classOptions {
-    final classes = _students
-        .map((s) => s['className']?.toString() ?? '')
-        .where((c) => c.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    return ['All', ...classes];
   }
 
   // ── fee helpers (month-aware) ──
@@ -434,18 +286,6 @@ class _FeeScreenState extends State<FeeScreen> {
     return 'none';
   }
 
-  // ── selection ──
-  void _toggleSelectAll(bool? v) {
-    setState(() {
-      _selectAll = v ?? false;
-      if (_selectAll) {
-        _selectedIndices.addAll(_filtered.map((e) => e.key));
-      } else {
-        _selectedIndices.clear();
-      }
-    });
-  }
-
   void _toggleStudent(int globalIdx, bool? v) {
     setState(() {
       if (v == true) {
@@ -453,7 +293,6 @@ class _FeeScreenState extends State<FeeScreen> {
       } else {
         _selectedIndices.remove(globalIdx);
       }
-      _selectAll = _selectedIndices.length == _filtered.length;
     });
   }
 
@@ -2324,98 +2163,6 @@ class _FeeScreenState extends State<FeeScreen> {
 
 
 
-  Widget _buildFilterBar() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isEn = AppLocalizations.of(context).locale.languageCode == 'en';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Column(
-        children: [
-          // Search Field
-          TextField(
-            controller: _searchController,
-            onChanged: (val) {
-              _searchQuery = val;
-              _applyFilter();
-            },
-            decoration: InputDecoration(
-              hintText: isEn ? 'Search student by name or father name...' : 'طالب علم کا نام، والد کا نام یا رول نمبر تلاش کریں...',
-              hintStyle: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.grey.shade600),
-              prefixIcon: const Icon(Icons.search_rounded, size: 20, color: _kNavy),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, size: 18),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() {
-                          _searchQuery = '';
-                          _applyFilter();
-                        });
-                      },
-                    )
-                  : null,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              filled: true,
-              fillColor: isDark ? const Color(0xFF1E293B) : Colors.grey.shade100,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : Colors.grey.shade300),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : Colors.grey.shade300),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          // Session Switcher & Class Filter Dropdown
-          Row(
-            children: [
-              _SessionToggle(
-                value: _selectedSession,
-                onChanged: (v) {
-                  setState(() {
-                    _selectedSession = v;
-                    _applyFilter();
-                  });
-                },
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                    border: Border.all(color: isDark ? const Color(0xFF334155) : Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _batchesList.contains(_selectedClass) ? _selectedClass : 'All',
-                      icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: _kNavy),
-                      isExpanded: true,
-                      style: TextStyle(fontSize: 11, color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() {
-                            _selectedClass = val;
-                            _applyFilter();
-                          });
-                        }
-                      },
-                      items: _batchesList.map((c) => DropdownMenuItem(value: c, child: Text(c, overflow: TextOverflow.ellipsis))).toList(),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   // ─────────────────────────────────────────────────────────────────────────
   // DASHBOARD SUMMARY
   // ─────────────────────────────────────────────────────────────────────────
@@ -2640,32 +2387,6 @@ class _FeeScreenState extends State<FeeScreen> {
 
   // ─────────────────────────────────────────────────────────────────────────
   // SELECT ALL ROW
-  // ─────────────────────────────────────────────────────────────────────────
-  Widget _buildSelectAllRow(AppLocalizations loc) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isEn = loc.locale.languageCode == 'en';
-    return Container(
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-      child: Row(children: [
-        Checkbox(
-          value: _selectAll,
-          activeColor: isDark ? Colors.indigoAccent : _kNavy,
-          onChanged: _toggleSelectAll,
-        ),
-        Text(isEn ? 'Select All' : 'سب منتخب کریں',
-            style:
-                const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        const Spacer(),
-        // timeline toggle hint
-        const Icon(Icons.timeline, size: 14, color: Colors.grey),
-        const SizedBox(width: 4),
-        Text(isEn ? 'Tap row to see timeline' : 'ٹائم لائن کے لیے کلک کریں',
-            style: const TextStyle(fontSize: 11, color: Colors.grey)),
-      ]),
-    );
-  }
-
   // ─────────────────────────────────────────────────────────────────────────
   // TABLE HEADER
   // ─────────────────────────────────────────────────────────────────────────
@@ -3423,168 +3144,6 @@ class _FeeScreenState extends State<FeeScreen> {
 // ─────────────────────────────────────────────────────────────────────────────
 // SUB-WIDGETS
 // ─────────────────────────────────────────────────────────────────────────────
-
-class _SessionToggle extends StatelessWidget {
-  final String value;
-  final void Function(String) onChanged;
-  const _SessionToggle({required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        _Tab(
-          icon: Icons.wb_sunny_rounded,
-          label: 'Subah',
-          active: value == 'subah',
-          activeColor: Colors.amber.shade600,
-          onTap: () => onChanged('subah'),
-        ),
-        _Tab(
-          icon: Icons.dark_mode_rounded,
-          label: 'Shaam',
-          active: value == 'shaam',
-          activeColor: _kNavy,
-          onTap: () => onChanged('shaam'),
-        ),
-      ]),
-    );
-  }
-}
-
-class _Tab extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool active;
-  final Color activeColor;
-  final VoidCallback onTap;
-  const _Tab(
-      {required this.icon,
-      required this.label,
-      required this.active,
-      required this.activeColor,
-      required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: active ? activeColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Row(children: [
-          Icon(icon,
-              size: 14, color: active ? Colors.white : Colors.grey),
-          const SizedBox(width: 4),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: active
-                      ? Colors.white
-                      : Colors.grey.shade600)),
-        ]),
-      ),
-    );
-  }
-}
-
-class _FilterDropdown extends StatelessWidget {
-  final String value;
-  final List<String> items;
-  final ValueChanged<String?> onChanged;
-  const _FilterDropdown(
-      {required this.value,
-      required this.items,
-      required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDk = Theme.of(context).brightness == Brightness.dark;
-    final safeValue = items.contains(value) ? value : items.first;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        border: Border.all(color: isDk ? const Color(0xFF334155) : Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-        color: isDk ? const Color(0xFF1E293B) : Colors.white,
-      ),
-      child: DropdownButton<String>(
-        value: safeValue,
-        isExpanded: true,
-        underline: const SizedBox(),
-        isDense: true,
-        style: TextStyle(
-            fontSize: 11,
-            color: isDk ? Colors.white70 : Colors.black87,
-            fontWeight: FontWeight.w500),
-        items:
-            items.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-        onChanged: onChanged,
-      ),
-    );
-  }
-}
-
-class _DateTimeBox extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final date =
-        '${now.day.toString().padLeft(2, '0')}-${now.month.toString().padLeft(2, '0')}-${now.year}';
-    final hour =
-        now.hour > 12 ? now.hour - 12 : now.hour == 0 ? 12 : now.hour;
-    final ampm = now.hour >= 12 ? 'PM' : 'AM';
-    final time =
-        '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $ampm';
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(children: [
-          const Icon(Icons.calendar_today_outlined,
-              size: 12, color: _kNavy),
-          const SizedBox(width: 3),
-          Text(date,
-              style: const TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w500)),
-        ]),
-      ),
-      const SizedBox(height: 3),
-      Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(children: [
-          const Icon(Icons.access_time_rounded,
-              size: 12, color: _kNavy),
-          const SizedBox(width: 3),
-          Text(time,
-              style: const TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w500)),
-        ]),
-      ),
-    ]);
-  }
-}
 
 class _FeeProgressBar extends StatelessWidget {
   final double paid;
