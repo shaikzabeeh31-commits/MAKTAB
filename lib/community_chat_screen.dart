@@ -304,6 +304,225 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
   final String _storageKeyMsg = 'community_chat_messages_v1';
   final String _storageKeyAnn = 'community_announcements_v1';
   String _activeChatName = 'Main Owner';
+
+  Future<void> _openDirectMessageToAdminDialog() async {
+    final prefs = await SharedPreferences.getInstance();
+    final adminPhone = prefs.getString('cred_admin_phone')?.trim().isNotEmpty == true
+        ? prefs.getString('cred_admin_phone')!.trim()
+        : '1234567890';
+    final adminName = prefs.getString('cred_admin_name')?.trim().isNotEmpty == true
+        ? prefs.getString('cred_admin_name')!.trim()
+        : 'ایڈمن (Master Admin)';
+    final msgCtrl = TextEditingController();
+
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const CircleAvatar(
+              backgroundColor: Color(0xFF0F172A),
+              radius: 16,
+              child: Icon(Icons.shield_rounded, color: Colors.amberAccent, size: 18),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'ایڈمن کو براہِ راست پیغام',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '$adminName ($adminPhone)',
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF0F172A)),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'مینیجر یہاں سے ایڈمن کو براہِ راست ایپ میں میسج بھیج سکتے ہیں یا ڈائریکٹ واٹس ایپ / SMS پر بھیج سکتے ہیں۔',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF334155)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TextField(
+                controller: msgCtrl,
+                maxLines: 4,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'پیغام تحریر فرمائیں (Type Message to Admin)',
+                  hintText: 'محترم ایڈمن صاحب! السلام علیکم...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.green.shade800,
+                        side: BorderSide(color: Colors.green.shade400),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.chat_rounded, size: 16, color: Colors.green),
+                      label: const Text('WhatsApp', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      onPressed: () async {
+                        final text = msgCtrl.text.trim();
+                        if (text.isEmpty) return;
+                        final cleanPhone = adminPhone.replaceAll(RegExp(r'[^0-9]'), '');
+                        final fullPhone = cleanPhone.length == 10 ? '91$cleanPhone' : cleanPhone;
+                        final uri = Uri.parse('https://wa.me/$fullPhone?text=${Uri.encodeComponent(text)}');
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        }
+                        _sendMessage(text: '[WhatsApp] $text');
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.blue.shade800,
+                        side: BorderSide(color: Colors.blue.shade400),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.message_rounded, size: 16, color: Colors.blue),
+                      label: const Text('SMS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      onPressed: () async {
+                        final text = msgCtrl.text.trim();
+                        if (text.isEmpty) return;
+                        final uri = Uri.parse('sms:$adminPhone?body=${Uri.encodeComponent(text)}');
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri);
+                        }
+                        _sendMessage(text: '[SMS] $text');
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('منسوخ'),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0F172A),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: const Text('ایپ میں بھیجیں'),
+            onPressed: () {
+              final text = msgCtrl.text.trim();
+              if (text.isEmpty) return;
+              setState(() {
+                _activeChatName = 'ایڈمن (Master Admin)';
+                _tabController.animateTo(0);
+              });
+              _sendMessage(text: text);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('ایڈمن کو براہِ راست پیغام بھیج دیا گیا! ✓✓'),
+                  backgroundColor: Color(0xFF047857),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManagerAdminMessageBanner() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(10, 6, 10, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.amber.shade700, width: 1.2),
+      ),
+      child: Row(
+        children: [
+          const CircleAvatar(
+            radius: 14,
+            backgroundColor: Colors.amber,
+            child: Icon(Icons.shield_rounded, color: Color(0xFF0F172A), size: 16),
+          ),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'ایڈمن کو میسج بھیجیں (Direct Message Admin)',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  'مینیجر کے لیے ایڈمن سے براہِ راست رابطہ',
+                  style: TextStyle(color: Colors.white70, fontSize: 9.5),
+                ),
+              ],
+            ),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF047857),
+              foregroundColor: Colors.white,
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            icon: const Icon(Icons.send_rounded, size: 13),
+            label: const Text('ڈائریکٹ میسج', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            onPressed: _openDirectMessageToAdminDialog,
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showToolsBottomSheet() {
     showModalBottomSheet<void>(
       context: context,
@@ -337,6 +556,16 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                   children: [
+                    if (widget.currentRole == AppRole.manager)
+                      _buildToolItem(
+                        icon: Icons.shield_rounded,
+                        color: const Color(0xFF0F172A),
+                        label: 'Message Admin\n(ایڈمن کو میسج)',
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _openDirectMessageToAdminDialog();
+                        },
+                      ),
                     _buildToolItem(
                       icon: Icons.bolt_rounded,
                       color: const Color(0xFF047857),
@@ -479,6 +708,9 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    if (widget.currentRole == AppRole.manager) {
+      _activeChatName = 'ایڈمن (Master Admin)';
+    }
     _loadData();
     if (widget.initialOpenAnnouncementModal) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -664,6 +896,12 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
         foregroundColor: Colors.white,
         title: const SizedBox.shrink(),
         actions: [
+          if (widget.currentRole == AppRole.manager)
+            IconButton(
+              icon: const Icon(Icons.shield_rounded, color: Colors.amberAccent),
+              tooltip: 'ایڈمن کو میسج بھیجیں (Message Admin)',
+              onPressed: _openDirectMessageToAdminDialog,
+            ),
           IconButton(
             icon: const Icon(Icons.home_rounded, color: Colors.white),
             tooltip: 'ہوم ڈیش بورڈ (Return to Home)',
@@ -697,6 +935,8 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
         children: [
           // Hierarchy Indicator Banner
           _buildRoleHierarchyBanner(),
+          if (widget.currentRole == AppRole.manager)
+            _buildManagerAdminMessageBanner(),
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -932,43 +1172,54 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
                     style: const TextStyle(color: Colors.white, fontSize: 12)),
               ),
               const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_activeChatName,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.bold)),
-                  const Text('Online • Connected',
-                      style: TextStyle(fontSize: 10, color: Colors.green)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_activeChatName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 13.5, fontWeight: FontWeight.bold)),
+                    const Text('Online • Connected',
+                        style: TextStyle(fontSize: 10, color: Colors.green)),
+                  ],
+                ),
               ),
-              const Spacer(),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _enableReadReceipts ? Colors.blue.shade50 : Colors.grey.shade200,
-                  foregroundColor: _enableReadReceipts ? Colors.blue.shade700 : Colors.grey.shade700,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  minimumSize: const Size(0, 32),
+              IconButton(
+                tooltip: _enableReadReceipts ? 'Receipts ON' : 'Receipts OFF',
+                icon: Icon(
+                  _enableReadReceipts ? Icons.done_all_rounded : Icons.visibility_off_rounded,
+                  size: 18,
+                  color: _enableReadReceipts ? Colors.blue : Colors.grey,
                 ),
                 onPressed: () {
                   setState(() {
                     _enableReadReceipts = !_enableReadReceipts;
                   });
                 },
-                icon: Icon(
-                  _enableReadReceipts ? Icons.done_all_rounded : Icons.visibility_off_rounded,
-                  size: 16,
-                ),
-                label: Text(
-                  _enableReadReceipts ? 'Receipts ON' : 'Receipts OFF',
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                ),
               ),
-              const SizedBox(width: 8),
+              if (_activeChatName.contains('Admin') || _activeChatName.contains('ایڈمن'))
+                IconButton(
+                  tooltip: 'واٹس ایپ پر ایڈمن سے رابطہ',
+                  onPressed: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    final adminPhone = prefs.getString('cred_admin_phone')?.trim().isNotEmpty == true
+                        ? prefs.getString('cred_admin_phone')!.trim()
+                        : '1234567890';
+                    final cleanPhone = adminPhone.replaceAll(RegExp(r'[^0-9]'), '');
+                    final fullPhone = cleanPhone.length == 10 ? '91$cleanPhone' : cleanPhone;
+                    final uri = Uri.parse('https://wa.me/$fullPhone');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  icon: const Icon(Icons.chat_rounded, color: Colors.green, size: 18),
+                ),
               IconButton(
                   onPressed: _callPhone,
-                  icon: const Icon(Icons.phone_rounded, color: Color(0xFF0F172A))),
+                  icon: const Icon(Icons.phone_rounded, color: Color(0xFF0F172A), size: 18)),
               IconButton(
                   onPressed: () {
                     setState(() {
@@ -976,7 +1227,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen>
                       _searchQuery = '';
                     });
                   },
-                  icon: Icon(_isSearching ? Icons.close : Icons.search_rounded, color: const Color(0xFF0F172A))),
+                  icon: Icon(_isSearching ? Icons.close : Icons.search_rounded, color: const Color(0xFF0F172A), size: 18)),
             ],
           ),
         ),
