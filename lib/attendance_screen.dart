@@ -1422,7 +1422,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         return false;
       },
       child: Container(
-        height: 56,
+        height: 62,
         margin: const EdgeInsets.fromLTRB(7, 1, 7, 1),
         decoration: BoxDecoration(
           color: dark
@@ -1471,11 +1471,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         textAlign: TextAlign.left,
                         textDirection: nameDirection,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14.5,
                           fontWeight: FontWeight.bold,
                           color: dark ? Colors.white : Colors.black87,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
                         [
                           if (admissionNo.isNotEmpty) 'داخلہ نمبر: $admissionNo',
@@ -1487,7 +1488,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         textAlign: TextAlign.left,
                         textDirection: TextDirection.rtl,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 9.5,
                           fontWeight: FontWeight.w600,
                           color: dark ? Colors.white70 : const Color(0xFF047857),
                         ),

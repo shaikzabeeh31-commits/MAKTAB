@@ -622,18 +622,43 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
             .map((item) => Map<String, dynamic>.from(item as Map))
             .toList();
       }
-      if (profiles.isEmpty) {
-        profiles = [
-          {'id': 'm1', 'name': 'مکتب الفاروق', 'sectionName': 'مرکزی ڈویژن'},
-          {'id': 'm2', 'name': 'مکتب النور', 'sectionName': 'شاخ 1'},
-          {'id': 'm3', 'name': 'مکتب الصفاء', 'sectionName': 'شاخ 2'},
-        ];
-        await prefs.setString('maktab_profiles_v1', jsonEncode(profiles));
-      }
+      // Purge the 3 old maktabs requested by user: مکتب الفاروق, مکتب النور, مکتب الصفاء
+      profiles.removeWhere((p) {
+        final name = (p['name'] ?? '').toString();
+        final id = (p['id'] ?? '').toString();
+        return name.contains('الفاروق') ||
+            name.contains('النور') ||
+            name.contains('الصفاء') ||
+            id == 'm1' ||
+            id == 'm2' ||
+            id == 'm3';
+      });
+      await prefs.setString('maktab_profiles_v1', jsonEncode(profiles));
     } catch (_) {}
+    String? resolvedActiveId = activeMaktabId;
+    if (resolvedActiveId == 'm1' ||
+        resolvedActiveId == 'm2' ||
+        resolvedActiveId == 'm3' ||
+        (resolvedActiveId != null && !profiles.any((p) => p['id']?.toString() == resolvedActiveId))) {
+      resolvedActiveId = profiles.isNotEmpty ? profiles.first['id']?.toString() : null;
+      if (resolvedActiveId != null) {
+        await prefs.setString('active_maktab_id', resolvedActiveId);
+      } else {
+        await prefs.remove('active_maktab_id');
+      }
+    }
     final activeProfile = profiles.where(
-      (item) => item['id']?.toString() == activeMaktabId,
+      (item) => item['id']?.toString() == resolvedActiveId,
     );
+    String currentMaktabName = activeProfile.isEmpty
+        ? (prefs.getString('maktab_name') ?? '')
+        : (activeProfile.first['name']?.toString() ?? '');
+    if (currentMaktabName.contains('الفاروق') ||
+        currentMaktabName.contains('النور') ||
+        currentMaktabName.contains('الصفاء')) {
+      currentMaktabName = profiles.isNotEmpty ? (profiles.first['name']?.toString() ?? '') : '';
+      await prefs.setString('maktab_name', currentMaktabName);
+    }
     final name = prefs.getString('current_user_name') ?? prefs.getString('cred_${widget.currentRole.name}_name');
     if (!mounted) return;
     setState(() {
@@ -1215,7 +1240,7 @@ class _RoleDashboardScreenState extends State<RoleDashboardScreen> {
                       'id': 'student_${DateTime.now().microsecondsSinceEpoch}',
                       'maktabId': selectedMaktabTargetId,
                       'maktabType': selectedMaktabType,
-                      'maktabName': _maktabProfiles.firstWhere((p) => p['id']?.toString() == selectedMaktabTargetId, orElse: () => {'name': _activeMaktabName.isNotEmpty ? _activeMaktabName : 'مکتب الفاروق'})['name']?.toString() ?? 'مکتب الفاروق',
+                      'maktabName': _maktabProfiles.firstWhere((p) => p['id']?.toString() == selectedMaktabTargetId, orElse: () => {'name': _activeMaktabName.isNotEmpty ? _activeMaktabName : (_maktabProfiles.isNotEmpty ? (_maktabProfiles.first['name']?.toString() ?? '') : '')})['name']?.toString() ?? _activeMaktabName,
                       'admissionNo': nextAdmissionNo.toString().padLeft(4, '0'),
                       'name': name,
                       'fatherName': fatherNameCtrl.text.trim(),

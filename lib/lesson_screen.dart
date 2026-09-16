@@ -65,7 +65,7 @@ class _LessonScreenState extends State<LessonScreen> {
   DateTime _selectedDate = DateTime.now();
   String _selectedShiftId = 'morning';
   String _selectedSubject = 'ناظرہ قرآن';
-  String _maktabName = 'مکتب الفاروق';
+  String _maktabName = 'مکتب نانوتوی';
   String _maktabAddress = 'مدینہ مسجد، محلہ، گاؤں/شہر';
   String _teacherName = 'معلم/معلمہ کا نام';
   bool _loading = true;
@@ -165,9 +165,17 @@ class _LessonScreenState extends State<LessonScreen> {
     if (!_subjects.contains(_selectedSubject)) {
       _selectedSubject = _subjects.first;
     }
-    _maktabName = prefs.getString('maktab_name') ??
-        prefs.getString('attendance_institution_name') ??
-        _maktabName;
+    final savedMaktabName = prefs.getString('maktab_name') ??
+        prefs.getString('attendance_institution_name');
+    if (savedMaktabName != null &&
+        savedMaktabName.isNotEmpty &&
+        !savedMaktabName.contains('الفاروق') &&
+        !savedMaktabName.contains('النور') &&
+        !savedMaktabName.contains('الصفاء')) {
+      _maktabName = savedMaktabName;
+    } else {
+      _maktabName = 'مکتب نانوتوی';
+    }
     _maktabAddress = prefs.getString('maktab_address') ?? _maktabAddress;
     final String? loggedTeacher = prefs.getString('logged_in_user_name') ??
         prefs.getString('cred_user_name') ??

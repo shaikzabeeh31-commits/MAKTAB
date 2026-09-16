@@ -59,6 +59,7 @@ class _FeeScreenState extends State<FeeScreen> {
   int _selectedYear = DateTime.now().year;
   int _selectedMonthIndex = DateTime.now().month - 1; // 0-based
   String _selectedStatus = 'ALL';
+  String _maktabName = 'مکتب نانوتوی';
   String _maktabAddress = 'مکتب قاسم العلوم مدینہ مسجد کدہ پیٹ، ڈون، ندیال، آندھرا پردیش';
   String _teacherName = 'معلم/معلمہ کا نام';
   bool _headerExpanded = true;
@@ -142,6 +143,14 @@ class _FeeScreenState extends State<FeeScreen> {
 
   Future<void> _loadSavedBatches() async {
     final prefs = await SharedPreferences.getInstance();
+    final mName = prefs.getString('maktab_name')?.trim();
+    if (mName != null &&
+        mName.isNotEmpty &&
+        !mName.contains('الفاروق') &&
+        !mName.contains('النور') &&
+        !mName.contains('الصفاء')) {
+      _maktabName = mName;
+    }
     final address = prefs.getString('maktab_address')?.trim() ??
         prefs.getString('cred_maktab_address')?.trim();
     if (address != null && address.isNotEmpty) {
@@ -919,8 +928,8 @@ class _FeeScreenState extends State<FeeScreen> {
                         Expanded(
                           child: Text(
                             widget.languageController.locale.languageCode == 'en'
-                                ? 'Maktab: Maktab Al-Farooq (ID: MKT-001)'
-                                : 'مکتب: مکتب الفاروق (آئی ڈی: MKT-001)',
+                                ? 'Maktab: $_maktabName'
+                                : 'مکتب: $_maktabName',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor),
                             overflow: TextOverflow.ellipsis,
                           ),

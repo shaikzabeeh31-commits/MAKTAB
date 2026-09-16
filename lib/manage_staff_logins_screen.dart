@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -196,7 +197,8 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
     );
   }
 
-  void _showAddNewTeacherDialog() {
+  Future<void> _showAddNewTeacherDialog() async {
+    final prefs = await SharedPreferences.getInstance();
     final isEn = widget.languageController.locale.languageCode == 'en';
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
@@ -205,12 +207,38 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
     String error = '';
     bool obscurePin = true;
 
-    final maktabOptions = [
-      {'id': 'm1', 'name': 'مکتب الفاروق (مرکزی ڈویژن)'},
-      {'id': 'm2', 'name': 'مکتب النور (شاخ 1)'},
-      {'id': 'm3', 'name': 'مکتب الصفاء (شاخ 2)'},
-    ];
-    String selectedMaktabId = 'm1';
+    List<Map<String, String>> maktabOptions = [];
+    try {
+      final raw = prefs.getString('maktab_profiles_v1');
+      if (raw != null) {
+        final list = jsonDecode(raw) as List;
+        for (final item in list) {
+          final id = item['id']?.toString() ?? '';
+          final name = item['name']?.toString() ?? '';
+          if (!name.contains('الفاروق') &&
+              !name.contains('النور') &&
+              !name.contains('الصفاء') &&
+              id != 'm1' &&
+              id != 'm2' &&
+              id != 'm3' &&
+              name.isNotEmpty) {
+            maktabOptions.add({'id': id, 'name': name});
+          }
+        }
+      }
+    } catch (_) {}
+    if (maktabOptions.isEmpty) {
+      final activeName = prefs.getString('maktab_name') ?? '';
+      if (activeName.isNotEmpty &&
+          !activeName.contains('الفاروق') &&
+          !activeName.contains('النور') &&
+          !activeName.contains('الصفاء')) {
+        maktabOptions.add({'id': 'default', 'name': activeName});
+      } else {
+        maktabOptions.add({'id': 'default', 'name': 'مکتب نانوتوی'});
+      }
+    }
+    String selectedMaktabId = maktabOptions.first['id'] ?? 'default';
     String selectedBatch = isEn ? 'Subah (Morning / صبح)' : 'صبح (Subah / Morning)';
     String selectedClass = isEn ? 'Darja Awwal (Class 1 / درجہ اول)' : 'درجہ اول (Darja 1 / Class 1)';
 
@@ -229,6 +257,7 @@ class _ManageStaffLoginsScreenState extends State<ManageStaffLoginsScreen> {
       isEn ? 'Nazira Class (ناظرہ کلاس)' : 'ناظرہ کلاس (Nazira Class)',
     ];
 
+    if (!mounted) return;
     showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
