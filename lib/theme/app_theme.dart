@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' as std_io;
 import 'app_colors.dart';
@@ -16,7 +16,24 @@ class AppTheme {
       }
     } catch (_) {}
     if (langCode == 'ur' || langCode == 'ar') {
-      return GoogleFonts.notoNastaliqUrduTextTheme();
+      const baseTheme = TextTheme(
+        displayLarge: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 24, height: 1.45),
+        displayMedium: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 21, height: 1.45),
+        displaySmall: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 18, height: 1.4),
+        headlineLarge: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 17, height: 1.4, fontWeight: FontWeight.bold),
+        headlineMedium: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 15, height: 1.35, fontWeight: FontWeight.bold),
+        headlineSmall: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 14, height: 1.35, fontWeight: FontWeight.w600),
+        titleLarge: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 14, height: 1.35, fontWeight: FontWeight.bold),
+        titleMedium: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 13, height: 1.35, fontWeight: FontWeight.w600),
+        titleSmall: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 12, height: 1.3, fontWeight: FontWeight.w600),
+        bodyLarge: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 13, height: 1.35),
+        bodyMedium: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 12, height: 1.3),
+        bodySmall: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 10.5, height: 1.25),
+        labelLarge: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 12, height: 1.3, fontWeight: FontWeight.bold),
+        labelMedium: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 10.5, height: 1.25),
+        labelSmall: TextStyle(fontFamily: 'MehrNastaliq', fontSize: 9.5, height: 1.2),
+      );
+      return GoogleFonts.notoNastaliqUrduTextTheme(baseTheme);
     }
     return GoogleFonts.interTextTheme();
   }
@@ -31,7 +48,7 @@ class AppTheme {
       }
     } catch (_) {}
     final String? fontFamily = (isUrduOrArabic && !isTest)
-        ? GoogleFonts.notoNastaliqUrdu().fontFamily
+        ? 'MehrNastaliq'
         : null;
     return ThemeData(
       fontFamily: fontFamily,
@@ -95,7 +112,7 @@ class AppTheme {
       }
     } catch (_) {}
     final String? fontFamily = (isUrduOrArabic && !isTest)
-        ? GoogleFonts.notoNastaliqUrdu().fontFamily
+        ? 'MehrNastaliq'
         : null;
     return ThemeData(
       fontFamily: fontFamily,
